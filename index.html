@@ -4252,8 +4252,8 @@ select.form-input:focus {
 // KONFIGURASI MANUAL SUPABASE
 // ====================================================================
 // Isi kredensial Supabase Anda di bawah ini (di dalam tanda kutip):
-const HARDCODED_SUPABASE_URL = ""; // contoh: "https://vycpefzdpsfsiczdlvbg.supabase.co"
-const HARDCODED_SUPABASE_KEY = ""; // contoh: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5Y3BlZnpkcHNmc2ljemRsdmJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxODcsImV4cCI6MjA5ODQ1MDE4N30.upr6L-vw0cr0vAlS_m6pGMbZHtNswKQTwJDWY4KoB-I"
+const HARDCODED_SUPABASE_URL = "https://vycpefzdpsfsiczdlvbg.supabase.co"; // contoh: ""
+const HARDCODED_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5Y3BlZnpkcHNmc2ljemRsdmJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxODcsImV4cCI6MjA5ODQ1MDE4N30.upr6L-vw0cr0vAlS_m6pGMbZHtNswKQTwJDWY4KoB-I"; // contoh: ""
 // ====================================================================
 
 // Safe localStorage wrapper — prevents crashes when browser blocks storage
@@ -4881,7 +4881,11 @@ window.google = {
 function initSupabaseClient() {
   var creds = getSupabaseCredentials();
   if (creds.url && creds.key) {
-    _sb = window.supabase.createClient(creds.url, creds.key);
+    _sb = window.supabase.createClient(creds.url, creds.key, {
+      auth: {
+        persistSession: false
+      }
+    });
     window.supabaseConnected = true;
     return true;
   }
