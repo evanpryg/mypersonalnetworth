@@ -4388,11 +4388,32 @@ const HARDCODED_SUPABASE_URL = ""; // e.g. "https://vycpefzdpsfsiczdlvbg.supabas
 const HARDCODED_SUPABASE_KEY = ""; // e.g. "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5Y3BlZnpkcHNmc2ljemRsdmJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxODcsImV4cCI6MjA5ODQ1MDE4N30.upr6L-vw0cr0vAlS_m6pGMbZHtNswKQTwJDWY4KoB-I"
 // ====================================================================
 
+// Safe localStorage wrapper to prevent crashes when tracking prevention/incognito blocks storage access
+const safeStorage = {
+  getItem(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      return null;
+    }
+  },
+  setItem(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {}
+  },
+  removeItem(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {}
+  }
+};
+
 let supabaseClient = null;
 
 function getSupabaseCredentials() {
-  const url = HARDCODED_SUPABASE_URL || localStorage.getItem('supabase_url');
-  const key = HARDCODED_SUPABASE_KEY || localStorage.getItem('supabase_key');
+  const url = HARDCODED_SUPABASE_URL || safeStorage.getItem('supabase_url');
+  const key = HARDCODED_SUPABASE_KEY || safeStorage.getItem('supabase_key');
   return { url, key };
 }
 
@@ -5783,7 +5804,7 @@ function initSupabaseClient(isFirstTime) {
     document.getElementById('supabaseSetupOverlay').classList.add('hidden');
     
     // Automatically trigger app load if it's the first setup, or if hardcoded variables exist and app is not yet initialized
-    const hasLocalStorage = localStorage.getItem('supabase_url') && localStorage.getItem('supabase_key');
+    const hasLocalStorage = safeStorage.getItem('supabase_url') && safeStorage.getItem('supabase_key');
     if (isFirstTime || (!hasLocalStorage && HARDCODED_SUPABASE_URL && HARDCODED_SUPABASE_KEY)) {
       setTimeout(() => {
         if (typeof initApp === 'function') initApp();
@@ -5810,9 +5831,9 @@ async function saveSupabaseWizard(event) {
     
     if (error) throw error;
     
-    // Save to localStorage
-    localStorage.setItem('supabase_url', url);
-    localStorage.setItem('supabase_key', key);
+    // Save to safeStorage
+    safeStorage.setItem('supabase_url', url);
+    safeStorage.setItem('supabase_key', key);
     
     statusEl.textContent = 'Koneksi sukses! Memuat data...';
     statusEl.className = 'setup-status success';
@@ -5833,8 +5854,8 @@ function saveSupabaseSettingsForm(event) {
   const url = document.getElementById('supabaseSettingsUrl').value.trim();
   const key = document.getElementById('supabaseSettingsKey').value.trim();
   
-  localStorage.setItem('supabase_url', url);
-  localStorage.setItem('supabase_key', key);
+  safeStorage.setItem('supabase_url', url);
+  safeStorage.setItem('supabase_key', key);
   showToast('supabaseClient settings saved! Reloading...', 'success');
   setTimeout(() => {
     window.location.reload();
@@ -5843,8 +5864,8 @@ function saveSupabaseSettingsForm(event) {
 
 function resetSupabaseSettings() {
   if (confirm('Apakah Anda yakin ingin memutuskan koneksi database? Data tidak akan hilang di supabaseClient, tapi Anda harus memasukkan URL & Anon Key lagi.')) {
-    localStorage.removeItem('supabase_url');
-    localStorage.removeItem('supabase_key');
+    safeStorage.removeItem('supabase_url');
+    safeStorage.removeItem('supabase_key');
     window.location.reload();
   }
 }
@@ -5854,8 +5875,8 @@ function injectSupabaseSettingsCard() {
   const settingsPage = document.getElementById('settingsPage');
   if (!settingsPage) return;
   
-  const currentUrl = localStorage.getItem('supabase_url') || '';
-  const currentKey = localStorage.getItem('supabase_key') || '';
+  const currentUrl = safeStorage.getItem('supabase_url') || '';
+  const currentKey = safeStorage.getItem('supabase_key') || '';
   
   const cardHtml = `
     <!-- supabaseClient Connection Config Card -->
@@ -5909,7 +5930,7 @@ if (document.readyState === 'loading') {
   function startAppIfConfigured() {
     const creds = typeof getSupabaseCredentials === 'function' 
       ? getSupabaseCredentials() 
-      : { url: localStorage.getItem('supabase_url'), key: localStorage.getItem('supabase_key') };
+      : { url: safeStorage.getItem('supabase_url'), key: safeStorage.getItem('supabase_key') };
     if (creds.url && creds.key) {
       initApp();
     }
@@ -5925,7 +5946,7 @@ if (document.readyState === 'loading') {
   let ALLOCATION_TARGETS = [];
   let LATEST_DASHBOARD_DATA = null;
   let HISTORY_DATA = { transactions: [] };
-  let AMOUNTS_HIDDEN = localStorage.getItem('amountsHidden') === 'true';
+  let AMOUNTS_HIDDEN = safeStorage.getItem('amountsHidden') === 'true';
 
   function initApp() {
     if (window.appInitialized) return;
@@ -5955,7 +5976,7 @@ if (document.readyState === 'loading') {
   /* === GLOBAL AMOUNT VISIBILITY TOGGLE === */
   function toggleAmountVisibility() {
     AMOUNTS_HIDDEN = !AMOUNTS_HIDDEN;
-    localStorage.setItem('amountsHidden', AMOUNTS_HIDDEN);
+    safeStorage.setItem('amountsHidden', AMOUNTS_HIDDEN);
     applyGlobalVisibility();
     refreshAllAmounts();
   }
@@ -10106,7 +10127,7 @@ let TX_SELECTED_CATEGORY = '';
 let TX_SELECTED_SUBCATEGORY = '';
 let TX_SELECTED_ACCOUNT = '';
 let TX_SELECTED_ACCOUNT_TO = '';
-let TX_RECENT = JSON.parse(localStorage.getItem('txRecent') || '[]');
+let TX_RECENT = JSON.parse(safeStorage.getItem('txRecent') || '[]');
 
 /* === OPEN ACTION SHEET === */
 function mmShowActionSheet(type) {
@@ -10455,7 +10476,7 @@ function txSaveRecent(payload) {
 
   TX_RECENT.unshift(entry);
   TX_RECENT = TX_RECENT.slice(0, 10); // Keep max 10
-  localStorage.setItem('txRecent', JSON.stringify(TX_RECENT));
+  safeStorage.setItem('txRecent', JSON.stringify(TX_RECENT));
 }
 
 </script>
