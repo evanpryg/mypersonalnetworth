@@ -95,6 +95,11 @@ function mmUpdateIncomeSubcategories(category) {
 
 /* === DASHBOARD === */
 function mmLoadDashboard(skipIfCached) {
+  if (!window.supabaseConnected) {
+    const container = document.getElementById('mmAccountsList');
+    if (container) container.innerHTML = '<div class="empty-state">Database is not connected. Configure connection in Settings.</div>';
+    return;
+  }
   // If skipIfCached is true and we have data, just re-render from cache
   if (skipIfCached && MM_DASHBOARD) {
     mmRenderDashboard(MM_DASHBOARD);

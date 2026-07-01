@@ -7,6 +7,11 @@ let INSIGHT_DATA = null;
 let INSIGHT_LOADED = false;
 
 function loadFinancialInsight() {
+  if (!window.supabaseConnected) {
+    const container = document.getElementById('insightContent');
+    if (container) container.innerHTML = '<div class="insight-error"><p>Database is not connected. Configure connection in Settings.</p></div>';
+    return;
+  }
   if (INSIGHT_LOADED && INSIGHT_DATA) {
     renderFinancialInsight(INSIGHT_DATA);
     return;

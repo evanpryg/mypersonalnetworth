@@ -19,16 +19,18 @@
     setTodayDefaults();
     setupAssetPickerListeners();
     setupMoneyInputs();
-    loadSettings();
-    loadAssetOptions();
-    if (typeof loadAllocationTargets === 'function') {
-      loadAllocationTargets();
-    }
-    loadDashboard();
-    // History loads lazily when user visits the page
+    if (window.supabaseConnected) {
+      loadSettings();
+      loadAssetOptions();
+      if (typeof loadAllocationTargets === 'function') {
+        loadAllocationTargets();
+      }
+      loadDashboard();
+      // History loads lazily when user visits the page
 
-    // Load Money Management on startup (default workspace)
-    if (typeof mmLoadDashboard === 'function') mmLoadDashboard();
+      // Load Money Management on startup (default workspace)
+      if (typeof mmLoadDashboard === 'function') mmLoadDashboard();
+    }
 
     // Apply global eye visibility state
     applyGlobalVisibility();
@@ -416,6 +418,11 @@
 
   /* === DATA LOADING === */
   function loadDashboard(skipIfCached) {
+    if (!window.supabaseConnected) {
+      const container = document.getElementById('allocationFocusList');
+      if (container) container.innerHTML = '<div class="empty-state">Database is not connected. Configure connection in Settings.</div>';
+      return;
+    }
     // If skipIfCached is true and we have data, just re-render from cache
     if (skipIfCached && LATEST_DASHBOARD_DATA) {
       renderDashboard(LATEST_DASHBOARD_DATA);
@@ -460,6 +467,11 @@
   }
 
   function loadHistory() {
+    if (!window.supabaseConnected) {
+      HISTORY_DATA = { transactions: [] };
+      renderHistory();
+      return;
+    }
     google.script.run
       .withSuccessHandler(data => {
         HISTORY_DATA = data || { transactions: [] };
