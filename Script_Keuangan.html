@@ -1,6 +1,6 @@
 <script>
 /* ============================================================
-   MONEY MANAGEMENT â€” Frontend JavaScript
+   MONEY MANAGEMENT — Frontend JavaScript
    ============================================================ */
 
 let MM_DASHBOARD = null;
@@ -54,7 +54,7 @@ function mmPopulateDropdowns() {
     if (el) el.innerHTML = selectHtml;
   });
 
-  // Income categories â€” de-duplicate by category name
+  // Income categories — de-duplicate by category name
   const incomeCats = [...new Set(
     MM_CATEGORIES.filter(c => c.type === 'Income').map(c => c.category)
   )];
@@ -156,7 +156,10 @@ function mmRenderDashboard(data) {
         .filter(a => a.showOnDashboard)
         .map(a => `
           <div class="mm-account-row-mini" onclick="mmShowAccountTransactions('${escapeHtml(a.name)}')">
-            <span>${escapeHtml(a.name)}</span>
+            <span style="display:flex;align-items:center;gap:8px;">
+              <span class="mm-account-icon-mini" style="font-size:16px;">${escapeHtml(a.icon || '💳')}</span>
+              <span>${escapeHtml(a.name)}</span>
+            </span>
             <strong>${mmFormatIDR(a.balance)}</strong>
           </div>
         `).join('');
@@ -172,14 +175,18 @@ function mmRenderDashboard(data) {
       allocContainer.innerHTML = data.allocationCards.map(card => {
         const progressPct = Math.round(card.progress * 100);
         const isOver = card.spent > card.target && card.target > 0;
+        const colorStyle = isOver ? 'var(--error)' : (card.color || 'var(--primary)');
         return `
           <div class="mm-alloc-card" onclick="mmShowCategoryDetail('${escapeHtml(card.category)}')">
             <div class="mm-alloc-header">
-              <span class="cat-name">${escapeHtml(card.category)}</span>
+              <span class="cat-name">
+                <span class="cat-icon-mini" style="margin-right:6px;font-size:14px;">${escapeHtml(card.icon || '💰')}</span>
+                ${escapeHtml(card.category)}
+              </span>
               <span class="cat-percent">${card.percent}%</span>
             </div>
             <div class="mm-alloc-bar">
-              <div class="mm-alloc-fill ${isOver ? 'warning' : ''}" style="width:${Math.min(progressPct, 100)}%"></div>
+              <div class="mm-alloc-fill" style="width:${Math.min(progressPct, 100)}%; background-color:${colorStyle};"></div>
             </div>
             <div class="mm-alloc-meta">
               <span>${mmFormatIDR(card.spent)} spent</span>
@@ -345,7 +352,7 @@ function mmRenderDonut(entries, total, type) {
               color: '#fafafa',
               offsetY: 4,
               formatter: function(val) {
-                if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return 'â€¢â€¢â€¢â€¢â€¢â€¢';
+                if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••';
                 return 'Rp' + Number(val).toLocaleString('id-ID');
               }
             },
@@ -359,7 +366,7 @@ function mmRenderDonut(entries, total, type) {
               color: '#a1a1aa',
               formatter: function(w) {
                 const t = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
-                if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return 'â€¢â€¢â€¢â€¢â€¢â€¢';
+                if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••';
                 return 'Rp' + t.toLocaleString('id-ID');
               }
             }
@@ -381,7 +388,7 @@ function mmRenderDonut(entries, total, type) {
       style: { fontSize: '12px', fontFamily: 'Inter' },
       y: {
         formatter: function(val) {
-          if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return 'â€¢â€¢â€¢â€¢â€¢â€¢';
+          if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••';
           return 'Rp' + Number(val).toLocaleString('id-ID');
         }
       }
@@ -531,9 +538,9 @@ function mmShowTxDetail(rowNumber, type, account, accountTo, category, subcatego
   const prefix = type === 'Income' ? '+' : type === 'Expense' ? '-' : '';
   const color = type === 'Income' ? 'var(--success)' : type === 'Expense' ? 'var(--error)' : '#60a5fa';
   
-  let details = `<p style="font-size:12px;color:var(--text-muted);margin:4px 0;">${mmFormatDate(date)} Â· ${account}`;
-  if (type === 'Transfer' && accountTo) details += ` â†’ ${accountTo}`;
-  if (category) details += ` Â· ${category}`;
+  let details = `<p style="font-size:12px;color:var(--text-muted);margin:4px 0;">${mmFormatDate(date)} · ${account}`;
+  if (type === 'Transfer' && accountTo) details += ` → ${accountTo}`;
+  if (category) details += ` · ${category}`;
   if (subcategory) details += ` / ${subcategory}`;
   details += `</p>`;
   
@@ -734,7 +741,7 @@ function mmUpdateTransferDirection() {
   const toSelect = document.getElementById('mmTransferTo');
 
   const accountOpts = MM_ACCOUNTS.map(a => `<option value="${escapeHtml(a.name)}">${a.icon} ${escapeHtml(a.name)}</option>`).join('');
-  const platformOpts = (APP_SETTINGS.Platform || []).map(p => `<option value="${escapeHtml(p)}">ðŸ“ˆ ${escapeHtml(p)}</option>`).join('');
+  const platformOpts = (APP_SETTINGS.Platform || []).map(p => `<option value="${escapeHtml(p)}">📈 ${escapeHtml(p)}</option>`).join('');
 
   if (direction === 'mm-to-mm') {
     fromLabel.querySelector('span, .form-label-text')
@@ -855,7 +862,7 @@ function mmRenderAllTime(data, container) {
     xaxis: { categories: chartData.map(d => mmFormatMonthLabel(d.month)), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { colors: '#a1a1aa', fontSize: '10px', fontFamily: 'Inter' } } },
     yaxis: { labels: { show: false }, max: function(max) { return max * 1.15; } },
     markers: { size: 0, hover: { size: 5, sizeOffset: 2 } },
-    tooltip: { theme: 'dark', style: { fontSize: '12px', fontFamily: 'Inter' }, y: { formatter: function(val) { if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return 'â€¢â€¢â€¢â€¢â€¢â€¢'; return 'Rp' + Number(val).toLocaleString('id-ID'); } } },
+    tooltip: { theme: 'dark', style: { fontSize: '12px', fontFamily: 'Inter' }, y: { formatter: function(val) { if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••'; return 'Rp' + Number(val).toLocaleString('id-ID'); } } },
     legend: { show: true, position: 'top', horizontalAlign: 'center', fontSize: '11px', fontFamily: 'Inter', fontWeight: 600, labels: { colors: '#a1a1aa' }, markers: { width: 8, height: 8, radius: 4 } },
     dataLabels: { enabled: false }
   };
@@ -1066,7 +1073,7 @@ function mmShowDayDetail(day, dayData) {
 
   if (!dayData.transactions || !dayData.transactions.length) {
     detail.style.display = 'block';
-    detail.innerHTML = `<p style="font-size:13px;color:var(--text-muted);margin:0;">${day} ${mmFormatMonthLabel(MM_CAL_YEAR+'-'+String(MM_CAL_MONTH).padStart(2,'0'))} â€” No transactions</p>`;
+    detail.innerHTML = `<p style="font-size:13px;color:var(--text-muted);margin:0;">${day} ${mmFormatMonthLabel(MM_CAL_YEAR+'-'+String(MM_CAL_MONTH).padStart(2,'0'))} — No transactions</p>`;
     return;
   }
 
@@ -1123,11 +1130,11 @@ function mmRenderSettingsAccounts() {
       <span class="icon">${a.icon}</span>
       <div class="info">
         <div class="name">${escapeHtml(a.name)}</div>
-        <div class="meta">Balance: ${mmFormatIDR(a.balance || a.initialBalance)} Â· ${a.showOnDashboard ? 'Shown' : 'Hidden'}</div>
+        <div class="meta">Balance: ${mmFormatIDR(a.balance || a.initialBalance)} · ${a.showOnDashboard ? 'Shown' : 'Hidden'}</div>
       </div>
       <div class="actions">
-        <button onclick="mmShowEditAccount('${a.id}', '${escapeHtml(a.name)}', '${escapeHtml(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">âœŽ</button>
-        <button onclick="mmDeleteAccountConfirm('${a.id}')">Ã—</button>
+        <button onclick="mmShowEditAccount('${a.id}', '${escapeHtml(a.name)}', '${escapeHtml(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">✏️</button>
+        <button onclick="mmDeleteAccountConfirm('${a.id}')">×</button>
       </div>
     </div>
   `).join('');
@@ -1141,7 +1148,7 @@ function mmShowAddAccount() {
     <div class="form-stack">
       <input type="hidden" name="mmModalType" value="account">
       <label class="form-label">Name <input type="text" name="name" class="form-input" placeholder="BCA, Cash, E-wallet..." required></label>
-      <label class="form-label">Icon (emoji) <input type="text" name="icon" class="form-input" placeholder="ðŸ’³" value="ðŸ’³"></label>
+      <label class="form-label">Icon (emoji) <input type="text" name="icon" class="form-input" placeholder="💳" value="💳"></label>
       <label class="form-label">Initial Balance <input type="text" name="initialBalance" class="form-input money-input" inputmode="decimal" placeholder="0"></label>
       <label class="form-label">Show on Dashboard
         <select name="showOnDashboard" class="form-input">
@@ -1199,7 +1206,7 @@ function mmRenderAllocReadOnly() {
   }
   container.innerHTML = MM_ALLOCATION.map(a => `
     <div class="mm-account-row-mini">
-      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${a.color || '#10b981'};margin-right:6px;"></span>${a.icon || 'ðŸ“Œ'} ${escapeHtml(a.category)}</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${a.color || '#10b981'};margin-right:6px;"></span>${a.icon || '📌'} ${escapeHtml(a.category)}</span>
       <strong>${a.percent}%</strong>
     </div>
   `).join('');
@@ -1307,8 +1314,8 @@ function mmSubmitModal(event) {
   } else if (type === 'editAccount') {
     const payload = {
       id: form.querySelector('[name="accountId"]').value,
-      name: form.querySelector('[name="name"]').value,
-      icon: form.querySelector('[name="icon"]').value || 'ðŸ’³',
+      name: form.querySelector('[name="name"]').value.trim(),
+      icon: form.querySelector('[name="icon"]').value || '💳',
       initialBalance: parseMoneyInput(form.querySelector('[name="initialBalance"]').value),
       showOnDashboard: form.querySelector('[name="showOnDashboard"]').value === 'true'
     };
@@ -1333,19 +1340,19 @@ function mmRenderAllocEditor() {
   if (!container) return;
   if (!MM_ALLOCATION.length) {
     MM_ALLOCATION = [
-      { category: 'Living', percent: 50, icon: 'ðŸ ', color: '#10b981' },
-      { category: 'Playing', percent: 20, icon: 'ðŸŽ®', color: '#f59e0b' },
-      { category: 'Alms', percent: 10, icon: 'ðŸ¤²', color: '#ec4899' },
-      { category: 'Invest', percent: 20, icon: 'ðŸ“ˆ', color: '#3b82f6' }
+      { category: 'Living', percent: 50, icon: '🏠', color: '#10b981' },
+      { category: 'Playing', percent: 20, icon: '🎮', color: '#f59e0b' },
+      { category: 'Alms', percent: 10, icon: '🤲', color: '#ec4899' },
+      { category: 'Invest', percent: 20, icon: '📈', color: '#3b82f6' }
     ];
   }
   container.innerHTML = MM_ALLOCATION.map((item, i) => `
     <div class="allocation-target-row" data-index="${i}">
-      <input class="mm-alloc-icon-input form-input" type="text" value="${escapeHtml(item.icon || '')}" placeholder="ðŸ " style="width:50px;text-align:center;">
+      <input class="mm-alloc-icon-input form-input" type="text" value="${escapeHtml(item.icon || '')}" placeholder="🏠" style="width:50px;text-align:center;">
       <input class="mm-alloc-cat-input form-input" type="text" value="${escapeHtml(item.category)}" placeholder="Category">
       <input class="mm-alloc-pct-input form-input" type="number" step="0.01" min="0" max="100" value="${item.percent}" oninput="mmUpdateAllocTotal()">
       <input class="mm-alloc-color-input form-input" type="color" value="${item.color || '#10b981'}" style="width:40px;padding:4px;height:40px;">
-      <button type="button" class="remove-row-btn" onclick="mmRemoveAllocRow(${i})">Ã—</button>
+      <button type="button" class="remove-row-btn" onclick="mmRemoveAllocRow(${i})">×</button>
     </div>`).join('');
   mmUpdateAllocTotal();
 }
@@ -1365,7 +1372,7 @@ function mmUpdateAllocTotal() {
 
 function mmAddAllocRow() {
   mmSyncAllocFromUI();
-  MM_ALLOCATION.push({ category: '', percent: 0, icon: 'ðŸ“Œ', color: '#64748b' });
+  MM_ALLOCATION.push({ category: '', percent: 0, icon: '📌', color: '#64748b' });
   mmRenderAllocEditor();
 }
 
@@ -1423,21 +1430,21 @@ function mmRenderCategories() {
   // Group by type then category
   const groups = {};
   MM_CATEGORIES.forEach(c => {
-    const key = `${c.type} â€” ${c.category}`;
+    const key = `${c.type} — ${c.category}`;
     if (!groups[key]) groups[key] = [];
     if (c.subcategory) groups[key].push(c.subcategory);
   });
 
   container.innerHTML = Object.entries(groups).map(([key, subs]) => {
     const chips = subs.length
-      ? subs.map(s => `<span class="mm-cat-chip">${escapeHtml(s)} <button class="delete-cat" onclick="mmDeleteCat('${escapeHtml(key)}','${escapeHtml(s)}')">Ã—</button></span>`).join('')
+      ? subs.map(s => `<span class="mm-cat-chip">${escapeHtml(s)} <button class="delete-cat" onclick="mmDeleteCat('${escapeHtml(key)}','${escapeHtml(s)}')">×</button></span>`).join('')
       : '<span style="font-size:11px;color:var(--text-muted);">No subcategories</span>';
     return `<div class="mm-cat-group"><div class="mm-cat-group-title">${escapeHtml(key)}</div>${chips}</div>`;
   }).join('');
 }
 
 function mmDeleteCat(groupKey, subcategory) {
-  const parts = groupKey.split(' â€” ');
+  const parts = groupKey.split(' — ');
   const type = parts[0];
   const category = parts[1];
   if (!confirm(`Delete subcategory "${subcategory}" from ${category}?`)) return;
@@ -1545,8 +1552,8 @@ function mmShowAccountTransactions(accountName) {
 
   let html = `<h3 class="sheet-title">${lucideIconSvg('wallet', 18)} ${escapeHtml(accountName)}</h3>`;
   html += `<div style="display:flex;gap:12px;margin:8px 0 16px;">`;
-  html += `<span style="font-size:12px;color:var(--success);">â†“ In: ${mmFormatIDR(totalIn)}</span>`;
-  html += `<span style="font-size:12px;color:var(--error);">â†‘ Out: ${mmFormatIDR(totalOut)}</span>`;
+  html += `<span style="font-size:12px;color:var(--success);">↓ In: ${mmFormatIDR(totalIn)}</span>`;
+  html += `<span style="font-size:12px;color:var(--error);">↑ Out: ${mmFormatIDR(totalOut)}</span>`;
   html += `</div>`;
 
   // Group by date
@@ -1569,7 +1576,7 @@ function mmShowAccountTransactions(accountName) {
         else { prefix = '-'; color = '#60a5fa'; }
       }
       const label = tx.notes || tx.subcategory || tx.category || tx.type;
-      const meta = tx.type === 'Transfer' ? (tx.account === accountName ? `â†’ ${tx.accountTo}` : `â† ${tx.account}`) : (tx.category || '');
+      const meta = tx.type === 'Transfer' ? (tx.account === accountName ? `→ ${tx.accountTo}` : `← ${tx.account}`) : (tx.category || '');
       return `
         <div class="mm-detail-tx-row">
           <div style="display:flex;flex-direction:column;gap:1px;">
@@ -1652,7 +1659,7 @@ function lucideIconSvg(name, size) {
 
 /* === FORMATTING HELPERS === */
 function mmFormatIDR(value) {
-  if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return 'â€¢â€¢â€¢â€¢â€¢â€¢';
+  if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••';
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value) || 0);
 }
 

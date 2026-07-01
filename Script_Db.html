@@ -341,7 +341,17 @@ var DB_API = {
   // MONEY MANAGEMENT
   async mmGetAccounts() {
     var rows = await getRows_('mm_accounts');
-    return rows.filter(function(r){return normalize_(r.Status||'Active')!=='Deleted';}).map(function(r){return{id:normalize_(r.AccountID),name:normalize_(r.Name),icon:normalize_(r.Icon)||'💳',initialBalance:toNumber_(r.InitialBalance),order:toNumber_(r.Order),showOnDashboard:normalize_(r.ShowOnDashboard)==='true',status:normalize_(r.Status)||'Active'};}).sort(function(a,b){return a.order-b.order;});
+    return rows.filter(function(r){return normalize_(r.Status||'Active')!=='Deleted';}).map(function(r){
+      var showDb = r.ShowOnDashboard;
+      var showOnDashboard = false;
+      if (typeof showDb === 'boolean') {
+        showOnDashboard = showDb;
+      } else if (showDb !== undefined && showDb !== null) {
+        var s = String(showDb).trim().toLowerCase();
+        showOnDashboard = (s === 'true' || s === '1' || s === 'yes' || s === 't');
+      }
+      return {id:normalize_(r.AccountID),name:normalize_(r.Name),icon:normalize_(r.Icon)||'💳',initialBalance:toNumber_(r.InitialBalance),order:toNumber_(r.Order),showOnDashboard:showOnDashboard,status:normalize_(r.Status)||'Active'};
+    }).sort(function(a,b){return a.order-b.order;});
   },
 
   async mmAddAccount(payload) {
@@ -436,10 +446,27 @@ var DB_API = {
   async mmGetDashboard() {
     var accounts=await this.mmGetAccounts(),allTransactions=await this.mmGetTransactions({}),allocation=await this.mmGetAllocation();
     var balances={}; accounts.forEach(function(acc){balances[acc.name]=acc.initialBalance;});
+    function findExactAccountName(name) {
+      if (!name) return null;
+      var normalized = name.trim().toLowerCase();
+      for (var i = 0; i < accounts.length; i++) {
+        if (accounts[i].name.toLowerCase() === normalized) {
+          return accounts[i].name;
+        }
+      }
+      return name;
+    }
     allTransactions.slice().reverse().forEach(function(tx){
-      if(tx.type==='Income') balances[tx.account]=(balances[tx.account]||0)+tx.amount;
-      else if(tx.type==='Expense') balances[tx.account]=(balances[tx.account]||0)-tx.amount;
-      else if(tx.type==='Transfer'){balances[tx.account]=(balances[tx.account]||0)-tx.amount;balances[tx.accountTo]=(balances[tx.accountTo]||0)+tx.amount;}
+      var accName = findExactAccountName(tx.account);
+      var accToName = findExactAccountName(tx.accountTo);
+      if(tx.type==='Income') {
+        if (accName) balances[accName]=(balances[accName]||0)+tx.amount;
+      } else if(tx.type==='Expense') {
+        if (accName) balances[accName]=(balances[accName]||0)-tx.amount;
+      } else if(tx.type==='Transfer'){
+        if (accName) balances[accName]=(balances[accName]||0)-tx.amount;
+        if (accToName) balances[accToName]=(balances[accToName]||0)+tx.amount;
+      }
     });
     var netWorth=0; accounts.forEach(function(acc){if(acc.showOnDashboard) netWorth+=balances[acc.name]||0;});
     var now=new Date(),monthStartStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01';
@@ -452,7 +479,7 @@ var DB_API = {
       if(tx.type==='Transfer'&&tx.category==='Invest'){if(categoryExpenses['Invest']!==undefined) categoryExpenses['Invest']+=tx.amount;}
     });
     var saving=totalIncome-totalExpense;
-    var allocationCards=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.min(spent/target,1):0;return{category:a.category,percent:a.percent,spent:spent,target:target,progress:progress};});
+    var allocationCards=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.min(spent/target,1):0;return{category:a.category,percent:a.percent,icon:a.icon,color:a.color,spent:spent,target:target,progress:progress};});
     return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
   },
 
@@ -497,7 +524,28 @@ var DB_API = {
     var accounts=await this.mmGetAccounts(),allTransactions=await this.mmGetTransactions({}),allocation=await this.mmGetAllocation();
     var now=new Date(),currentYear=now.getFullYear(),currentMonth=now.getMonth()+1;
     var balances={}; accounts.forEach(function(acc){balances[acc.name]=acc.initialBalance;});
-    allTransactions.slice().reverse().forEach(function(tx){if(tx.type==='Income')balances[tx.account]=(balances[tx.account]||0)+tx.amount;else if(tx.type==='Expense')balances[tx.account]=(balances[tx.account]||0)-tx.amount;else if(tx.type==='Transfer'){balances[tx.account]=(balances[tx.account]||0)-tx.amount;balances[tx.accountTo]=(balances[tx.accountTo]||0)+tx.amount;}});
+    function findExactAccountName(name) {
+      if (!name) return null;
+      var normalized = name.trim().toLowerCase();
+      for (var i = 0; i < accounts.length; i++) {
+        if (accounts[i].name.toLowerCase() === normalized) {
+          return accounts[i].name;
+        }
+      }
+      return name;
+    }
+    allTransactions.slice().reverse().forEach(function(tx){
+      var accName = findExactAccountName(tx.account);
+      var accToName = findExactAccountName(tx.accountTo);
+      if(tx.type==='Income') {
+        if (accName) balances[accName]=(balances[accName]||0)+tx.amount;
+      } else if(tx.type==='Expense') {
+        if (accName) balances[accName]=(balances[accName]||0)-tx.amount;
+      } else if(tx.type==='Transfer'){
+        if (accName) balances[accName]=(balances[accName]||0)-tx.amount;
+        if (accToName) balances[accToName]=(balances[accToName]||0)+tx.amount;
+      }
+    });
     var netWorth=0; accounts.forEach(function(acc){if(acc.showOnDashboard) netWorth+=balances[acc.name]||0;});
     var monthStartStr=currentYear+'-'+String(currentMonth).padStart(2,'0')+'-01';
     var monthTxs=allTransactions.filter(function(tx){return tx.date>=monthStartStr;});
@@ -524,7 +572,24 @@ var DB_API = {
     var streak=0,checkDate=new Date(now);for(var i=0;i<uniqueDates.length&&i<365;i++){var dateStr=checkDate.toISOString().slice(0,10);if(uniqueDates.includes(dateStr)){streak++;checkDate.setDate(checkDate.getDate()-1);}else break;}
     var runningBalances={}; accounts.forEach(function(acc){runningBalances[acc.name]=acc.initialBalance;});
     var sortedTxs=allTransactions.slice().reverse(),monthlyNW={};
-    sortedTxs.forEach(function(tx){if(tx.type==='Income')runningBalances[tx.account]=(runningBalances[tx.account]||0)+tx.amount;else if(tx.type==='Expense')runningBalances[tx.account]=(runningBalances[tx.account]||0)-tx.amount;else if(tx.type==='Transfer'){runningBalances[tx.account]=(runningBalances[tx.account]||0)-tx.amount;runningBalances[tx.accountTo]=(runningBalances[tx.accountTo]||0)+tx.amount;}var mKey=tx.date?tx.date.substring(0,7):'';if(mKey){var nw=0;accounts.forEach(function(acc){if(acc.showOnDashboard)nw+=runningBalances[acc.name]||0;});monthlyNW[mKey]=nw;}});
+    sortedTxs.forEach(function(tx){
+      var accName = findExactAccountName(tx.account);
+      var accToName = findExactAccountName(tx.accountTo);
+      if(tx.type==='Income') {
+        if (accName) runningBalances[accName]=(runningBalances[accName]||0)+tx.amount;
+      } else if(tx.type==='Expense') {
+        if (accName) runningBalances[accName]=(runningBalances[accName]||0)-tx.amount;
+      } else if(tx.type==='Transfer') {
+        if (accName) runningBalances[accName]=(runningBalances[accName]||0)-tx.amount;
+        if (accToName) runningBalances[accToName]=(runningBalances[accToName]||0)+tx.amount;
+      }
+      var mKey=tx.date?tx.date.substring(0,7):'';
+      if(mKey){
+        var nw=0;
+        accounts.forEach(function(acc){if(acc.showOnDashboard)nw+=runningBalances[acc.name]||0;});
+        monthlyNW[mKey]=nw;
+      }
+    });
     var nwValues=Object.values(monthlyNW),isNetWorthHighest=nwValues.length>0&&netWorth>=Math.max.apply(null,nwValues);
     var budgetMetMonths=0;for(var i=1;i<=6;i++){var m=new Date(currentYear,currentMonth-1-i,1);var h=monthlyHistory.find(function(mh){return mh.month===m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0');});if(h&&h.saving>=0)budgetMetMonths++;}
     return{currentMonth:currentMonth,currentYear:currentYear,dayOfMonth:dayOfMonth,daysInMonth:daysInMonth,netWorth:netWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,savingRate:savingRate,prevIncome:prevIncome,prevExpense:prevExpense,prevSaving:prevSaving,prevSavingRate:prevSavingRate,budgetAnalysis:budgetAnalysis,spendingByCategory:spendingByCategory,monthlyHistory:monthlyHistory,investmentData:investmentData,prediction:{income:predictedIncome,expense:predictedExpense,saving:predictedSaving,netWorth:predictedNetWorth},streak:streak,isNetWorthHighest:isNetWorthHighest,budgetMetMonths:budgetMetMonths};
