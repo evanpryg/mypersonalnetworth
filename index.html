@@ -4245,11 +4245,10 @@ select.form-input:focus {
     })();
   </script>
 
-  <script>
-<!-- SUPABASE CONNECTION & APPS SCRIPT COMPATIBILITY LAYER -->
+  <!-- supabaseClient CONNECTION & APPS SCRIPT COMPATIBILITY LAYER -->
 <style>
-/* Supabase Setup Wizard CSS */
-.supabase-setup-overlay {
+/* supabaseClient Setup Wizard CSS */
+.supabaseClient-setup-overlay {
   position: fixed;
   top: 0; left: 0; width: 100vw; height: 100vh;
   background: #09090b;
@@ -4260,7 +4259,7 @@ select.form-input:focus {
   justify-content: center;
   font-family: 'Inter', sans-serif;
 }
-.supabase-setup-overlay.hidden {
+.supabaseClient-setup-overlay.hidden {
   display: none !important;
 }
 .setup-wizard-card {
@@ -4355,23 +4354,23 @@ select.form-input:focus {
 </style>
 
 <!-- Wizard markup will be injected at page load -->
-<div id="supabaseSetupOverlay" class="supabase-setup-overlay hidden">
+<div id="supabaseSetupOverlay" class="supabaseClient-setup-overlay hidden">
   <div class="setup-wizard-card">
     <div class="setup-header">
       <div class="setup-logo">⚡</div>
-      <h2 class="setup-title">Supabase Database Setup</h2>
+      <h2 class="setup-title">supabaseClient Database Setup</h2>
       <p class="setup-desc">
-        To migrate from Google Sheets to Supabase, enter your Supabase credentials. 
+        To migrate from Google Sheets to supabaseClient, enter your supabaseClient credentials. 
         Your keys are saved in your browser's local storage and never uploaded to any server.
       </p>
     </div>
     <form onsubmit="saveSupabaseWizard(event)">
       <div class="setup-form-group">
-        <label class="setup-label">Supabase Project URL</label>
-        <input type="url" id="wizardSupabaseUrl" class="setup-input" placeholder="https://your-project.supabase.co" required>
+        <label class="setup-label">supabaseClient Project URL</label>
+        <input type="url" id="wizardSupabaseUrl" class="setup-input" placeholder="https://your-project.supabaseClient.co" required>
       </div>
       <div class="setup-form-group">
-        <label class="setup-label">Supabase Anon Key</label>
+        <label class="setup-label">supabaseClient Anon Key</label>
         <input type="password" id="wizardSupabaseKey" class="setup-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." required>
       </div>
       <button type="submit" class="setup-btn">Connect &amp; Sync App</button>
@@ -4382,14 +4381,14 @@ select.form-input:focus {
 
 <script>
 // ====================================================================
-// CONFIG CONFIGURATION MANUAL (MANUAL SUPABASE SETUP)
+// CONFIG CONFIGURATION MANUAL (MANUAL supabaseClient SETUP)
 // ====================================================================
-// Paste your Supabase credentials here to connect your database directly:
-const HARDCODED_SUPABASE_URL = ""; // e.g. "https://vycpefzdpsfsiczdlvbg.supabase.co"
+// Paste your supabaseClient credentials here to connect your database directly:
+const HARDCODED_SUPABASE_URL = ""; // e.g. "https://vycpefzdpsfsiczdlvbg.supabaseClient.co"
 const HARDCODED_SUPABASE_KEY = ""; // e.g. "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5Y3BlZnpkcHNmc2ljemRsdmJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxODcsImV4cCI6MjA5ODQ1MDE4N30.upr6L-vw0cr0vAlS_m6pGMbZHtNswKQTwJDWY4KoB-I"
 // ====================================================================
 
-let supabase = null;
+let supabaseClient = null;
 
 function getSupabaseCredentials() {
   const url = HARDCODED_SUPABASE_URL || localStorage.getItem('supabase_url');
@@ -4496,10 +4495,10 @@ function formatTimestampForClient_(value) {
   return `${y}-${m}-${dateStr} ${h}:${mi}:${s}`;
 }
 
-// 1. Get raw rows from Supabase (auto-mapped to frontend keys)
+// 1. Get raw rows from supabaseClient (auto-mapped to frontend keys)
 async function getRows_(tableName) {
-  if (!supabase) throw new Error("Supabase is not initialized.");
-  const { data, error } = await supabase.from(tableName.toLowerCase()).select('*');
+  if (!supabaseClient) throw new Error("supabaseClient is not initialized.");
+  const { data, error } = await supabaseClient.from(tableName.toLowerCase()).select('*');
   if (error) {
     console.error(`Error reading ${tableName}:`, error);
     throw error;
@@ -4547,7 +4546,7 @@ const DB_API = {
       return { success: false, message: `${value} already exists in ${key}.` };
     }
     
-    const { error } = await supabase.from('settings').insert(mapRowToDb({ Key: key, Value: value }));
+    const { error } = await supabaseClient.from('settings').insert(mapRowToDb({ Key: key, Value: value }));
     if (error) throw error;
     return { success: true, message: `${value} added to ${key}.` };
   },
@@ -4579,7 +4578,7 @@ const DB_API = {
 
     const targets = await getRows_('targets');
     if (targets.length === 0) {
-      const { error } = await supabase.from('targets').insert(mapRowToDb({
+      const { error } = await supabaseClient.from('targets').insert(mapRowToDb({
         TargetID: 'T001',
         TargetName: targetName,
         TargetAmount: targetAmount,
@@ -4589,7 +4588,7 @@ const DB_API = {
       }));
       if (error) throw error;
     } else {
-      const { error } = await supabase.from('targets').update(mapRowToDb({
+      const { error } = await supabaseClient.from('targets').update(mapRowToDb({
         TargetName: targetName,
         TargetAmount: targetAmount,
         TargetCurrency: targetCurrency,
@@ -4624,7 +4623,7 @@ const DB_API = {
 
     if (!platform || !sector || !asset) throw new Error('Platform, Sector, and Asset are required.');
 
-    const { error } = await supabase.from('portfolio').upsert(mapRowToDb({
+    const { error } = await supabaseClient.from('portfolio').upsert(mapRowToDb({
       Platform: platform,
       Sector: sector,
       Asset: asset,
@@ -4672,10 +4671,10 @@ const DB_API = {
     if (Math.abs(total - 100) > 0.01) throw new Error(`Total allocation must be 100%. Current total is ${total}%.`);
 
     // Truncate and replace
-    const { error: delError } = await supabase.from('allocation_targets').delete().neq('sector', '');
+    const { error: delError } = await supabaseClient.from('allocation_targets').delete().neq('sector', '');
     if (delError) throw delError;
 
-    const { error: insError } = await supabase.from('allocation_targets').insert(cleanedItems.map(item => mapRowToDb({
+    const { error: insError } = await supabaseClient.from('allocation_targets').insert(cleanedItems.map(item => mapRowToDb({
       Sector: item.sector,
       TargetPercent: item.targetPercent
     })));
@@ -4870,7 +4869,7 @@ const DB_API = {
       asset = getCashAssetName_(platform);
     }
 
-    const { error } = await supabase.from('transactions').insert(mapRowToDb({
+    const { error } = await supabaseClient.from('transactions').insert(mapRowToDb({
       Date: payload.date,
       Platform: platform,
       Sector: sector,
@@ -4901,7 +4900,7 @@ const DB_API = {
     }
 
     const todayStr = new Date().toISOString().slice(0, 10);
-    const { error } = await supabase.from('transactions').insert(mapRowToDb({
+    const { error } = await supabaseClient.from('transactions').insert(mapRowToDb({
       Date: todayStr,
       Platform: platform,
       Sector: 'Cash',
@@ -4933,7 +4932,7 @@ const DB_API = {
     const raw = await getRows_('transactions');
     const transactions = raw
       .map(row => ({
-        rowNumber: row.id, // Supabase id serves as rowNumber
+        rowNumber: row.id, // supabaseClient id serves as rowNumber
         timestamp: formatTimestampForClient_(row.Timestamp),
         date: formatDateForClient_(row.Date),
         platform: row.Platform || '',
@@ -4952,7 +4951,7 @@ const DB_API = {
   },
 
   async deleteTransaction(rowNumber) {
-    const { error } = await supabase.from('transactions').update({ status: 'Deleted' }).eq('id', rowNumber);
+    const { error } = await supabaseClient.from('transactions').update({ status: 'Deleted' }).eq('id', rowNumber);
     if (error) throw error;
     return { success: true, message: 'Transaction deleted successfully.' };
   },
@@ -4977,7 +4976,7 @@ const DB_API = {
 
   async mmAddAccount(payload) {
     const id = 'ACC_' + Date.now();
-    const { error } = await supabase.from('mm_accounts').insert(mapRowToDb({
+    const { error } = await supabaseClient.from('mm_accounts').insert(mapRowToDb({
       AccountID: id,
       Name: normalize_(payload.name),
       Icon: normalize_(payload.icon) || '💳',
@@ -4998,13 +4997,13 @@ const DB_API = {
     if (payload.order !== undefined) updatePayload.Order = toNumber_(payload.order);
     if (payload.showOnDashboard !== undefined) updatePayload.ShowOnDashboard = payload.showOnDashboard ? 'true' : 'false';
 
-    const { error } = await supabase.from('mm_accounts').update(mapRowToDb(updatePayload)).eq('accountid', payload.id);
+    const { error } = await supabaseClient.from('mm_accounts').update(mapRowToDb(updatePayload)).eq('accountid', payload.id);
     if (error) throw error;
     return { success: true, message: 'Account updated.' };
   },
 
   async mmDeleteAccount(accountId) {
-    const { error } = await supabase.from('mm_accounts').update({ status: 'Deleted' }).eq('accountid', accountId);
+    const { error } = await supabaseClient.from('mm_accounts').update({ status: 'Deleted' }).eq('accountid', accountId);
     if (error) throw error;
     return { success: true, message: 'Account deleted.' };
   },
@@ -5022,7 +5021,7 @@ const DB_API = {
   },
 
   async mmAddCategory(payload) {
-    const { error } = await supabase.from('mm_categories').insert(mapRowToDb({
+    const { error } = await supabaseClient.from('mm_categories').insert(mapRowToDb({
       Type: normalize_(payload.type),
       Category: normalize_(payload.category),
       Subcategory: normalize_(payload.subcategory) || '',
@@ -5033,7 +5032,7 @@ const DB_API = {
   },
 
   async mmDeleteCategory(payload) {
-    const { error } = await supabase.from('mm_categories').update({ status: 'Deleted' })
+    const { error } = await supabaseClient.from('mm_categories').update({ status: 'Deleted' })
       .eq('type', normalize_(payload.type))
       .eq('category', normalize_(payload.category))
       .eq('subcategory', normalize_(payload.subcategory || ''));
@@ -5065,7 +5064,7 @@ const DB_API = {
     const total = items.reduce((s, i) => s + toNumber_(i.percent), 0);
     if (Math.abs(total - 100) > 0.01) throw new Error(`Total must be 100%. Current: ${total}%`);
 
-    const { error: delError } = await supabase.from('mm_allocation').delete().neq('category', '');
+    const { error: delError } = await supabaseClient.from('mm_allocation').delete().neq('category', '');
     if (delError) throw delError;
 
     const values = items.map(i => mapRowToDb({
@@ -5076,7 +5075,7 @@ const DB_API = {
     }));
 
     if (values.length > 0) {
-      const { error: insError } = await supabase.from('mm_allocation').insert(values);
+      const { error: insError } = await supabaseClient.from('mm_allocation').insert(values);
       if (insError) throw insError;
     }
     return { success: true, message: 'Allocation saved.' };
@@ -5090,7 +5089,7 @@ const DB_API = {
     const amount = toNumber_(payload.amount);
     const category = (type === 'Transfer' && accountTo.startsWith('Invest:')) ? 'Invest' : normalize_(payload.category) || '';
 
-    const { error } = await supabase.from('mm_transactions').insert(mapRowToDb({
+    const { error } = await supabaseClient.from('mm_transactions').insert(mapRowToDb({
       Date: payload.date,
       Type: type,
       Account: account,
@@ -5135,13 +5134,13 @@ const DB_API = {
   },
 
   async mmDeleteTransaction(rowNumber) {
-    const { error } = await supabase.from('mm_transactions').delete().eq('id', rowNumber);
+    const { error } = await supabaseClient.from('mm_transactions').delete().eq('id', rowNumber);
     if (error) throw error;
     return { success: true, message: 'Transaction deleted.' };
   },
 
   async mmUpdateTransaction(payload) {
-    const { error } = await supabase.from('mm_transactions').update(mapRowToDb({
+    const { error } = await supabaseClient.from('mm_transactions').update(mapRowToDb({
       Date: payload.date,
       Type: normalize_(payload.type),
       Account: normalize_(payload.account),
@@ -5167,7 +5166,7 @@ const DB_API = {
     }
 
     return filtered.map(r => ({
-      rowNumber: r.id, // Supabase id serves as rowNumber
+      rowNumber: r.id, // supabaseClient id serves as rowNumber
       timestamp: formatTimestampForClient_(r.Timestamp),
       date: formatDateForClient_(r.Date),
       type: normalize_(r.Type),
@@ -5586,7 +5585,7 @@ const DB_API = {
     }).filter(r => r.platform && r.transactiontype && r.amountidr > 0);
 
     if (inserts.length > 0) {
-      const { error } = await supabase.from('transactions').insert(inserts);
+      const { error } = await supabaseClient.from('transactions').insert(inserts);
       if (error) throw error;
     }
     return { success: true, message: `Import berhasil: ${inserts.length} transaksi investasi ditambahkan.`, imported: inserts.length };
@@ -5594,18 +5593,18 @@ const DB_API = {
 
   async investDeleteData(target) {
     if (target === 'transactions') {
-      await supabase.from('transactions').delete().neq('id', 0);
+      await supabaseClient.from('transactions').delete().neq('id', 0);
     } else if (target === 'portfolio') {
-      await supabase.from('portfolio').delete().neq('platform', '');
+      await supabaseClient.from('portfolio').delete().neq('platform', '');
     } else if (target === 'settings') {
-      await supabase.from('settings').delete().neq('id', 0);
-      await supabase.from('allocation_targets').delete().neq('sector', '');
+      await supabaseClient.from('settings').delete().neq('id', 0);
+      await supabaseClient.from('allocation_targets').delete().neq('sector', '');
     } else if (target === 'all') {
-      await supabase.from('transactions').delete().neq('id', 0);
-      await supabase.from('portfolio').delete().neq('platform', '');
-      await supabase.from('settings').delete().neq('id', 0);
-      await supabase.from('allocation_targets').delete().neq('sector', '');
-      await supabase.from('targets').delete().neq('targetid', '');
+      await supabaseClient.from('transactions').delete().neq('id', 0);
+      await supabaseClient.from('portfolio').delete().neq('platform', '');
+      await supabaseClient.from('settings').delete().neq('id', 0);
+      await supabaseClient.from('allocation_targets').delete().neq('sector', '');
+      await supabaseClient.from('targets').delete().neq('targetid', '');
     } else {
       return { success: false, message: 'Target tidak valid.' };
     }
@@ -5668,7 +5667,7 @@ const DB_API = {
     })).filter(r => r.type && r.amount > 0);
 
     if (inserts.length > 0) {
-      const { error } = await supabase.from('mm_transactions').insert(inserts);
+      const { error } = await supabaseClient.from('mm_transactions').insert(inserts);
       if (error) throw error;
     }
     return { success: true, message: `Import berhasil: ${inserts.length} transaksi ditambahkan.`, imported: inserts.length };
@@ -5676,16 +5675,16 @@ const DB_API = {
 
   async mmDeleteData(target) {
     if (target === 'transactions') {
-      await supabase.from('mm_transactions').delete().neq('id', 0);
+      await supabaseClient.from('mm_transactions').delete().neq('id', 0);
     } else if (target === 'accounts') {
-      await supabase.from('mm_accounts').delete().neq('accountid', '');
+      await supabaseClient.from('mm_accounts').delete().neq('accountid', '');
     } else if (target === 'categories') {
-      await supabase.from('mm_categories').delete().neq('id', 0);
+      await supabaseClient.from('mm_categories').delete().neq('id', 0);
     } else if (target === 'all') {
-      await supabase.from('mm_transactions').delete().neq('id', 0);
-      await supabase.from('mm_accounts').delete().neq('accountid', '');
-      await supabase.from('mm_categories').delete().neq('id', 0);
-      await supabase.from('mm_allocation').delete().neq('category', '');
+      await supabaseClient.from('mm_transactions').delete().neq('id', 0);
+      await supabaseClient.from('mm_accounts').delete().neq('accountid', '');
+      await supabaseClient.from('mm_categories').delete().neq('id', 0);
+      await supabaseClient.from('mm_allocation').delete().neq('category', '');
     } else {
       return { success: false, message: 'Target tidak valid.' };
     }
@@ -5694,9 +5693,9 @@ const DB_API = {
 
   async testConnection() {
     try {
-      const { data, error } = await supabase.from('targets').select('*').limit(1);
+      const { data, error } = await supabaseClient.from('targets').select('*').limit(1);
       if (error) throw error;
-      return { success: true, message: 'Koneksi database Supabase berhasil!' };
+      return { success: true, message: 'Koneksi database supabaseClient berhasil!' };
     } catch (e) {
       return { success: false, message: 'Koneksi gagal: ' + e.message };
     }
@@ -5729,7 +5728,7 @@ const runnerProxyHandler = {
     return async (...args) => {
       try {
         if (!DB_API[methodName]) {
-          throw new Error(`Google Apps Script function "${methodName}" is not implemented in the Supabase adapter.`);
+          throw new Error(`Google Apps Script function "${methodName}" is not implemented in the supabaseClient adapter.`);
         }
         const result = await DB_API[methodName](...args);
         if (runner.successCb) runner.successCb(result);
@@ -5773,14 +5772,14 @@ window.google = {
   }
 };
 
-// 3. Supabase Credentials Manager
+// 3. supabaseClient Credentials Manager
 function initSupabaseClient(isFirstTime) {
   const creds = getSupabaseCredentials();
   const url = creds.url;
   const key = creds.key;
   
   if (url && key) {
-    supabase = window.supabase.createClient(url, key);
+    supabaseClient = window.supabase.createClient(url, key);
     document.getElementById('supabaseSetupOverlay').classList.add('hidden');
     
     // Automatically trigger app load if it's the first setup, or if hardcoded variables exist and app is not yet initialized
@@ -5828,7 +5827,7 @@ async function saveSupabaseWizard(event) {
   }
 }
 
-// 4. Supabase UI Settings Page injection
+// 4. supabaseClient UI Settings Page injection
 function saveSupabaseSettingsForm(event) {
   event.preventDefault();
   const url = document.getElementById('supabaseSettingsUrl').value.trim();
@@ -5836,21 +5835,21 @@ function saveSupabaseSettingsForm(event) {
   
   localStorage.setItem('supabase_url', url);
   localStorage.setItem('supabase_key', key);
-  showToast('Supabase settings saved! Reloading...', 'success');
+  showToast('supabaseClient settings saved! Reloading...', 'success');
   setTimeout(() => {
     window.location.reload();
   }, 1000);
 }
 
 function resetSupabaseSettings() {
-  if (confirm('Apakah Anda yakin ingin memutuskan koneksi database? Data tidak akan hilang di Supabase, tapi Anda harus memasukkan URL & Anon Key lagi.')) {
+  if (confirm('Apakah Anda yakin ingin memutuskan koneksi database? Data tidak akan hilang di supabaseClient, tapi Anda harus memasukkan URL & Anon Key lagi.')) {
     localStorage.removeItem('supabase_url');
     localStorage.removeItem('supabase_key');
     window.location.reload();
   }
 }
 
-// Injects Supabase Settings Card into settings page
+// Injects supabaseClient Settings Card into settings page
 function injectSupabaseSettingsCard() {
   const settingsPage = document.getElementById('settingsPage');
   if (!settingsPage) return;
@@ -5859,23 +5858,23 @@ function injectSupabaseSettingsCard() {
   const currentKey = localStorage.getItem('supabase_key') || '';
   
   const cardHtml = `
-    <!-- Supabase Connection Config Card -->
+    <!-- supabaseClient Connection Config Card -->
     <section class="panel-card">
       <button class="panel-toggle" onclick="togglePanel('supabaseSettingsPanel')">
         <div>
           <p class="panel-eyebrow">Database</p>
-          <h3 class="panel-title">Supabase connection</h3>
+          <h3 class="panel-title">supabaseClient connection</h3>
         </div>
         <strong class="panel-chevron" id="supabaseSettingsChevron">↓</strong>
       </button>
       <div id="supabaseSettingsPanel" class="panel-body hidden">
         <form class="stack-form" onsubmit="saveSupabaseSettingsForm(event)" style="display:flex;flex-direction:column;gap:12px;">
           <label class="form-label" style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;">
-            Supabase URL
-            <input type="url" id="supabaseSettingsUrl" class="form-input" value="${currentUrl}" required placeholder="https://yourproject.supabase.co" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:#fff;">
+            supabaseClient URL
+            <input type="url" id="supabaseSettingsUrl" class="form-input" value="${currentUrl}" required placeholder="https://yourproject.supabaseClient.co" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:#fff;">
           </label>
           <label class="form-label" style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;">
-            Supabase Anon Key
+            supabaseClient Anon Key
             <input type="password" id="supabaseSettingsKey" class="form-input" value="${currentKey}" required placeholder="Anon Key" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:#fff;">
           </label>
           <div style="display:flex;gap:8px;margin-top:8px;">
@@ -5906,7 +5905,6 @@ if (document.readyState === 'loading') {
 }
 </script>
 
-</script>
   <script>
   function startAppIfConfigured() {
     const creds = typeof getSupabaseCredentials === 'function' 
