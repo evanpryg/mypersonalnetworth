@@ -133,7 +133,21 @@
 </div>
 
 <script>
+// ====================================================================
+// CONFIG CONFIGURATION MANUAL (MANUAL SUPABASE SETUP)
+// ====================================================================
+// Paste your Supabase credentials here to connect your database directly:
+const HARDCODED_SUPABASE_URL = ""; // e.g. "https://vycpefzdpsfsiczdlvbg.supabase.co"
+const HARDCODED_SUPABASE_KEY = ""; // e.g. "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5Y3BlZnpkcHNmc2ljemRsdmJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxODcsImV4cCI6MjA5ODQ1MDE4N30.upr6L-vw0cr0vAlS_m6pGMbZHtNswKQTwJDWY4KoB-I"
+// ====================================================================
+
 let supabase = null;
+
+function getSupabaseCredentials() {
+  const url = HARDCODED_SUPABASE_URL || localStorage.getItem('supabase_url');
+  const key = HARDCODED_SUPABASE_KEY || localStorage.getItem('supabase_key');
+  return { url, key };
+}
 
 // Case-insensitive key mapper dictionaries to bridge PostgreSQL and frontend logic
 const KEY_MAP = {
@@ -1513,15 +1527,17 @@ window.google = {
 
 // 3. Supabase Credentials Manager
 function initSupabaseClient(isFirstTime) {
-  const url = localStorage.getItem('supabase_url');
-  const key = localStorage.getItem('supabase_key');
+  const creds = getSupabaseCredentials();
+  const url = creds.url;
+  const key = creds.key;
   
   if (url && key) {
     supabase = window.supabase.createClient(url, key);
     document.getElementById('supabaseSetupOverlay').classList.add('hidden');
     
-    // Automatically trigger app load once supabase is ready only if it's the first time setup
-    if (isFirstTime) {
+    // Automatically trigger app load if it's the first setup, or if hardcoded variables exist and app is not yet initialized
+    const hasLocalStorage = localStorage.getItem('supabase_url') && localStorage.getItem('supabase_key');
+    if (isFirstTime || (!hasLocalStorage && HARDCODED_SUPABASE_URL && HARDCODED_SUPABASE_KEY)) {
       setTimeout(() => {
         if (typeof initApp === 'function') initApp();
       }, 100);
@@ -1631,8 +1647,13 @@ function injectSupabaseSettingsCard() {
 }
 
 // Initial bootstrapper
-window.addEventListener('DOMContentLoaded', () => {
+function bootstrapDb() {
   initSupabaseClient(false);
   setTimeout(injectSupabaseSettingsCard, 300);
-});
+}
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', bootstrapDb);
+} else {
+  bootstrapDb();
+}
 </script>

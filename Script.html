@@ -1,9 +1,17 @@
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    if (localStorage.getItem('supabase_url') && localStorage.getItem('supabase_key')) {
+  function startAppIfConfigured() {
+    const creds = typeof getSupabaseCredentials === 'function' 
+      ? getSupabaseCredentials() 
+      : { url: localStorage.getItem('supabase_url'), key: localStorage.getItem('supabase_key') };
+    if (creds.url && creds.key) {
       initApp();
     }
-  });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startAppIfConfigured);
+  } else {
+    startAppIfConfigured();
+  }
 
   let APP_SETTINGS = {};
   let ASSET_OPTIONS = [];
@@ -13,6 +21,9 @@
   let AMOUNTS_HIDDEN = localStorage.getItem('amountsHidden') === 'true';
 
   function initApp() {
+    if (window.appInitialized) return;
+    window.appInitialized = true;
+
     // Initialize Lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
