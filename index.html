@@ -4246,129 +4246,6 @@ select.form-input:focus {
   </script>
 
   <!-- SUPABASE CONNECTION & APPS SCRIPT COMPATIBILITY LAYER -->
-<style>
-/* Supabase Setup Wizard CSS */
-.supabase-setup-overlay {
-  position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
-  background: #09090b;
-  color: #fafafa;
-  z-index: 99999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Inter', sans-serif;
-}
-.supabase-setup-overlay.hidden {
-  display: none !important;
-}
-.setup-wizard-card {
-  width: 100%;
-  max-width: 440px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 32px 24px;
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-}
-.setup-header {
-  margin-bottom: 24px;
-  text-align: center;
-}
-.setup-logo {
-  font-size: 28px;
-  margin-bottom: 12px;
-}
-.setup-title {
-  font-size: 20px;
-  font-weight: 800;
-  color: #fff;
-  margin-bottom: 8px;
-}
-.setup-desc {
-  font-size: 12px;
-  color: #a1a1aa;
-  line-height: 1.5;
-}
-.setup-form-group {
-  margin-bottom: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.setup-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #a1a1aa;
-}
-.setup-input {
-  width: 100%;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px;
-  padding: 10px 14px;
-  color: #fff;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-.setup-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  background: rgba(255,255,255,0.06);
-}
-.setup-btn {
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  width: 100%;
-  margin-top: 10px;
-  transition: background 0.2s;
-}
-.setup-btn:hover {
-  background: #1d4ed8;
-}
-.setup-status {
-  margin-top: 14px;
-  font-size: 12px;
-  text-align: center;
-  min-height: 18px;
-}
-.setup-status.success { color: #10b981; }
-.setup-status.error { color: #f43f5e; }
-</style>
-
-<!-- Wizard overlay (starts hidden, shown only if no credentials found) -->
-<div id="supabaseSetupOverlay" class="supabase-setup-overlay hidden">
-  <div class="setup-wizard-card">
-    <div class="setup-header">
-      <div class="setup-logo">⚡</div>
-      <h2 class="setup-title">Supabase Database Setup</h2>
-      <p class="setup-desc">
-        Masukkan kredensial Supabase Anda untuk menghubungkan database.
-        Data disimpan di browser Anda dan tidak pernah diunggah ke server manapun.
-      </p>
-    </div>
-    <form onsubmit="saveSupabaseWizard(event)">
-      <div class="setup-form-group">
-        <label class="setup-label">Supabase Project URL</label>
-        <input type="url" id="wizardSupabaseUrl" class="setup-input" placeholder="https://your-project.supabase.co" required>
-      </div>
-      <div class="setup-form-group">
-        <label class="setup-label">Supabase Anon Key</label>
-        <input type="password" id="wizardSupabaseKey" class="setup-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." required>
-      </div>
-      <button type="submit" class="setup-btn">Connect &amp; Sync App</button>
-      <div id="wizardStatus" class="setup-status"></div>
-    </form>
-  </div>
-</div>
 
 <script>
 // ====================================================================
@@ -5005,41 +4882,11 @@ function initSupabaseClient() {
   var creds = getSupabaseCredentials();
   if (creds.url && creds.key) {
     _sb = window.supabase.createClient(creds.url, creds.key);
-    var overlay = document.getElementById('supabaseSetupOverlay');
-    if (overlay) overlay.classList.add('hidden');
+    window.supabaseConnected = true;
     return true;
-  } else {
-    var overlay = document.getElementById('supabaseSetupOverlay');
-    if (overlay) overlay.classList.remove('hidden');
-    return false;
   }
-}
-
-async function saveSupabaseWizard(event) {
-  event.preventDefault();
-  var url = document.getElementById('wizardSupabaseUrl').value.trim();
-  var key = document.getElementById('wizardSupabaseKey').value.trim();
-  var statusEl = document.getElementById('wizardStatus');
-  statusEl.textContent = 'Menghubungkan ke database...';
-  statusEl.className = 'setup-status';
-  try {
-    var tempSb = window.supabase.createClient(url, key);
-    var result = await tempSb.from('targets').select('*').limit(1);
-    if (result.error) throw result.error;
-    safeStorage.setItem('supabase_url', url);
-    safeStorage.setItem('supabase_key', key);
-    statusEl.textContent = 'Koneksi sukses! Memuat data...';
-    statusEl.className = 'setup-status success';
-    setTimeout(function() {
-      _sb = tempSb;
-      var overlay = document.getElementById('supabaseSetupOverlay');
-      if (overlay) overlay.classList.add('hidden');
-      if (typeof initApp === 'function') initApp();
-    }, 1000);
-  } catch (err) {
-    statusEl.textContent = 'Gagal terhubung: ' + (err.message || 'Periksa URL / Anon Key.');
-    statusEl.className = 'setup-status error';
-  }
+  window.supabaseConnected = false;
+  return false;
 }
 
 function saveSupabaseSettingsForm(event) {
@@ -5073,9 +4920,9 @@ function injectSupabaseSettingsCard() {
 // BOOTSTRAPPER — runs immediately
 (function() {
   function boot() {
-    var connected = initSupabaseClient();
+    initSupabaseClient();
     setTimeout(injectSupabaseSettingsCard, 300);
-    if (connected && typeof initApp === 'function') {
+    if (typeof initApp === 'function') {
       initApp();
     }
   }
@@ -5108,16 +4955,18 @@ function injectSupabaseSettingsCard() {
     setTodayDefaults();
     setupAssetPickerListeners();
     setupMoneyInputs();
-    loadSettings();
-    loadAssetOptions();
-    if (typeof loadAllocationTargets === 'function') {
-      loadAllocationTargets();
-    }
-    loadDashboard();
-    // History loads lazily when user visits the page
+    if (window.supabaseConnected) {
+      loadSettings();
+      loadAssetOptions();
+      if (typeof loadAllocationTargets === 'function') {
+        loadAllocationTargets();
+      }
+      loadDashboard();
+      // History loads lazily when user visits the page
 
-    // Load Money Management on startup (default workspace)
-    if (typeof mmLoadDashboard === 'function') mmLoadDashboard();
+      // Load Money Management on startup (default workspace)
+      if (typeof mmLoadDashboard === 'function') mmLoadDashboard();
+    }
 
     // Apply global eye visibility state
     applyGlobalVisibility();
@@ -5505,6 +5354,11 @@ function injectSupabaseSettingsCard() {
 
   /* === DATA LOADING === */
   function loadDashboard(skipIfCached) {
+    if (!window.supabaseConnected) {
+      const container = document.getElementById('allocationFocusList');
+      if (container) container.innerHTML = '<div class="empty-state">Database is not connected. Configure connection in Settings.</div>';
+      return;
+    }
     // If skipIfCached is true and we have data, just re-render from cache
     if (skipIfCached && LATEST_DASHBOARD_DATA) {
       renderDashboard(LATEST_DASHBOARD_DATA);
@@ -5549,6 +5403,11 @@ function injectSupabaseSettingsCard() {
   }
 
   function loadHistory() {
+    if (!window.supabaseConnected) {
+      HISTORY_DATA = { transactions: [] };
+      renderHistory();
+      return;
+    }
     google.script.run
       .withSuccessHandler(data => {
         HISTORY_DATA = data || { transactions: [] };
@@ -6766,6 +6625,11 @@ function mmUpdateIncomeSubcategories(category) {
 
 /* === DASHBOARD === */
 function mmLoadDashboard(skipIfCached) {
+  if (!window.supabaseConnected) {
+    const container = document.getElementById('mmAccountsList');
+    if (container) container.innerHTML = '<div class="empty-state">Database is not connected. Configure connection in Settings.</div>';
+    return;
+  }
   // If skipIfCached is true and we have data, just re-render from cache
   if (skipIfCached && MM_DASHBOARD) {
     mmRenderDashboard(MM_DASHBOARD);
@@ -8603,6 +8467,11 @@ let INSIGHT_DATA = null;
 let INSIGHT_LOADED = false;
 
 function loadFinancialInsight() {
+  if (!window.supabaseConnected) {
+    const container = document.getElementById('insightContent');
+    if (container) container.innerHTML = '<div class="insight-error"><p>Database is not connected. Configure connection in Settings.</p></div>';
+    return;
+  }
   if (INSIGHT_LOADED && INSIGHT_DATA) {
     renderFinancialInsight(INSIGHT_DATA);
     return;
