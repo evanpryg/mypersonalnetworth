@@ -1,0 +1,1924 @@
+<script>
+/* ============================================================
+   MONEY MANAGEMENT â€” Frontend JavaScript
+   ============================================================ */
+
+let MM_DASHBOARD = null;
+let MM_ACCOUNTS = [];
+let MM_CATEGORIES = [];
+let MM_ALLOCATION = [];
+let MM_CAL_YEAR = new Date().getFullYear();
+let MM_CAL_MONTH = new Date().getMonth() + 1;
+let MM_HIST_YEAR = new Date().getFullYear();
+let MM_HIST_MONTH = new Date().getMonth() + 1;
+let mmHistoryChart = null;
+
+/* === PAGE NAVIGATION === */
+function mmShowPage(pageId) {
+  document.querySelectorAll('#moneyWorkspace .page').forEach(p => p.classList.remove('active-page'));
+  const page = document.getElementById(pageId);
+  if (page) page.classList.add('active-page');
+  document.querySelectorAll('#mmBottomTabs .tab-item').forEach(b => b.classList.remove('active'));
+  const active = document.querySelector(`#mmBottomTabs .tab-item[data-page="${pageId}"]`);
+  if (active) active.classList.add('active');
+
+  // Only load data if not cached
+  if (pageId === 'mmDashboardPage') mmLoadDashboard(true);
+  if (pageId === 'mmHistoryPage' && !document.getElementById('mmHistoryAllTime').innerHTML.trim()) mmLoadHistory();
+  if (pageId === 'mmCalendarPage' && !document.getElementById('mmCalendarGrid').children.length) mmLoadCalendar(MM_CAL_YEAR, MM_CAL_MONTH);
+  if (pageId === 'mmSettingsPage' && !document.getElementById('mmSettingsAccountsList').innerHTML.includes('mm-settings-acc-row')) mmLoadSettings();
+  if (pageId === 'mmInsightPage') loadFinancialInsight();
+}
+
+/* === FAB === */
+function mmToggleFab() {
+  const btn = document.getElementById('mmFabBtn');
+  const menu = document.getElementById('mmFabMenu');
+  const overlay = document.getElementById('mmFabOverlay');
+  const isOpen = btn.classList.contains('open');
+  btn.classList.toggle('open');
+  menu.classList.toggle('open');
+  overlay.classList.toggle('hidden', isOpen);
+}
+
+/* Old mmShowActionSheet, mmCloseActionSheet, mmCloseActionSheetBackdrop
+   are now in Script_TxInput.html */
+
+/* === DROPDOWNS === */
+function mmPopulateDropdowns() {
+  const accountOpts = MM_ACCOUNTS.map(a => `<option value="${escapeHtml(a.name)}">${a.icon} ${escapeHtml(a.name)}</option>`).join('');
+  const selectHtml = '<option value="">Select...</option>' + accountOpts;
+
+  ['mmIncomeAccount', 'mmExpenseAccount', 'mmTransferFrom', 'mmTransferTo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = selectHtml;
+  });
+
+  // Income categories â€” de-duplicate by category name
+  const incomeCats = [...new Set(
+    MM_CATEGORIES.filter(c => c.type === 'Income').map(c => c.category)
+  )];
+  const incomeEl = document.getElementById('mmIncomeCategory');
+  if (incomeEl) {
+    incomeEl.innerHTML = '<option value="">None</option>' +
+      incomeCats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  }
+
+  // Expense main categories (allocation categories)
+  const expEl = document.getElementById('mmExpenseCategory');
+  if (expEl) {
+    const allocCats = MM_ALLOCATION.map(a => a.category);
+    expEl.innerHTML = '<option value="">Select...</option>' +
+      allocCats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  }
+}
+
+function mmUpdateSubcategories(category) {
+  const subEl = document.getElementById('mmExpenseSubcategory');
+  if (!subEl) return;
+  const subs = MM_CATEGORIES
+    .filter(c => c.type === 'Expense' && c.category === category && c.subcategory)
+    .map(c => c.subcategory);
+  subEl.innerHTML = '<option value="">None</option>' +
+    subs.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+}
+
+function mmUpdateIncomeSubcategories(category) {
+  const subEl = document.getElementById('mmIncomeSubcategory');
+  if (!subEl) return;
+  const subs = MM_CATEGORIES
+    .filter(c => c.type === 'Income' && c.category === category && c.subcategory)
+    .map(c => c.subcategory);
+  subEl.innerHTML = '<option value="">None</option>' +
+    subs.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+}
+
+/* === DASHBOARD === */
+function mmLoadDashboard(skipIfCached) {
+  // If skipIfCached is true and we have data, just re-render from cache
+  if (skipIfCached && MM_DASHBOARD) {
+    mmRenderDashboard(MM_DASHBOARD);
+    return;
+  }
+
+  // Mark insight and history as stale since data is being refreshed
+  if (typeof INSIGHT_LOADED !== 'undefined') INSIGHT_LOADED = false;
+  MM_ALLTIME_CACHE = null;
+  MM_MONTH_CACHE = {};
+
+  const container = document.getElementById('mmAccountsList');
+  if (container) container.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
+
+  google.script.run
+    .withSuccessHandler(data => {
+      MM_DASHBOARD = data;
+      MM_ACCOUNTS = data.accounts || [];
+      MM_ALLOCATION = data.allocation || [];
+      mmRenderDashboard(data);
+    })
+    .withFailureHandler(err => showToast(err.message || 'Failed to load dashboard.', 'error'))
+    .mmGetDashboard();
+
+  // Load categories (lightweight, needed for dropdowns)
+  if (!MM_CATEGORIES.length) {
+    google.script.run
+      .withSuccessHandler(cats => { MM_CATEGORIES = cats || []; })
+      .withFailureHandler(() => {})
+      .mmGetCategories();
+  }
+}
+
+function mmRenderDashboard(data) {
+  // Net worth
+  setText('mmNetWorthValue', mmFormatIDR(data.netWorth));
+  setText('mmTotalIncome', mmFormatIDR(data.totalIncome));
+  setText('mmTotalExpense', mmFormatIDR(data.totalExpense));
+  setText('mmTotalSaving', mmFormatIDR(data.saving));
+
+  // Color saving
+  const savingEl = document.getElementById('mmTotalSaving');
+  if (savingEl) {
+    savingEl.style.color = data.saving >= 0 ? 'var(--success)' : 'var(--error)';
+  }
+
+  // Accounts
+  const accContainer = document.getElementById('mmAccountsList');
+  if (accContainer) {
+    if (!data.accounts.length) {
+      accContainer.innerHTML = '<div class="empty-state">No accounts yet. Add one in Settings.</div>';
+    } else {
+      accContainer.innerHTML = data.accounts
+        .filter(a => a.showOnDashboard)
+        .map(a => `
+          <div class="mm-account-row-mini" onclick="mmShowAccountTransactions('${escapeHtml(a.name)}')">
+            <span>${escapeHtml(a.name)}</span>
+            <strong>${mmFormatIDR(a.balance)}</strong>
+          </div>
+        `).join('');
+    }
+  }
+
+  // Allocation cards
+  const allocContainer = document.getElementById('mmAllocationCards');
+  if (allocContainer) {
+    if (!data.allocationCards.length) {
+      allocContainer.innerHTML = '<div class="empty-state">No allocation data yet.</div>';
+    } else {
+      allocContainer.innerHTML = data.allocationCards.map(card => {
+        const progressPct = Math.round(card.progress * 100);
+        const isOver = card.spent > card.target && card.target > 0;
+        return `
+          <div class="mm-alloc-card" onclick="mmShowCategoryDetail('${escapeHtml(card.category)}')">
+            <div class="mm-alloc-header">
+              <span class="cat-name">${escapeHtml(card.category)}</span>
+              <span class="cat-percent">${card.percent}%</span>
+            </div>
+            <div class="mm-alloc-bar">
+              <div class="mm-alloc-fill ${isOver ? 'warning' : ''}" style="width:${Math.min(progressPct, 100)}%"></div>
+            </div>
+            <div class="mm-alloc-meta">
+              <span>${mmFormatIDR(card.spent)} spent</span>
+              <span>of ${mmFormatIDR(card.target)}</span>
+            </div>
+          </div>`;
+      }).join('');
+    }
+  }
+
+  // Render chart and transactions
+  mmRenderChart('expense');
+  mmRenderDashboardTransactions();
+}
+
+/* === CHART === */
+let mmApexChart = null;
+let mmChartActiveIndex = -1;
+let mmCurrentChartType = 'expense';
+
+function mmRenderChart(type) {
+  mmCurrentChartType = type;
+  mmChartActiveIndex = -1;
+
+  const donutEl = document.getElementById('mmChartDonut');
+  const statsEl = document.getElementById('chartMiniStats');
+  const listEl = document.getElementById('mmChartCategoryList');
+  if (!donutEl || !statsEl || !listEl) return;
+
+  // Update tab active state
+  const panelCard = donutEl.closest('.panel-card');
+  const tabs = panelCard.querySelectorAll('.tab-btn');
+  tabs.forEach(t => t.classList.remove('active'));
+  tabs.forEach(t => { if (t.textContent.toLowerCase().includes(type)) t.classList.add('active'); });
+
+  if (!MM_DASHBOARD) {
+    donutEl.innerHTML = '<div class="empty-state">No data yet.</div>';
+    statsEl.innerHTML = '';
+    listEl.innerHTML = '';
+    return;
+  }
+
+  const colors = ['#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#f97316', '#8b5cf6', '#ef4444', '#14b8a6', '#a855f7', '#06b6d4'];
+  let entries = [];
+  let total = 0;
+
+  if (type === 'expense') {
+    const cards = (MM_DASHBOARD.allocationCards || []).filter(c => c.spent > 0).sort((a, b) => b.spent - a.spent);
+    total = cards.reduce((s, c) => s + c.spent, 0);
+    entries = cards.map((c, i) => ({ name: c.category, amount: c.spent, color: mmCategoryColor(c.category) || colors[i % colors.length] }));
+  } else {
+    const txs = (MM_DASHBOARD && MM_DASHBOARD.monthTransactions) || [];
+    const catMap = {};
+    txs.forEach(tx => {
+      if (tx.type === 'Income') {
+        const cat = tx.category || 'Other';
+        catMap[cat] = (catMap[cat] || 0) + tx.amount;
+      }
+    });
+    const sorted = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+    total = sorted.reduce((s, e) => s + e[1], 0);
+    entries = sorted.map(([name, amount], i) => ({ name, amount, color: colors[i % colors.length] }));
+  }
+
+  if (total <= 0) {
+    donutEl.innerHTML = '<div class="empty-state">No data this month.</div>';
+    statsEl.innerHTML = '';
+    listEl.innerHTML = '';
+    return;
+  }
+
+  // Mini stats
+  const txCount = (MM_DASHBOARD.monthTransactions || []).filter(tx => tx.type === (type === 'expense' ? 'Expense' : 'Income')).length;
+  const dayOfMonth = new Date().getDate();
+  const dailyAvg = dayOfMonth > 0 ? total / dayOfMonth : 0;
+
+  statsEl.innerHTML = `
+    <div class="chart-mini-stat">
+      <div class="chart-mini-stat-icon"><i data-lucide="wallet" class="mini-stat-lucide"></i></div>
+      <div class="chart-mini-stat-value">${mmFormatIDR(total)}</div>
+      <div class="chart-mini-stat-label">Total ${type}</div>
+    </div>
+    <div class="chart-mini-stat">
+      <div class="chart-mini-stat-icon"><i data-lucide="receipt" class="mini-stat-lucide"></i></div>
+      <div class="chart-mini-stat-value">${txCount}</div>
+      <div class="chart-mini-stat-label">Transaksi</div>
+    </div>
+    <div class="chart-mini-stat">
+      <div class="chart-mini-stat-icon"><i data-lucide="calendar-days" class="mini-stat-lucide"></i></div>
+      <div class="chart-mini-stat-value">${mmFormatIDR(dailyAvg)}</div>
+      <div class="chart-mini-stat-label">Per Hari</div>
+    </div>`;
+
+  // Re-init Lucide for dynamically added icons
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  // Render ApexCharts donut
+  mmRenderDonut(entries, total, type);
+
+  // Render category list
+  mmRenderCategoryList(entries, total);
+}
+
+function mmRenderDonut(entries, total, type) {
+  const donutEl = document.getElementById('mmChartDonut');
+
+  // Destroy old chart
+  if (mmApexChart) {
+    mmApexChart.destroy();
+    mmApexChart = null;
+  }
+
+  donutEl.innerHTML = '';
+
+  const series = entries.map(e => e.amount);
+  const labels = entries.map(e => e.name);
+  const chartColors = entries.map(e => e.color);
+
+  // Calculate change vs previous (simple: use prevExpense/prevIncome from insight data if available)
+  let changeHtml = '';
+  // We'll show total in center
+
+  const options = {
+    series: series,
+    chart: {
+      type: 'donut',
+      height: 220,
+      background: 'transparent',
+      animations: {
+        enabled: true,
+        easing: 'easeinout',
+        speed: 800,
+        animateGradually: { enabled: true, delay: 100 }
+      },
+      events: {
+        dataPointSelection: function(event, chartContext, config) {
+          const idx = config.dataPointIndex;
+          mmHighlightCategory(idx);
+        }
+      }
+    },
+    colors: chartColors,
+    labels: labels,
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '68%',
+          labels: {
+            show: true,
+            name: {
+              show: true,
+              fontSize: '10px',
+              fontFamily: 'Inter',
+              fontWeight: 600,
+              color: '#a1a1aa',
+              offsetY: -8
+            },
+            value: {
+              show: true,
+              fontSize: '16px',
+              fontFamily: 'Inter',
+              fontWeight: 800,
+              color: '#fafafa',
+              offsetY: 4,
+              formatter: function(val) {
+                if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return 'â€¢â€¢â€¢â€¢â€¢â€¢';
+                return 'Rp' + Number(val).toLocaleString('id-ID');
+              }
+            },
+            total: {
+              show: true,
+              showAlways: true,
+              label: type === 'expense' ? 'Total Expense' : 'Total Income',
+              fontSize: '10px',
+              fontFamily: 'Inter',
+              fontWeight: 600,
+              color: '#a1a1aa',
+              formatter: function(w) {
+                const t = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return 'â€¢â€¢â€¢â€¢â€¢â€¢';
+                return 'Rp' + t.toLocaleString('id-ID');
+              }
+            }
+          }
+        },
+        expandOnClick: true
+      }
+    },
+    stroke: {
+      show: true,
+      width: 2,
+      colors: ['#09090b']
+    },
+    dataLabels: { enabled: false },
+    legend: { show: false },
+    tooltip: {
+      enabled: true,
+      theme: 'dark',
+      style: { fontSize: '12px', fontFamily: 'Inter' },
+      y: {
+        formatter: function(val) {
+          if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return 'â€¢â€¢â€¢â€¢â€¢â€¢';
+          return 'Rp' + Number(val).toLocaleString('id-ID');
+        }
+      }
+    },
+    states: {
+      hover: { filter: { type: 'lighten', value: 0.05 } },
+      active: { filter: { type: 'none' } }
+    },
+    responsive: [{
+      breakpoint: 380,
+      options: { chart: { height: 180 } }
+    }]
+  };
+
+  mmApexChart = new ApexCharts(donutEl, options);
+  mmApexChart.render();
+}
+
+function mmHighlightCategory(index) {
+  mmChartActiveIndex = index;
+  // Highlight category card
+  const items = document.querySelectorAll('.chart-cat-item');
+  items.forEach((item, i) => {
+    item.classList.toggle('active', i === index);
+  });
+}
+
+function mmSelectCategoryFromList(index) {
+  mmChartActiveIndex = index;
+
+  // Toggle ApexCharts selection
+  if (mmApexChart) {
+    mmApexChart.toggleDataPointSelection(index);
+  }
+
+  // Highlight card
+  const items = document.querySelectorAll('.chart-cat-item');
+  items.forEach((item, i) => {
+    item.classList.toggle('active', i === index);
+  });
+}
+
+function mmRenderCategoryList(entries, total) {
+  const listEl = document.getElementById('mmChartCategoryList');
+  if (!listEl) return;
+
+  listEl.innerHTML = entries.map((entry, i) => {
+    const pct = ((entry.amount / total) * 100).toFixed(1);
+    const icon = mmCategoryEmoji(entry.name);
+    return `
+      <div class="chart-cat-item" onclick="mmSelectCategoryFromList(${i});mmShowCategoryDetail('${escapeHtml(entry.name)}')">
+        <div class="chart-cat-icon" style="color:${entry.color}">${icon}</div>
+        <div class="chart-cat-info">
+          <span class="chart-cat-name">${escapeHtml(entry.name)}</span>
+          <div class="chart-cat-bar-wrap">
+            <div class="chart-cat-bar" style="width:${pct}%;background:${entry.color}"></div>
+          </div>
+        </div>
+        <div class="chart-cat-values">
+          <span class="chart-cat-amount">${mmFormatIDR(entry.amount)}</span>
+          <span class="chart-cat-pct">${pct}%</span>
+        </div>
+        <span class="chart-cat-arrow"><i data-lucide="chevron-right" style="width:14px;height:14px;"></i></span>
+      </div>`;
+  }).join('');
+
+  // Re-init Lucide for dynamic icons
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+/* === DASHBOARD TRANSACTIONS === */
+function mmRenderDashboardTransactions() {
+  const container = document.getElementById('mmDashboardTransactions');
+  if (!container) return;
+
+  const txs = (MM_DASHBOARD && MM_DASHBOARD.monthTransactions) || [];
+  if (!txs.length) {
+    container.innerHTML = '<div class="empty-state">No transactions this month.</div>';
+    return;
+  }
+
+  // Group by date
+  const grouped = {};
+  txs.forEach(tx => {
+    const dateKey = tx.date;
+    if (!grouped[dateKey]) grouped[dateKey] = { transactions: [], net: 0 };
+    grouped[dateKey].transactions.push(tx);
+    if (tx.type === 'Income') grouped[dateKey].net += tx.amount;
+    if (tx.type === 'Expense') grouped[dateKey].net -= tx.amount;
+  });
+
+  // Sort dates descending
+  const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+  // Show max 5 date groups by default
+  const showAll = container.dataset.showAll === 'true';
+  const displayDates = showAll ? sortedDates : sortedDates.slice(0, 5);
+
+  let html = displayDates.map(dateKey => {
+    const group = grouped[dateKey];
+    const dateLabel = mmFormatDate(dateKey);
+    const netColor = group.net >= 0 ? 'var(--success)' : 'var(--error)';
+    const netPrefix = group.net >= 0 ? '+' : '';
+
+    let txHtml = group.transactions.map(tx => {
+      const prefix = tx.type === 'Income' ? '+' : tx.type === 'Expense' ? '-' : '';
+      const amtColor = tx.type === 'Income' ? 'var(--success)' : tx.type === 'Expense' ? 'var(--error)' : '#60a5fa';
+      const catColor = mmCategoryColor(tx.category, tx.type);
+      const catIcon = mmCategoryEmoji(tx.category, tx.type);
+      const label = tx.notes || tx.subcategory || tx.category || tx.type;
+      const badge = tx.subcategory || tx.category || '';
+      
+      return `<div class="mm-tx-card" onclick="mmShowTxDetail(${tx.rowNumber}, '${escapeHtml(tx.type)}', '${escapeHtml(tx.account)}', '${escapeHtml(tx.accountTo || '')}', '${escapeHtml(tx.category || '')}', '${escapeHtml(tx.subcategory || '')}', ${tx.amount}, '${escapeHtml(tx.notes || '')}', '${escapeHtml(tx.date || '')}')">
+        <div class="mm-tx-card-icon" style="color:${catColor}">${catIcon}</div>
+        <div class="mm-tx-card-body">
+          <span class="mm-tx-card-title">${escapeHtml(label)}</span>
+          ${badge ? `<span class="mm-tx-card-badge">${escapeHtml(badge)}</span>` : ''}
+        </div>
+        <span class="mm-tx-card-amount" style="color:${amtColor}">${prefix}${mmFormatIDR(tx.amount)}</span>
+      </div>`;
+    }).join('');
+
+    return `
+      <div class="mm-dash-date-group">
+        <div class="mm-dash-date-header">
+          <span>${dateLabel}</span>
+          <strong style="color:${netColor}">(${netPrefix}${mmFormatIDR(Math.abs(group.net))})</strong>
+        </div>
+        ${txHtml}
+      </div>`;
+  }).join('');
+
+  if (!showAll && sortedDates.length > 5) {
+    html += `<button class="btn-ghost btn-full" style="margin-top:10px;" onclick="document.getElementById('mmDashboardTransactions').dataset.showAll='true';mmRenderDashboardTransactions();">Show all days</button>`;
+  } else if (showAll && sortedDates.length > 5) {
+    html += `<button class="btn-ghost btn-full" style="margin-top:10px;" onclick="document.getElementById('mmDashboardTransactions').dataset.showAll='false';mmRenderDashboardTransactions();">Show less</button>`;
+  }
+
+  container.innerHTML = html;
+}
+
+/* === TRANSACTION DETAIL BOTTOM SHEET === */
+function mmShowTxDetail(rowNumber, type, account, accountTo, category, subcategory, amount, notes, date) {
+  const sheet = document.getElementById('mmTxDetailSheet');
+  const content = document.getElementById('mmTxDetailContent');
+  
+  const prefix = type === 'Income' ? '+' : type === 'Expense' ? '-' : '';
+  const color = type === 'Income' ? 'var(--success)' : type === 'Expense' ? 'var(--error)' : '#60a5fa';
+  
+  let details = `<p style="font-size:12px;color:var(--text-muted);margin:4px 0;">${mmFormatDate(date)} Â· ${account}`;
+  if (type === 'Transfer' && accountTo) details += ` â†’ ${accountTo}`;
+  if (category) details += ` Â· ${category}`;
+  if (subcategory) details += ` / ${subcategory}`;
+  details += `</p>`;
+  
+  content.innerHTML = `
+    <h3 class="sheet-title">${type}</h3>
+    <p style="font-size:22px;font-weight:800;color:${color};margin:8px 0;font-variant-numeric:tabular-nums;">${prefix}${mmFormatIDR(amount)}</p>
+    ${details}
+    ${notes ? `<p style="font-size:13px;color:var(--text);margin:8px 0;">${escapeHtml(notes)}</p>` : ''}
+    <button class="btn-primary btn-full" style="margin-top:16px;" onclick="mmShowEditTx(${rowNumber}, '${escapeHtml(type)}', '${escapeHtml(account)}', '${escapeHtml(accountTo || '')}', '${escapeHtml(category || '')}', '${escapeHtml(subcategory || '')}', ${amount}, '${escapeHtml(notes || '')}', '${escapeHtml(date || '')}')">Edit Transaction</button>
+    <button class="btn-primary btn-full" style="background:var(--error);box-shadow:0 4px 16px rgba(239,68,68,0.25);margin-top:8px;" onclick="mmDeleteTxFromDetail(${rowNumber})">Delete Transaction</button>
+    <button class="btn-ghost btn-full" style="margin-top:8px;" onclick="mmCloseTxDetailDirect()">Cancel</button>
+  `;
+  
+  sheet.classList.remove('hidden');
+}
+
+function mmShowEditTx(rowNumber, type, account, accountTo, category, subcategory, amount, notes, date) {
+  const content = document.getElementById('mmTxDetailContent');
+  
+  const accountOpts = MM_ACCOUNTS.map(a => {
+    const sel = a.name === account ? 'selected' : '';
+    return `<option value="${escapeHtml(a.name)}" ${sel}>${a.icon} ${escapeHtml(a.name)}</option>`;
+  }).join('');
+
+  const accountToOpts = MM_ACCOUNTS.map(a => {
+    const sel = a.name === accountTo ? 'selected' : '';
+    return `<option value="${escapeHtml(a.name)}" ${sel}>${a.icon} ${escapeHtml(a.name)}</option>`;
+  }).join('');
+
+  let extraFields = '';
+  if (type === 'Transfer') {
+    extraFields = `
+      <label class="form-label">To Account <select name="accountTo" class="form-input"><option value="">Select...</option>${accountToOpts}</select></label>`;
+  } else {
+    const allocCats = MM_ALLOCATION.map(a => a.category);
+    const catOpts = allocCats.map(c => {
+      const sel = c === category ? 'selected' : '';
+      return `<option value="${escapeHtml(c)}" ${sel}>${escapeHtml(c)}</option>`;
+    }).join('');
+    extraFields = `
+      <label class="form-label">Category <select name="category" class="form-input"><option value="">None</option>${catOpts}</select></label>
+      <label class="form-label">Subcategory <input type="text" name="subcategory" class="form-input" value="${escapeHtml(subcategory)}" placeholder="Optional"></label>`;
+  }
+
+  content.innerHTML = `
+    <h3 class="sheet-title">Edit ${type}</h3>
+    <form id="mmEditTxForm" class="form-stack" style="margin-top:12px;" onsubmit="mmSubmitEditTx(event, ${rowNumber}, '${escapeHtml(type)}')">
+      <label class="form-label">Date <input type="date" name="date" class="form-input" value="${date}" required></label>
+      <label class="form-label">Account <select name="account" class="form-input" required><option value="">Select...</option>${accountOpts}</select></label>
+      ${extraFields}
+      <label class="form-label">Amount <input type="text" name="amount" class="form-input money-input" value="${new Intl.NumberFormat('en').format(amount)}" inputmode="decimal" required></label>
+      <label class="form-label">Notes <textarea name="notes" class="form-input" rows="2">${escapeHtml(notes)}</textarea></label>
+      <button type="submit" class="btn-primary btn-full">Save Changes</button>
+      <button type="button" class="btn-ghost btn-full" onclick="mmCloseTxDetailDirect()">Cancel</button>
+    </form>`;
+  
+  setupMoneyInputs();
+}
+
+function mmSubmitEditTx(event, rowNumber, type) {
+  event.preventDefault();
+  const form = event.target;
+  const payload = {
+    rowNumber: rowNumber,
+    date: form.date.value,
+    type: type,
+    account: form.account.value,
+    accountTo: form.accountTo ? form.accountTo.value : '',
+    category: form.category ? form.category.value : '',
+    subcategory: form.subcategory ? form.subcategory.value : '',
+    amount: parseMoneyInput(form.amount.value),
+    notes: form.notes.value
+  };
+
+  const btn = form.querySelector('button[type="submit"]');
+  setButtonLoading(btn, true, 'Saving...');
+
+  google.script.run
+    .withSuccessHandler(result => {
+      setButtonLoading(btn, false, 'Save Changes');
+      if (result && result.success) {
+        showToast('Transaction updated.', 'success');
+        mmCloseTxDetailDirect();
+        MM_DASHBOARD = null;
+        mmLoadDashboard();
+      } else { showToast('Failed.', 'error'); }
+    })
+    .withFailureHandler(err => {
+      setButtonLoading(btn, false, 'Save Changes');
+      showToast(err.message || 'Failed.', 'error');
+    })
+    .mmUpdateTransaction(payload);
+}
+
+function mmCloseTxDetail(event) {
+  if (event.target === event.currentTarget) {
+    document.getElementById('mmTxDetailSheet').classList.add('hidden');
+  }
+}
+
+function mmCloseTxDetailDirect() {
+  document.getElementById('mmTxDetailSheet').classList.add('hidden');
+}
+
+function mmDeleteTxFromDetail(rowNumber) {
+  if (!confirm('Delete this transaction?')) return;
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result && result.success) {
+        showToast('Transaction deleted.', 'success');
+        document.getElementById('mmTxDetailSheet').classList.add('hidden');
+        MM_DASHBOARD = null;
+        mmLoadDashboard();
+      } else {
+        showToast('Failed to delete.', 'error');
+      }
+    })
+    .withFailureHandler(err => showToast(err.message || 'Failed.', 'error'))
+    .mmDeleteTransaction(rowNumber);
+}
+
+/* === FORM SUBMISSIONS === */
+function mmSubmitIncome(event) {
+  event.preventDefault();
+  const form = event.target;
+  const payload = {
+    date: form.date.value,
+    type: 'Income',
+    account: form.accountId.value,
+    category: form.category.value,
+    subcategory: form.subcategory.value || '',
+    amount: parseMoneyInput(form.amount.value),
+    notes: form.notes.value
+  };
+  mmSaveTransaction(form, payload, 'Save Income');
+}
+
+function mmSubmitExpense(event) {
+  event.preventDefault();
+  const form = event.target;
+  const payload = {
+    date: form.date.value,
+    type: 'Expense',
+    account: form.accountId.value,
+    category: form.category.value,
+    subcategory: form.subcategory.value,
+    amount: parseMoneyInput(form.amount.value),
+    notes: form.notes.value
+  };
+  mmSaveTransaction(form, payload, 'Save Expense');
+}
+
+function mmSubmitTransfer(event) {
+  event.preventDefault();
+  const form = event.target;
+  const direction = document.getElementById('mmTransferDirection').value;
+  const amount = parseMoneyInput(form.amount.value);
+  
+  let payload = {
+    date: form.date.value,
+    type: 'Transfer',
+    account: '',
+    accountTo: '',
+    category: '',
+    subcategory: '',
+    amount: amount,
+    notes: form.notes.value
+  };
+
+  if (direction === 'mm-to-mm') {
+    payload.account = form.accountId.value;
+    payload.accountTo = form.accountToId.value;
+    if (payload.account === payload.accountTo) {
+      showToast('From and To must be different.', 'error');
+      return;
+    }
+  } else if (direction === 'mm-to-invest') {
+    payload.account = form.accountId.value;
+    payload.accountTo = 'Invest:' + form.accountToId.value;
+  } else if (direction === 'invest-to-mm') {
+    payload.account = 'Invest:' + form.accountId.value;
+    payload.accountTo = form.accountToId.value;
+  }
+
+  if (!payload.account || !payload.accountTo) {
+    showToast('Please fill all fields.', 'error');
+    return;
+  }
+
+  mmSaveTransaction(form, payload, 'Save Transfer');
+}
+
+function mmUpdateTransferDirection() {
+  const direction = document.getElementById('mmTransferDirection').value;
+  const fromLabel = document.getElementById('mmTransferFromLabel');
+  const toLabel = document.getElementById('mmTransferToLabel');
+  const fromSelect = document.getElementById('mmTransferFrom');
+  const toSelect = document.getElementById('mmTransferTo');
+
+  const accountOpts = MM_ACCOUNTS.map(a => `<option value="${escapeHtml(a.name)}">${a.icon} ${escapeHtml(a.name)}</option>`).join('');
+  const platformOpts = (APP_SETTINGS.Platform || []).map(p => `<option value="${escapeHtml(p)}">ðŸ“ˆ ${escapeHtml(p)}</option>`).join('');
+
+  if (direction === 'mm-to-mm') {
+    fromLabel.querySelector('span, .form-label-text')
+    fromLabel.innerHTML = 'From Account <select name="accountId" id="mmTransferFrom" class="form-input" required><option value="">Select...</option>' + accountOpts + '</select>';
+    toLabel.innerHTML = 'To Account <select name="accountToId" id="mmTransferTo" class="form-input" required><option value="">Select...</option>' + accountOpts + '</select>';
+    toLabel.style.display = 'grid';
+  } else if (direction === 'mm-to-invest') {
+    fromLabel.innerHTML = 'From Account <select name="accountId" id="mmTransferFrom" class="form-input" required><option value="">Select...</option>' + accountOpts + '</select>';
+    toLabel.innerHTML = 'To Platform <select name="accountToId" id="mmTransferTo" class="form-input" required><option value="">Select...</option>' + platformOpts + '</select>';
+    toLabel.style.display = 'grid';
+  } else if (direction === 'invest-to-mm') {
+    fromLabel.innerHTML = 'From Platform <select name="accountId" id="mmTransferFrom" class="form-input" required><option value="">Select...</option>' + platformOpts + '</select>';
+    toLabel.innerHTML = 'To Account <select name="accountToId" id="mmTransferTo" class="form-input" required><option value="">Select...</option>' + accountOpts + '</select>';
+    toLabel.style.display = 'grid';
+  }
+}
+
+function mmSaveTransaction(form, payload, btnText) {
+  const btn = form.querySelector('button[type="submit"]');
+  setButtonLoading(btn, true, 'Saving...');
+  google.script.run
+    .withSuccessHandler(result => {
+      setButtonLoading(btn, false, btnText);
+      if (result && result.success) {
+        showToast('Transaction saved.', 'success');
+        form.reset();
+        mmCloseActionSheet();
+        // Invalidate cache so next visit reloads
+        MM_DASHBOARD = null;
+        mmLoadDashboard();
+      } else {
+        showToast('Failed to save.', 'error');
+      }
+    })
+    .withFailureHandler(err => {
+      setButtonLoading(btn, false, btnText);
+      showToast(err.message || 'Failed.', 'error');
+    })
+    .mmAddTransaction(payload);
+}
+
+/* === HISTORY === */
+let MM_ALLTIME_CACHE = null;
+let MM_MONTH_CACHE = {};
+
+function mmLoadHistory() {
+  mmSwitchHistoryTab('alltime');
+}
+
+function mmSwitchHistoryTab(tab) {
+  const tabs = document.querySelectorAll('.mm-history-tabs .tab-btn');
+  tabs.forEach(t => t.classList.remove('active'));
+
+  document.querySelectorAll('.mm-history-content').forEach(c => c.style.display = 'none');
+
+  if (tab === 'alltime') {
+    tabs[0]?.classList.add('active');
+    document.getElementById('mmHistoryAllTime').style.display = 'block';
+    mmLoadAllTime();
+  } else if (tab === 'month') {
+    tabs[1]?.classList.add('active');
+    document.getElementById('mmHistoryMonth').style.display = 'block';
+    mmUpdateHistoryMonthLabel();
+    mmLoadMonthHistory();
+  } else if (tab === 'period') {
+    tabs[2]?.classList.add('active');
+    document.getElementById('mmHistoryPeriod').style.display = 'block';
+  }
+}
+
+function mmLoadAllTime() {
+  const container = document.getElementById('mmHistoryAllTime');
+
+  // Use cache if available
+  if (MM_ALLTIME_CACHE) {
+    mmRenderAllTime(MM_ALLTIME_CACHE, container);
+    return;
+  }
+
+  container.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
+  google.script.run
+    .withSuccessHandler(data => {
+      MM_ALLTIME_CACHE = data;
+      mmRenderAllTime(data, container);
+    })
+    .withFailureHandler(err => { container.innerHTML = '<div class="empty-state">Failed to load.</div>'; })
+    .mmGetAllTimeSummary();
+}
+
+function mmRenderAllTime(data, container) {
+  if (!data || !data.length) {
+    container.innerHTML = '<div class="empty-state">No transaction history yet.</div>';
+    return;
+  }
+
+  const chartData = data.slice(-12);
+  let html = `<div id="mmHistoryAreaChart" class="mm-history-chart-wrap"></div>`;
+  html += `<div class="mm-alltime-table"><div class="mm-alltime-header"><span>Month</span><span>Income</span><span>Expense</span></div>`;
+  html += [...data].reverse().map(item => {
+    const monthLabel = mmFormatMonthLabel(item.month);
+    return `<div class="mm-alltime-row"><span>${monthLabel}</span><span class="positive">${mmFormatIDR(item.income)}</span><span class="negative">${mmFormatIDR(item.expense)}</span></div>`;
+  }).join('');
+  html += '</div>';
+  container.innerHTML = html;
+
+  // ApexCharts area chart
+  if (typeof mmHistoryChart !== 'undefined' && mmHistoryChart) { mmHistoryChart.destroy(); }
+  const el = document.getElementById('mmHistoryAreaChart');
+  if (!el || typeof ApexCharts === 'undefined') return;
+
+  const options = {
+    series: [{ name: 'Income', data: chartData.map(d => d.income) }, { name: 'Expense', data: chartData.map(d => d.expense) }],
+    chart: { type: 'area', height: 200, background: 'transparent', toolbar: { show: false }, zoom: { enabled: false }, animations: { enabled: true, easing: 'easeinout', speed: 800 } },
+    colors: ['#10b981', '#ef4444'],
+    stroke: { curve: 'smooth', width: 2.5 },
+    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0, stops: [0, 100] } },
+    grid: { show: true, borderColor: 'rgba(255,255,255,0.06)', strokeDashArray: 4, xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } }, padding: { top: 10, bottom: 0 } },
+    xaxis: { categories: chartData.map(d => mmFormatMonthLabel(d.month)), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { colors: '#a1a1aa', fontSize: '10px', fontFamily: 'Inter' } } },
+    yaxis: { labels: { show: false }, max: function(max) { return max * 1.15; } },
+    markers: { size: 0, hover: { size: 5, sizeOffset: 2 } },
+    tooltip: { theme: 'dark', style: { fontSize: '12px', fontFamily: 'Inter' }, y: { formatter: function(val) { if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return 'â€¢â€¢â€¢â€¢â€¢â€¢'; return 'Rp' + Number(val).toLocaleString('id-ID'); } } },
+    legend: { show: true, position: 'top', horizontalAlign: 'center', fontSize: '11px', fontFamily: 'Inter', fontWeight: 600, labels: { colors: '#a1a1aa' }, markers: { width: 8, height: 8, radius: 4 } },
+    dataLabels: { enabled: false }
+  };
+  mmHistoryChart = new ApexCharts(el, options);
+  mmHistoryChart.render();
+}
+
+function mmUpdateHistoryMonthLabel() {
+  const label = document.getElementById('mmHistoryMonthLabel');
+  if (label) label.textContent = mmFormatMonthLabel(`${MM_HIST_YEAR}-${String(MM_HIST_MONTH).padStart(2,'0')}`);
+}
+
+function mmPrevMonth() {
+  MM_HIST_MONTH--;
+  if (MM_HIST_MONTH < 1) { MM_HIST_MONTH = 12; MM_HIST_YEAR--; }
+  mmUpdateHistoryMonthLabel();
+  mmLoadMonthHistory();
+}
+
+function mmNextMonth() {
+  MM_HIST_MONTH++;
+  if (MM_HIST_MONTH > 12) { MM_HIST_MONTH = 1; MM_HIST_YEAR++; }
+  mmUpdateHistoryMonthLabel();
+  mmLoadMonthHistory();
+}
+
+function mmLoadMonthHistory() {
+  const container = document.getElementById('mmHistoryMonthContent');
+  const cacheKey = `${MM_HIST_YEAR}-${MM_HIST_MONTH}`;
+
+  // Use cache if available
+  if (MM_MONTH_CACHE[cacheKey]) {
+    mmRenderMonth(MM_MONTH_CACHE[cacheKey], container);
+    return;
+  }
+
+  container.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
+  google.script.run
+    .withSuccessHandler(data => {
+      MM_MONTH_CACHE[cacheKey] = data;
+      mmRenderMonth(data, container);
+    })
+    .withFailureHandler(err => { container.innerHTML = '<div class="empty-state">Failed to load.</div>'; })
+    .mmGetMonthlySummary(MM_HIST_YEAR, MM_HIST_MONTH);
+}
+
+function mmRenderMonth(data, container) {
+  if (!data) {
+    container.innerHTML = '<div class="empty-state">No data.</div>';
+    return;
+  }
+  let html = `
+    <div class="mm-month-summary">
+      <div class="item"><span>Income</span><strong class="positive">${mmFormatIDR(data.totalIncome)}</strong></div>
+      <div class="item"><span>Expense</span><strong class="negative">${mmFormatIDR(data.totalExpense)}</strong></div>
+      <div class="item"><span>Saving</span><strong>${mmFormatIDR(data.saving)}</strong></div>
+    </div>`;
+  html += mmRenderTransactionList(data.transactions || []);
+  container.innerHTML = html;
+}
+
+function mmLoadPeriod() {
+  const start = document.getElementById('mmPeriodStart').value;
+  const end = document.getElementById('mmPeriodEnd').value;
+  if (!start || !end) {
+    showToast('Select start and end date.', 'error');
+    return;
+  }
+  const container = document.getElementById('mmHistoryPeriodContent');
+  container.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
+  google.script.run
+    .withSuccessHandler(data => mmRenderPeriod(data, container))
+    .withFailureHandler(err => { container.innerHTML = '<div class="empty-state">Failed to load.</div>'; })
+    .mmGetTransactions({ startDate: start, endDate: end });
+}
+
+function mmRenderPeriod(data, container) {
+  if (!data || !data.length) {
+    container.innerHTML = '<div class="empty-state">No transactions in this period.</div>';
+    return;
+  }
+  let totalIn = 0, totalOut = 0;
+  data.forEach(tx => {
+    if (tx.type === 'Income') totalIn += tx.amount;
+    if (tx.type === 'Expense') totalOut += tx.amount;
+  });
+  let html = `
+    <div class="mm-month-summary">
+      <div class="item"><span>Income</span><strong class="positive">${mmFormatIDR(totalIn)}</strong></div>
+      <div class="item"><span>Expense</span><strong class="negative">${mmFormatIDR(totalOut)}</strong></div>
+      <div class="item"><span>Net</span><strong>${mmFormatIDR(totalIn - totalOut)}</strong></div>
+    </div>`;
+  html += mmRenderTransactionList(data);
+  container.innerHTML = html;
+}
+
+function mmRenderTransactionList(transactions) {
+  if (!transactions.length) return '<div class="empty-state">No transactions.</div>';
+
+  return transactions.map(tx => {
+    let amtClass = 'income-amt';
+    let prefix = '+';
+    let subtitle = tx.account;
+
+    if (tx.type === 'Expense') {
+      amtClass = 'expense-amt';
+      prefix = '-';
+      subtitle = `${tx.account} · ${tx.category}${tx.subcategory ? ' / ' + tx.subcategory : ''}`;
+    } else if (tx.type === 'Transfer') {
+      amtClass = 'transfer-amt';
+      prefix = '';
+      subtitle = `${tx.account} → ${tx.accountTo}`;
+    } else {
+      subtitle = `${tx.account}${tx.category ? ' · ' + tx.category : ''}`;
+    }
+
+    const catColor = mmCategoryColor(tx.category, tx.type);
+    const catIcon = mmCategoryEmoji(tx.category, tx.type);
+    const dateStr = mmFormatDate(tx.date);
+
+    return `
+      <div class="mm-tx-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${escapeHtml(tx.type)}', '${escapeHtml(tx.account)}', '${escapeHtml(tx.accountTo || '')}', '${escapeHtml(tx.category || '')}', '${escapeHtml(tx.subcategory || '')}', ${tx.amount}, '${escapeHtml(tx.notes || '')}', '${escapeHtml(tx.date || '')}')">
+        <div class="mm-tx-icon" style="color:${catColor}">${catIcon}</div>
+        <div class="mm-tx-info">
+          <div class="tx-title">${escapeHtml(tx.notes || tx.type)}</div>
+          <div class="tx-sub">${dateStr} · ${subtitle}</div>
+        </div>
+        <div class="mm-tx-amount ${amtClass}">${prefix}${mmFormatIDR(tx.amount)}</div>
+      </div>`;
+  }).join('');
+}
+
+/* === CALENDAR === */
+function mmLoadCalendar(year, month) {
+  MM_CAL_YEAR = year;
+  MM_CAL_MONTH = month;
+  const label = document.getElementById('mmCalMonthLabel');
+  if (label) label.textContent = mmFormatMonthLabel(`${year}-${String(month).padStart(2,'0')}`);
+
+  const grid = document.getElementById('mmCalendarGrid');
+  grid.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
+
+  google.script.run
+    .withSuccessHandler(data => mmRenderCalendar(data))
+    .withFailureHandler(err => { grid.innerHTML = '<div class="empty-state">Failed to load.</div>'; })
+    .mmGetCalendarData(year, month);
+}
+
+function mmCalPrevMonth() {
+  MM_CAL_MONTH--;
+  if (MM_CAL_MONTH < 1) { MM_CAL_MONTH = 12; MM_CAL_YEAR--; }
+  mmLoadCalendar(MM_CAL_YEAR, MM_CAL_MONTH);
+}
+
+function mmCalNextMonth() {
+  MM_CAL_MONTH++;
+  if (MM_CAL_MONTH > 12) { MM_CAL_MONTH = 1; MM_CAL_YEAR++; }
+  mmLoadCalendar(MM_CAL_YEAR, MM_CAL_MONTH);
+}
+
+function mmFormatShort(value) {
+  const abs = Math.abs(value);
+  if (abs >= 1000000000) return (value / 1000000000).toFixed(1) + ' M';
+  if (abs >= 1000000) return (value / 1000000).toFixed(1) + ' jt';
+  if (abs >= 1000) return (value / 1000).toFixed(1) + ' rb';
+  return String(value);
+}
+
+function mmRenderCalendar(data) {
+  const grid = document.getElementById('mmCalendarGrid');
+  const detail = document.getElementById('mmCalDayDetail');
+  if (detail) detail.style.display = 'none';
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  let html = dayNames.map(d => `<div class="mm-cal-header">${d}</div>`).join('');
+
+  const firstDay = new Date(data.year, data.month - 1, 1).getDay();
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === data.year && (today.getMonth() + 1) === data.month;
+
+  // Empty cells before first day
+  for (let i = 0; i < firstDay; i++) {
+    html += '<div class="mm-cal-day empty"></div>';
+  }
+
+  for (let d = 1; d <= data.endDay; d++) {
+    const dayData = data.days[d] || { income: 0, expense: 0, transactions: [] };
+    const isToday = isCurrentMonth && today.getDate() === d;
+    const net = dayData.income - dayData.expense;
+    let netHtml = '';
+    if (net !== 0) {
+      const color = net > 0 ? 'var(--success)' : 'var(--error)';
+      const prefix = net > 0 ? '+' : '';
+      netHtml = `<span class="mm-cal-amount" style="color:${color}">${prefix}${mmFormatShort(net)}</span>`;
+    }
+
+    html += `<div class="mm-cal-day ${isToday ? 'today' : ''}" onclick="mmShowDayDetail(${d}, ${JSON.stringify(dayData).replace(/"/g, '&quot;')})">
+      <span class="mm-cal-num">${d}</span>${netHtml}
+    </div>`;
+  }
+
+  grid.innerHTML = html;
+}
+
+function mmShowDayDetail(day, dayData) {
+  const detail = document.getElementById('mmCalDayDetail');
+  if (!detail) return;
+
+  if (!dayData.transactions || !dayData.transactions.length) {
+    detail.style.display = 'block';
+    detail.innerHTML = `<p style="font-size:13px;color:var(--text-muted);margin:0;">${day} ${mmFormatMonthLabel(MM_CAL_YEAR+'-'+String(MM_CAL_MONTH).padStart(2,'0'))} â€” No transactions</p>`;
+    return;
+  }
+
+  let html = `<p style="font-size:14px;font-weight:700;color:var(--text);margin:0 0 10px;">${day} ${mmFormatMonthLabel(MM_CAL_YEAR+'-'+String(MM_CAL_MONTH).padStart(2,'0'))}</p>`;
+
+  if (dayData.income > 0) html += `<p style="font-size:12px;color:var(--success);margin:0 0 4px;">Income: ${mmFormatIDR(dayData.income)}</p>`;
+  if (dayData.expense > 0) html += `<p style="font-size:12px;color:var(--error);margin:0 0 8px;">Expense: ${mmFormatIDR(dayData.expense)}</p>`;
+
+  html += mmRenderTransactionList(dayData.transactions);
+  detail.style.display = 'block';
+  detail.innerHTML = html;
+}
+
+/* === SETTINGS === */
+function mmLoadSettings() {
+  // Load accounts
+  google.script.run
+    .withSuccessHandler(accounts => {
+      MM_ACCOUNTS = accounts || [];
+      mmRenderSettingsAccounts();
+    })
+    .withFailureHandler(() => {})
+    .mmGetAccounts();
+
+  // Load categories
+  google.script.run
+    .withSuccessHandler(cats => {
+      MM_CATEGORIES = cats || [];
+      mmRenderCategories();
+    })
+    .withFailureHandler(() => {})
+    .mmGetCategories();
+
+  // Load allocation
+  google.script.run
+    .withSuccessHandler(alloc => {
+      MM_ALLOCATION = alloc || [];
+      mmRenderAllocEditor();
+      mmRenderAllocReadOnly();
+    })
+    .withFailureHandler(() => {})
+    .mmGetAllocation();
+}
+
+function mmRenderSettingsAccounts() {
+  const container = document.getElementById('mmSettingsAccountsList');
+  if (!container) return;
+  if (!MM_ACCOUNTS.length) {
+    container.innerHTML = '<div class="empty-state">No accounts yet.</div>';
+    return;
+  }
+  container.innerHTML = MM_ACCOUNTS.map(a => `
+    <div class="mm-settings-acc-row">
+      <span class="icon">${a.icon}</span>
+      <div class="info">
+        <div class="name">${escapeHtml(a.name)}</div>
+        <div class="meta">Balance: ${mmFormatIDR(a.balance || a.initialBalance)} Â· ${a.showOnDashboard ? 'Shown' : 'Hidden'}</div>
+      </div>
+      <div class="actions">
+        <button onclick="mmShowEditAccount('${a.id}', '${escapeHtml(a.name)}', '${escapeHtml(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">âœŽ</button>
+        <button onclick="mmDeleteAccountConfirm('${a.id}')">Ã—</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function mmShowAddAccount() {
+  const title = document.getElementById('mmModalTitle');
+  const body = document.getElementById('mmModalBody');
+  title.textContent = 'Add Account';
+  body.innerHTML = `
+    <div class="form-stack">
+      <input type="hidden" name="mmModalType" value="account">
+      <label class="form-label">Name <input type="text" name="name" class="form-input" placeholder="BCA, Cash, E-wallet..." required></label>
+      <label class="form-label">Icon (emoji) <input type="text" name="icon" class="form-input" placeholder="ðŸ’³" value="ðŸ’³"></label>
+      <label class="form-label">Initial Balance <input type="text" name="initialBalance" class="form-input money-input" inputmode="decimal" placeholder="0"></label>
+      <label class="form-label">Show on Dashboard
+        <select name="showOnDashboard" class="form-input">
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </select>
+      </label>
+    </div>`;
+  openModal('mmModal');
+  setupMoneyInputs();
+}
+
+function mmDeleteAccountConfirm(accountId) {
+  if (!confirm('Delete this account?')) return;
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success) {
+        showToast('Account deleted.', 'success');
+        mmLoadSettings();
+        mmLoadDashboard();
+      }
+    })
+    .withFailureHandler(err => showToast(err.message || 'Failed.', 'error'))
+    .mmDeleteAccount(accountId);
+}
+
+function mmShowEditAccount(id, name, icon, initialBalance, showOnDashboard) {
+  const title = document.getElementById('mmModalTitle');
+  const body = document.getElementById('mmModalBody');
+  title.textContent = 'Edit Account';
+  body.innerHTML = `
+    <div class="form-stack">
+      <input type="hidden" name="mmModalType" value="editAccount">
+      <input type="hidden" name="accountId" value="${id}">
+      <label class="form-label">Name <input type="text" name="name" class="form-input" value="${escapeHtml(name)}" required></label>
+      <label class="form-label">Icon (emoji) <input type="text" name="icon" class="form-input" value="${escapeHtml(icon)}"></label>
+      <label class="form-label">Initial Balance <input type="text" name="initialBalance" class="form-input money-input" value="${new Intl.NumberFormat('en').format(initialBalance)}" inputmode="decimal"></label>
+      <label class="form-label">Show on Dashboard
+        <select name="showOnDashboard" class="form-input">
+          <option value="true" ${showOnDashboard ? 'selected' : ''}>Yes</option>
+          <option value="false" ${!showOnDashboard ? 'selected' : ''}>No</option>
+        </select>
+      </label>
+    </div>`;
+  openModal('mmModal');
+  setupMoneyInputs();
+}
+
+function mmRenderAllocReadOnly() {
+  const container = document.getElementById('mmAllocReadOnly');
+  if (!container) return;
+  if (!MM_ALLOCATION.length) {
+    container.innerHTML = '<div class="empty-state">No allocation set.</div>';
+    return;
+  }
+  container.innerHTML = MM_ALLOCATION.map(a => `
+    <div class="mm-account-row-mini">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${a.color || '#10b981'};margin-right:6px;"></span>${a.icon || 'ðŸ“Œ'} ${escapeHtml(a.category)}</span>
+      <strong>${a.percent}%</strong>
+    </div>
+  `).join('');
+}
+
+function mmToggleAllocEdit() {
+  const form = document.getElementById('mmAllocationForm');
+  const readOnly = document.getElementById('mmAllocReadOnly');
+  const editBtn = document.getElementById('mmAllocEditBtn');
+  
+  if (form.style.display === 'none') {
+    form.style.display = 'block';
+    readOnly.style.display = 'none';
+    editBtn.style.display = 'none';
+    mmRenderAllocEditor();
+  } else {
+    form.style.display = 'none';
+    readOnly.style.display = 'block';
+    editBtn.style.display = 'block';
+  }
+}
+
+function mmShowAddCategory() {
+  const title = document.getElementById('mmModalTitle');
+  const body = document.getElementById('mmModalBody');
+  title.textContent = 'Add Category';
+  const allocCats = MM_ALLOCATION.map(a => a.category);
+  body.innerHTML = `
+    <div class="form-stack">
+      <input type="hidden" name="mmModalType" value="category">
+      <label class="form-label">Type
+        <select name="type" class="form-input">
+          <option value="Expense">Expense</option>
+          <option value="Income">Income</option>
+        </select>
+      </label>
+      <label class="form-label">Category
+        <select name="category" class="form-input" id="mmModalCatSelect">
+          ${allocCats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
+          <option value="__custom__">Custom...</option>
+        </select>
+      </label>
+      <label class="form-label" id="mmModalCustomCatLabel" style="display:none;">Custom Category <input type="text" name="customCategory" class="form-input" placeholder="Category name"></label>
+      <label class="form-label">Subcategory <input type="text" name="subcategory" class="form-input" placeholder="e.g. Food, Transport..."></label>
+    </div>`;
+  openModal('mmModal');
+
+  // Listen for custom category selection
+  setTimeout(() => {
+    const sel = document.getElementById('mmModalCatSelect');
+    if (sel) sel.addEventListener('change', () => {
+      const customLabel = document.getElementById('mmModalCustomCatLabel');
+      if (customLabel) customLabel.style.display = sel.value === '__custom__' ? 'grid' : 'none';
+    });
+  }, 100);
+}
+
+function mmSubmitModal(event) {
+  event.preventDefault();
+  const form = event.target;
+  const type = form.querySelector('[name="mmModalType"]').value;
+
+  if (type === 'account') {
+    const payload = {
+      name: form.querySelector('[name="name"]').value,
+      icon: form.querySelector('[name="icon"]').value || 'ðŸ’³',
+      initialBalance: parseMoneyInput(form.querySelector('[name="initialBalance"]').value),
+      showOnDashboard: form.querySelector('[name="showOnDashboard"]').value === 'true'
+    };
+    google.script.run
+      .withSuccessHandler(result => {
+        if (result.success) {
+          showToast('Account added.', 'success');
+          closeModal('mmModal');
+          mmLoadSettings();
+          mmLoadDashboard();
+        }
+      })
+      .withFailureHandler(err => showToast(err.message || 'Failed.', 'error'))
+      .mmAddAccount(payload);
+  } else if (type === 'category') {
+    let category = form.querySelector('[name="category"]').value;
+    if (category === '__custom__') {
+      category = form.querySelector('[name="customCategory"]').value;
+    }
+    const payload = {
+      type: form.querySelector('[name="type"]').value,
+      category: category,
+      subcategory: form.querySelector('[name="subcategory"]').value
+    };
+    if (!payload.category) {
+      showToast('Category is required.', 'error');
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(result => {
+        if (result.success) {
+          showToast('Category added.', 'success');
+          closeModal('mmModal');
+          mmLoadSettings();
+        }
+      })
+      .withFailureHandler(err => showToast(err.message || 'Failed.', 'error'))
+      .mmAddCategory(payload);
+  } else if (type === 'editAccount') {
+    const payload = {
+      id: form.querySelector('[name="accountId"]').value,
+      name: form.querySelector('[name="name"]').value,
+      icon: form.querySelector('[name="icon"]').value || 'ðŸ’³',
+      initialBalance: parseMoneyInput(form.querySelector('[name="initialBalance"]').value),
+      showOnDashboard: form.querySelector('[name="showOnDashboard"]').value === 'true'
+    };
+    google.script.run
+      .withSuccessHandler(result => {
+        if (result.success) {
+          showToast('Account updated.', 'success');
+          closeModal('mmModal');
+          mmLoadSettings();
+          MM_DASHBOARD = null;
+          mmLoadDashboard();
+        }
+      })
+      .withFailureHandler(err => showToast(err.message || 'Failed.', 'error'))
+      .mmUpdateAccount(payload);
+  }
+}
+
+/* === ALLOCATION EDITOR === */
+function mmRenderAllocEditor() {
+  const container = document.getElementById('mmAllocationRows');
+  if (!container) return;
+  if (!MM_ALLOCATION.length) {
+    MM_ALLOCATION = [
+      { category: 'Living', percent: 50, icon: 'ðŸ ', color: '#10b981' },
+      { category: 'Playing', percent: 20, icon: 'ðŸŽ®', color: '#f59e0b' },
+      { category: 'Alms', percent: 10, icon: 'ðŸ¤²', color: '#ec4899' },
+      { category: 'Invest', percent: 20, icon: 'ðŸ“ˆ', color: '#3b82f6' }
+    ];
+  }
+  container.innerHTML = MM_ALLOCATION.map((item, i) => `
+    <div class="allocation-target-row" data-index="${i}">
+      <input class="mm-alloc-icon-input form-input" type="text" value="${escapeHtml(item.icon || '')}" placeholder="ðŸ " style="width:50px;text-align:center;">
+      <input class="mm-alloc-cat-input form-input" type="text" value="${escapeHtml(item.category)}" placeholder="Category">
+      <input class="mm-alloc-pct-input form-input" type="number" step="0.01" min="0" max="100" value="${item.percent}" oninput="mmUpdateAllocTotal()">
+      <input class="mm-alloc-color-input form-input" type="color" value="${item.color || '#10b981'}" style="width:40px;padding:4px;height:40px;">
+      <button type="button" class="remove-row-btn" onclick="mmRemoveAllocRow(${i})">Ã—</button>
+    </div>`).join('');
+  mmUpdateAllocTotal();
+}
+
+function mmUpdateAllocTotal() {
+  const inputs = document.querySelectorAll('.mm-alloc-pct-input');
+  let total = 0;
+  inputs.forEach(i => { total += Number(i.value) || 0; });
+  const totalEl = document.getElementById('mmAllocTotal');
+  const box = document.getElementById('mmAllocTotalBox');
+  if (totalEl) totalEl.textContent = `${total.toFixed(2)}%`;
+  if (box) {
+    box.classList.remove('good', 'bad');
+    box.classList.add(Math.abs(total - 100) <= 0.01 ? 'good' : 'bad');
+  }
+}
+
+function mmAddAllocRow() {
+  mmSyncAllocFromUI();
+  MM_ALLOCATION.push({ category: '', percent: 0, icon: 'ðŸ“Œ', color: '#64748b' });
+  mmRenderAllocEditor();
+}
+
+function mmRemoveAllocRow(index) {
+  mmSyncAllocFromUI();
+  MM_ALLOCATION.splice(index, 1);
+  mmRenderAllocEditor();
+}
+
+function mmSyncAllocFromUI() {
+  const rows = document.querySelectorAll('#mmAllocationRows .allocation-target-row');
+  MM_ALLOCATION = Array.from(rows).map(row => ({
+    category: row.querySelector('.mm-alloc-cat-input')?.value || '',
+    percent: Number(row.querySelector('.mm-alloc-pct-input')?.value) || 0,
+    icon: row.querySelector('.mm-alloc-icon-input')?.value || '',
+    color: row.querySelector('.mm-alloc-color-input')?.value || ''
+  }));
+}
+
+function mmSubmitAllocation(event) {
+  event.preventDefault();
+  mmSyncAllocFromUI();
+  const items = MM_ALLOCATION.filter(i => i.category);
+  const total = items.reduce((s, i) => s + i.percent, 0);
+  if (Math.abs(total - 100) > 0.01) {
+    showToast(`Total must be 100%. Current: ${total.toFixed(2)}%`, 'error');
+    return;
+  }
+  const btn = event.target.querySelector('button[type="submit"]');
+  setButtonLoading(btn, true, 'Saving...');
+  google.script.run
+    .withSuccessHandler(result => {
+      setButtonLoading(btn, false, 'Save');
+      if (result.success) {
+        showToast('Allocation saved.', 'success');
+        mmLoadDashboard();
+      }
+    })
+    .withFailureHandler(err => {
+      setButtonLoading(btn, false, 'Save');
+      showToast(err.message || 'Failed.', 'error');
+    })
+    .mmSaveAllocation({ items });
+}
+
+/* === CATEGORIES RENDERER === */
+function mmRenderCategories() {
+  const container = document.getElementById('mmCategoriesList');
+  if (!container) return;
+  if (!MM_CATEGORIES.length) {
+    container.innerHTML = '<div class="empty-state">No categories yet.</div>';
+    return;
+  }
+
+  // Group by type then category
+  const groups = {};
+  MM_CATEGORIES.forEach(c => {
+    const key = `${c.type} â€” ${c.category}`;
+    if (!groups[key]) groups[key] = [];
+    if (c.subcategory) groups[key].push(c.subcategory);
+  });
+
+  container.innerHTML = Object.entries(groups).map(([key, subs]) => {
+    const chips = subs.length
+      ? subs.map(s => `<span class="mm-cat-chip">${escapeHtml(s)} <button class="delete-cat" onclick="mmDeleteCat('${escapeHtml(key)}','${escapeHtml(s)}')">Ã—</button></span>`).join('')
+      : '<span style="font-size:11px;color:var(--text-muted);">No subcategories</span>';
+    return `<div class="mm-cat-group"><div class="mm-cat-group-title">${escapeHtml(key)}</div>${chips}</div>`;
+  }).join('');
+}
+
+function mmDeleteCat(groupKey, subcategory) {
+  const parts = groupKey.split(' â€” ');
+  const type = parts[0];
+  const category = parts[1];
+  if (!confirm(`Delete subcategory "${subcategory}" from ${category}?`)) return;
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success) {
+        showToast('Category deleted.', 'success');
+        mmLoadSettings();
+      }
+    })
+    .withFailureHandler(err => showToast(err.message || 'Failed.', 'error'))
+    .mmDeleteCategory({ type, category, subcategory });
+}
+
+/* === CATEGORY DETAIL BOTTOM SHEET === */
+function mmShowCategoryDetail(category) {
+  const sheet = document.getElementById('mmCategoryDetailSheet');
+  const content = document.getElementById('mmCategoryDetailContent');
+  content.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
+  sheet.classList.remove('hidden');
+
+  const now = new Date();
+  const monthStartStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+
+  google.script.run
+    .withSuccessHandler(txs => {
+      const filtered = txs.filter(tx => (tx.type === 'Expense' || tx.type === 'Income' || (tx.type === 'Transfer' && tx.category)) && tx.category === category);
+      if (!filtered.length) {
+        content.innerHTML = `<h3 class="sheet-title">${mmCategoryEmoji(category)} ${escapeHtml(category)}</h3><p class="sheet-desc">No transactions this month.</p>`;
+        return;
+      }
+
+      const total = filtered.reduce((s, tx) => s + tx.amount, 0);
+
+      // Group by subcategory
+      const subMap = {};
+      filtered.forEach(tx => {
+        const sub = tx.subcategory || 'General';
+        if (!subMap[sub]) subMap[sub] = { amount: 0, transactions: [] };
+        subMap[sub].amount += tx.amount;
+        subMap[sub].transactions.push(tx);
+      });
+
+      const subs = Object.entries(subMap).sort((a, b) => b[1].amount - a[1].amount);
+
+      let html = `<h3 class="sheet-title">${mmCategoryEmoji(category)} ${escapeHtml(category)}</h3>`;
+      html += `<p class="sheet-desc">Total: ${mmFormatIDR(total)}</p>`;
+
+      html += subs.map(([subName, data]) => {
+        const txRows = data.transactions.map(tx => `
+          <div class="mm-detail-tx-row">
+            <span>${escapeHtml(tx.notes || tx.type)} <small style="color:var(--text-muted)">${mmFormatDate(tx.date)}</small></span>
+            <strong style="color:var(--error)">${mmFormatIDR(tx.amount)}</strong>
+          </div>`).join('');
+        return `
+          <div class="mm-detail-sub-group">
+            <div class="mm-detail-sub-header">
+              <span>${escapeHtml(subName)}</span>
+              <strong>${mmFormatIDR(data.amount)}</strong>
+            </div>
+            ${txRows}
+          </div>`;
+      }).join('');
+
+      content.innerHTML = html;
+    })
+    .withFailureHandler(err => {
+      content.innerHTML = '<div class="empty-state">Failed to load detail.</div>';
+    })
+    .mmGetTransactions({ startDate: monthStartStr });
+}
+
+function mmCloseCategoryDetail(event) {
+  if (event.target === event.currentTarget) {
+    document.getElementById('mmCategoryDetailSheet').classList.add('hidden');
+  }
+}
+
+/* === ACCOUNT TRANSACTIONS DETAIL === */
+function mmShowAccountTransactions(accountName) {
+  const sheet = document.getElementById('mmCategoryDetailSheet');
+  const content = document.getElementById('mmCategoryDetailContent');
+  content.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
+  sheet.classList.remove('hidden');
+
+  // Get transactions from cache
+  const txs = (MM_DASHBOARD && MM_DASHBOARD.monthTransactions) || [];
+  const filtered = txs.filter(tx => tx.account === accountName || tx.accountTo === accountName);
+
+  if (!filtered.length) {
+    content.innerHTML = `<h3 class="sheet-title">${lucideIconSvg('wallet', 18)} ${escapeHtml(accountName)}</h3><p class="sheet-desc">No transactions this month.</p>`;
+    return;
+  }
+
+  // Calculate totals
+  let totalIn = 0, totalOut = 0;
+  filtered.forEach(tx => {
+    if (tx.type === 'Income' && tx.account === accountName) totalIn += tx.amount;
+    else if (tx.type === 'Expense' && tx.account === accountName) totalOut += tx.amount;
+    else if (tx.type === 'Transfer') {
+      if (tx.accountTo === accountName) totalIn += tx.amount;
+      if (tx.account === accountName) totalOut += tx.amount;
+    }
+  });
+
+  let html = `<h3 class="sheet-title">${lucideIconSvg('wallet', 18)} ${escapeHtml(accountName)}</h3>`;
+  html += `<div style="display:flex;gap:12px;margin:8px 0 16px;">`;
+  html += `<span style="font-size:12px;color:var(--success);">â†“ In: ${mmFormatIDR(totalIn)}</span>`;
+  html += `<span style="font-size:12px;color:var(--error);">â†‘ Out: ${mmFormatIDR(totalOut)}</span>`;
+  html += `</div>`;
+
+  // Group by date
+  const grouped = {};
+  filtered.forEach(tx => {
+    if (!grouped[tx.date]) grouped[tx.date] = [];
+    grouped[tx.date].push(tx);
+  });
+
+  const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+  html += sortedDates.map(date => {
+    const dayTxs = grouped[date];
+    const rows = dayTxs.map(tx => {
+      let prefix = '', color = 'var(--text-muted)';
+      if (tx.type === 'Income') { prefix = '+'; color = 'var(--success)'; }
+      else if (tx.type === 'Expense') { prefix = '-'; color = 'var(--error)'; }
+      else if (tx.type === 'Transfer') {
+        if (tx.accountTo === accountName) { prefix = '+'; color = 'var(--success)'; }
+        else { prefix = '-'; color = '#60a5fa'; }
+      }
+      const label = tx.notes || tx.subcategory || tx.category || tx.type;
+      const meta = tx.type === 'Transfer' ? (tx.account === accountName ? `â†’ ${tx.accountTo}` : `â† ${tx.account}`) : (tx.category || '');
+      return `
+        <div class="mm-detail-tx-row">
+          <div style="display:flex;flex-direction:column;gap:1px;">
+            <span style="font-size:12px;font-weight:600;color:var(--text);">${escapeHtml(label)}</span>
+            <span style="font-size:10px;color:var(--text-muted);">${escapeHtml(meta)}</span>
+          </div>
+          <strong style="color:${color};font-size:13px;">${prefix}${mmFormatIDR(tx.amount)}</strong>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="mm-detail-sub-group">
+        <div class="mm-detail-sub-header">
+          <span>${mmFormatDate(date)}</span>
+        </div>
+        ${rows}
+      </div>`;
+  }).join('');
+
+  content.innerHTML = html;
+}
+
+/* === CATEGORY ICON HELPER (Lucide SVG) === */
+
+// Fixed category definitions with colors
+const MM_CATEGORY_CONFIG = {
+  'Living':   { color: '#10b981', icon: 'home' },
+  'Playing':  { color: '#f59e0b', icon: 'gamepad-2' },
+  'Alms':     { color: '#ec4899', icon: 'heart-handshake' },
+  'Invest':   { color: '#3b82f6', icon: 'trending-up' },
+  'Bisyaroh': { color: '#8b5cf6', icon: 'briefcase' },
+  'Other':    { color: '#64748b', icon: 'package' }
+};
+
+function mmCategoryEmoji(category, txType) {
+  // Transfer
+  if (txType === 'Transfer' || (!category && txType !== 'Income')) {
+    return lucideIconSvg('arrow-right-left', 16);
+  }
+  // Lookup from config
+  const cfg = MM_CATEGORY_CONFIG[category];
+  if (cfg) return lucideIconSvg(cfg.icon, 16);
+  // Income generic
+  if (txType === 'Income') return lucideIconSvg('wallet', 16);
+  // Fallback
+  return lucideIconSvg('tag', 16);
+}
+
+function mmCategoryColor(category, txType) {
+  // Transfer
+  if (txType === 'Transfer' || (!category && txType !== 'Income')) return '#60a5fa';
+  // Lookup from config
+  const cfg = MM_CATEGORY_CONFIG[category];
+  if (cfg) return cfg.color;
+  // Income generic
+  if (txType === 'Income') return '#10b981';
+  // Fallback
+  return '#64748b';
+}
+
+function lucideIconSvg(name, size) {
+  size = size || 16;
+  // Predefined SVG paths for the icons we use
+  const paths = {
+    'home': '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    'gamepad-2': '<line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/>',
+    'heart-handshake': '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66"/><path d="m18 15-2-2"/><path d="m15 18-2-2"/>',
+    'trending-up': '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
+    'briefcase': '<path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/>',
+    'package': '<path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/>',
+    'wallet': '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+    'arrow-right-left': '<polyline points="21 7 3 7"/><polyline points="15 1 21 7 15 13"/><polyline points="3 17 21 17"/><polyline points="9 11 3 17 9 23"/>',
+    'tag': '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>',
+    'chevron-right': '<path d="m9 18 6-6-6-6"/>'
+  };
+
+  const inner = paths[name] || '<circle cx="12" cy="12" r="4"/>';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+}
+
+/* === FORMATTING HELPERS === */
+function mmFormatIDR(value) {
+  if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return 'â€¢â€¢â€¢â€¢â€¢â€¢';
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value) || 0);
+}
+
+function mmFormatDate(value) {
+  if (!value) return '-';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return String(value);
+  return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+}
+
+function mmFormatMonthLabel(monthStr) {
+  // monthStr: "2024-01"
+  const parts = monthStr.split('-');
+  const d = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+  return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(d);
+}
+
+/* ============================================================
+   EXPORT / IMPORT / DELETE DATA
+   ============================================================ */
+
+/* === CSV HELPERS === */
+function csvEscape(value) {
+  if (value == null) return '';
+  const str = String(value);
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
+}
+
+function csvToArray(csv) {
+  const lines = csv.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+
+  const headers = parseCsvLine(lines[0]);
+  const rows = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCsvLine(lines[i]);
+    if (values.length === 0) continue;
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h.trim()] = (values[idx] || '').trim(); });
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function parseCsvLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+/* === EXPORT === */
+function mmExportData(target) {
+  showToast('Exporting...', 'success');
+  google.script.run
+    .withSuccessHandler(data => {
+      if (target === 'transactions') {
+        downloadCsv(buildTransactionsCsv(data.transactions), 'transactions');
+      } else if (target === 'accounts') {
+        downloadCsv(buildAccountsCsv(data.accounts), 'accounts');
+      } else {
+        // Export all as separate CSVs in one zip-like approach: multiple downloads
+        downloadCsv(buildTransactionsCsv(data.transactions), 'transactions');
+        setTimeout(() => downloadCsv(buildAccountsCsv(data.accounts), 'accounts'), 300);
+        setTimeout(() => downloadCsv(buildCategoriesCsv(data.categories), 'categories'), 600);
+        setTimeout(() => downloadCsv(buildAllocationCsv(data.allocation), 'allocation'), 900);
+      }
+      showToast('Export berhasil!', 'success');
+    })
+    .withFailureHandler(err => {
+      showToast(err.message || 'Export gagal.', 'error');
+    })
+    .mmExportAllData(target);
+}
+
+function buildTransactionsCsv(rows) {
+  const headers = ['date', 'type', 'account', 'accountTo', 'category', 'subcategory', 'amount', 'notes'];
+  let csv = headers.join(',') + '\n';
+  (rows || []).forEach(r => {
+    csv += [r.date, r.type, csvEscape(r.account), csvEscape(r.accountTo), csvEscape(r.category), csvEscape(r.subcategory), r.amount, csvEscape(r.notes)].join(',') + '\n';
+  });
+  return csv;
+}
+
+function buildAccountsCsv(rows) {
+  const headers = ['name', 'icon', 'initialBalance', 'order', 'showOnDashboard', 'status'];
+  let csv = headers.join(',') + '\n';
+  (rows || []).forEach(r => {
+    csv += [csvEscape(r.name), csvEscape(r.icon), r.initialBalance, r.order, r.showOnDashboard, r.status].join(',') + '\n';
+  });
+  return csv;
+}
+
+function buildCategoriesCsv(rows) {
+  const headers = ['type', 'category', 'subcategory', 'status'];
+  let csv = headers.join(',') + '\n';
+  (rows || []).forEach(r => {
+    csv += [r.type, csvEscape(r.category), csvEscape(r.subcategory), r.status].join(',') + '\n';
+  });
+  return csv;
+}
+
+function buildAllocationCsv(rows) {
+  const headers = ['category', 'percent', 'icon', 'color'];
+  let csv = headers.join(',') + '\n';
+  (rows || []).forEach(r => {
+    csv += [csvEscape(r.category), r.percent, csvEscape(r.icon), r.color].join(',') + '\n';
+  });
+  return csv;
+}
+
+function downloadCsv(csvContent, name) {
+  const bom = '\uFEFF'; // UTF-8 BOM for Excel compatibility
+  const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${name}-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* === IMPORT === */
+function mmDownloadTemplate() {
+  const csv = 'date,type,account,accountTo,category,subcategory,amount,notes\n' +
+    '2025-01-15,Income,Bank BCA,,Salary,,5000000,Gaji Januari\n' +
+    '2025-01-16,Expense,Bank BCA,,Food,Makan Siang,50000,Warteg\n' +
+    '2025-01-17,Expense,GoPay,,Transport,,25000,Ojol ke kantor\n' +
+    '2025-01-18,Transfer,Bank BCA,GoPay,,,500000,Top up\n' +
+    '2025-01-20,Transfer,Bank BCA,Bibit,Invest,,1000000,DCA Januari\n';
+  downloadCsv(csv, 'template-transaksi');
+  showToast('Template CSV downloaded!', 'success');
+}
+
+function mmImportData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById('mmImportStatus');
+  statusEl.style.display = 'block';
+  statusEl.className = 'import-status';
+  statusEl.textContent = 'Membaca file...';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const csv = e.target.result;
+      const rows = csvToArray(csv);
+
+      if (!rows.length) {
+        statusEl.className = 'import-status error';
+        statusEl.textContent = 'File CSV kosong atau format tidak valid.';
+        event.target.value = '';
+        return;
+      }
+
+      // Validate headers
+      const firstRow = rows[0];
+      if (!firstRow.date && !firstRow.type && !firstRow.amount) {
+        statusEl.className = 'import-status error';
+        statusEl.textContent = 'Header CSV tidak valid. Pastikan ada kolom: date, type, amount.';
+        event.target.value = '';
+        return;
+      }
+
+      // Confirm
+      if (!confirm(`Import ${rows.length} transaksi dari CSV?\n\nData akan ditambahkan ke data existing.`)) {
+        statusEl.style.display = 'none';
+        event.target.value = '';
+        return;
+      }
+
+      statusEl.textContent = 'Importing...';
+
+      google.script.run
+        .withSuccessHandler(result => {
+          if (result.success) {
+            statusEl.className = 'import-status success';
+            statusEl.textContent = result.message;
+            MM_DASHBOARD = null;
+            if (typeof mmLoadDashboard === 'function') mmLoadDashboard();
+          } else {
+            statusEl.className = 'import-status error';
+            statusEl.textContent = result.message || 'Import gagal.';
+          }
+          event.target.value = '';
+        })
+        .withFailureHandler(err => {
+          statusEl.className = 'import-status error';
+          statusEl.textContent = err.message || 'Import gagal.';
+          event.target.value = '';
+        })
+        .mmImportData({ rows: rows });
+
+    } catch (err) {
+      statusEl.className = 'import-status error';
+      statusEl.textContent = 'Gagal membaca file: ' + err.message;
+      event.target.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* === DELETE DATA === */
+function mmDeleteDataPrompt(target) {
+  const labels = {
+    transactions: 'SEMUA TRANSAKSI',
+    accounts: 'SEMUA AKUN',
+    categories: 'SEMUA KATEGORI',
+    all: 'SEMUA DATA (RESET TOTAL)'
+  };
+
+  const label = labels[target] || target;
+
+  // First confirmation
+  if (!confirm(`Anda yakin ingin menghapus ${label}?\n\nTindakan ini TIDAK DAPAT dibatalkan!`)) return;
+
+  // Second confirmation for extra safety
+  const confirmText = target === 'all' ? 'HAPUS SEMUA' : 'HAPUS';
+  const userInput = prompt(`Ketik "${confirmText}" untuk konfirmasi penghapusan:`);
+
+  if (userInput !== confirmText) {
+    showToast('Penghapusan dibatalkan.', 'error');
+    return;
+  }
+
+  showToast('Menghapus data...', 'error');
+
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result.success) {
+        showToast(result.message, 'success');
+        // Reset caches and reload
+        MM_DASHBOARD = null;
+        MM_ACCOUNTS = [];
+        MM_CATEGORIES = [];
+        MM_ALLOCATION = [];
+        if (typeof mmLoadDashboard === 'function') mmLoadDashboard();
+        if (typeof mmLoadSettings === 'function') mmLoadSettings();
+      } else {
+        showToast(result.message || 'Gagal menghapus.', 'error');
+      }
+    })
+    .withFailureHandler(err => {
+      showToast(err.message || 'Gagal menghapus.', 'error');
+    })
+    .mmDeleteData(target);
+}
+
+</script>

@@ -1,0 +1,672 @@
+<script>
+/* ============================================================
+   FINANCIAL INSIGHT — Frontend JavaScript
+   ============================================================ */
+
+let INSIGHT_DATA = null;
+let INSIGHT_LOADED = false;
+
+function loadFinancialInsight() {
+  if (INSIGHT_LOADED && INSIGHT_DATA) {
+    renderFinancialInsight(INSIGHT_DATA);
+    return;
+  }
+
+  const container = document.getElementById('insightContent');
+  container.innerHTML = '<div class="insight-loading"><div class="mm-spinner"></div><p>Analyzing your finances...</p></div>';
+
+  google.script.run
+    .withSuccessHandler(data => {
+      INSIGHT_DATA = data;
+      INSIGHT_LOADED = true;
+      renderFinancialInsight(data);
+    })
+    .withFailureHandler(err => {
+      container.innerHTML = `<div class="insight-error"><p>Failed to load insight data.</p><button class="btn-primary" onclick="loadFinancialInsight()">Retry</button></div>`;
+    })
+    .mmGetFinancialInsight();
+}
+
+function refreshInsight() {
+  INSIGHT_LOADED = false;
+  INSIGHT_DATA = null;
+  loadFinancialInsight();
+}
+
+// Alias for insight rendering — uses mmFormatIDR which respects AMOUNTS_HIDDEN
+function insightIDR(value) {
+  return mmFormatIDR(value);
+}
+
+function renderFinancialInsight(data) {
+  const container = document.getElementById('insightContent');
+  let html = '';
+
+  // 1. Financial Health Score
+  html += renderHealthScore(data);
+
+  // 2. Monthly Summary
+  html += renderMonthlySummary(data);
+
+  // 3. Key Financial Insights
+  html += renderKeyInsights(data);
+
+  // 4. Budget Analysis
+  html += renderBudgetAnalysis(data);
+
+  // 5. Spending Analysis
+  html += renderSpendingAnalysis(data);
+
+  // 6. Investment Insight
+  if (data.investmentData) {
+    html += renderInvestmentInsight(data);
+  }
+
+  // 7. Cash Flow Analysis
+  html += renderCashFlowAnalysis(data);
+
+  // 8. Financial Prediction
+  html += renderPrediction(data);
+
+  // 9. Recommendations
+  html += renderRecommendations(data);
+
+  // 10. Achievements
+  html += renderAchievements(data);
+
+  // Refresh button
+  html += '<div style="text-align:center;padding:16px 0 32px;">';
+  html += '<button class="btn-ghost" onclick="refreshInsight()">↻ Refresh Analysis</button>';
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+/* === 1. FINANCIAL HEALTH SCORE === */
+function renderHealthScore(data) {
+  let score = 50; // base
+  const reasons = [];
+
+  // Saving rate contribution (max +25)
+  if (data.savingRate >= 30) { score += 25; reasons.push('Saving rate sangat baik (≥30%)'); }
+  else if (data.savingRate >= 20) { score += 18; reasons.push('Saving rate baik (≥20%)'); }
+  else if (data.savingRate >= 10) { score += 10; reasons.push('Saving rate cukup (≥10%)'); }
+  else if (data.savingRate > 0) { score += 5; reasons.push('Saving rate masih rendah (<10%)'); }
+  else { score -= 10; reasons.push('Saving rate negatif — pengeluaran melebihi pemasukan'); }
+
+  // Budget compliance (max +15)
+  const overBudget = data.budgetAnalysis.filter(b => b.progress > 1 && !b.isSaving);
+  const investOverTarget = data.budgetAnalysis.filter(b => b.progress > 1 && b.isSaving);
+  if (overBudget.length === 0 && data.budgetAnalysis.length > 0) {
+    score += 15; reasons.push('Semua budget terkendali');
+  } else if (overBudget.length <= 1) {
+    score += 8; reasons.push(`${overBudget.length} kategori budget terlampaui`);
+  } else {
+    score -= 5; reasons.push(`${overBudget.length} kategori budget terlampaui`);
+  }
+  if (investOverTarget.length > 0) {
+    score += 5; reasons.push('Investasi melebihi target — excellent!');
+  }
+
+  // Cash flow trend (max +10)
+  const history = data.monthlyHistory;
+  if (history.length >= 2) {
+    const recentSavings = history.slice(-3).filter(h => h.saving > 0);
+    if (recentSavings.length === 3) { score += 10; reasons.push('Cash flow positif 3 bulan berturut-turut'); }
+    else if (recentSavings.length >= 2) { score += 5; reasons.push('Cash flow umumnya positif'); }
+  }
+
+  // Investment (max +10)
+  if (data.investmentData) {
+    if (data.investmentData.returnPercent > 0) { score += 5; reasons.push('Investasi menghasilkan profit'); }
+    if (data.investmentData.portfolio.length >= 3) { score += 5; reasons.push('Portofolio terdiversifikasi'); }
+  }
+
+  score = Math.max(0, Math.min(100, score));
+
+  let status, statusColor, statusIcon;
+  if (score >= 80) { status = 'Excellent'; statusColor = '#10b981'; statusIcon = '🏆'; }
+  else if (score >= 60) { status = 'Good'; statusColor = '#06b6d4'; statusIcon = '👍'; }
+  else if (score >= 40) { status = 'Fair'; statusColor = '#f59e0b'; statusIcon = '⚡'; }
+  else { status = 'Poor'; statusColor = '#ef4444'; statusIcon = '⚠️'; }
+
+  const circumference = 2 * Math.PI * 54;
+  const offset = circumference - (score / 100) * circumference;
+
+  return `
+    <div class="insight-card insight-health-card">
+      <div class="insight-health-visual">
+        <svg class="health-ring" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+          <circle cx="60" cy="60" r="54" fill="none" stroke="${statusColor}" stroke-width="8"
+            stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"
+            stroke-linecap="round" transform="rotate(-90 60 60)"/>
+        </svg>
+        <div class="health-score-center">
+          <span class="health-score-num">${score}</span>
+          <span class="health-score-label">/ 100</span>
+        </div>
+      </div>
+      <div class="insight-health-info">
+        <span class="health-status-badge" style="background:${statusColor}20;color:${statusColor}">
+          ${statusIcon} ${status}
+        </span>
+        <ul class="health-reasons">
+          ${reasons.map(r => `<li>${r}</li>`).join('')}
+        </ul>
+      </div>
+    </div>`;
+}
+
+/* === 2. MONTHLY SUMMARY === */
+function renderMonthlySummary(data) {
+  function changeIndicator(current, previous) {
+    if (previous === 0) return '';
+    const pct = ((current - previous) / Math.abs(previous) * 100).toFixed(1);
+    const isUp = current > previous;
+    const color = isUp ? 'var(--success)' : 'var(--error)';
+    const arrow = isUp ? '↑' : '↓';
+    return `<span class="insight-change" style="color:${color}">${arrow} ${Math.abs(pct)}%</span>`;
+  }
+
+  return `
+    <div class="insight-card">
+      <div class="insight-card-header">
+        <span class="insight-card-icon">📊</span>
+        <h3 class="insight-card-title">Monthly Summary</h3>
+      </div>
+      <div class="insight-summary-grid">
+        <div class="insight-summary-item">
+          <span class="insight-summary-label">Income</span>
+          <strong class="insight-summary-value" style="color:var(--success)">${insightIDR(data.totalIncome)}</strong>
+          ${changeIndicator(data.totalIncome, data.prevIncome)}
+        </div>
+        <div class="insight-summary-item">
+          <span class="insight-summary-label">Expense</span>
+          <strong class="insight-summary-value" style="color:var(--error)">${insightIDR(data.totalExpense)}</strong>
+          ${changeIndicator(data.totalExpense, data.prevExpense)}
+        </div>
+        <div class="insight-summary-item">
+          <span class="insight-summary-label">Saving</span>
+          <strong class="insight-summary-value" style="color:${data.saving >= 0 ? 'var(--success)' : 'var(--error)'}">${insightIDR(data.saving)}</strong>
+          ${changeIndicator(data.saving, data.prevSaving)}
+        </div>
+        <div class="insight-summary-item">
+          <span class="insight-summary-label">Net Worth</span>
+          <strong class="insight-summary-value">${insightIDR(data.netWorth)}</strong>
+        </div>
+        <div class="insight-summary-item">
+          <span class="insight-summary-label">Saving Rate</span>
+          <strong class="insight-summary-value" style="color:${data.savingRate >= 20 ? 'var(--success)' : 'var(--warning)'}">${data.savingRate.toFixed(1)}%</strong>
+          ${changeIndicator(data.savingRate, data.prevSavingRate)}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* === 3. KEY FINANCIAL INSIGHTS === */
+function renderKeyInsights(data) {
+  const insights = [];
+
+  // Saving rate comparison
+  if (data.prevSavingRate > 0 && data.savingRate > data.prevSavingRate) {
+    insights.push({ icon: '📈', text: `Saving rate meningkat dari ${data.prevSavingRate.toFixed(1)}% ke ${data.savingRate.toFixed(1)}%`, type: 'positive' });
+  } else if (data.prevSavingRate > 0 && data.savingRate < data.prevSavingRate) {
+    insights.push({ icon: '📉', text: `Saving rate turun dari ${data.prevSavingRate.toFixed(1)}% ke ${data.savingRate.toFixed(1)}%`, type: 'warning' });
+  }
+
+  // Category changes
+  data.budgetAnalysis.forEach(b => {
+    if (b.prevSpent > 0 && b.spent > 0) {
+      const change = ((b.spent - b.prevSpent) / b.prevSpent * 100);
+      if (b.isSaving) {
+        // Invest/Saving: going up is positive, going down is warning
+        if (change >= 15) {
+          insights.push({ icon: '🚀', text: `Investasi ${b.category} meningkat ${change.toFixed(0)}% dari bulan lalu`, type: 'positive' });
+        } else if (change <= -15) {
+          insights.push({ icon: '📉', text: `Investasi ${b.category} turun ${Math.abs(change).toFixed(0)}% dari bulan lalu`, type: 'warning' });
+        }
+      } else {
+        if (change >= 15) {
+          insights.push({ icon: '🔺', text: `Pengeluaran ${b.category} naik ${change.toFixed(0)}% dari bulan lalu`, type: 'warning' });
+        } else if (change <= -15) {
+          insights.push({ icon: '🔻', text: `Pengeluaran ${b.category} turun ${Math.abs(change).toFixed(0)}%`, type: 'positive' });
+        }
+      }
+    }
+  });
+
+  // Cash flow
+  if (data.saving > 0) {
+    insights.push({ icon: '✅', text: 'Cash flow tetap positif bulan ini', type: 'positive' });
+  } else if (data.saving < 0) {
+    insights.push({ icon: '🚨', text: 'Cash flow negatif — pengeluaran melebihi pemasukan', type: 'negative' });
+  }
+
+  // Budget warnings (only for expense categories, not saving/invest)
+  const overBudgets = data.budgetAnalysis.filter(b => b.progress > 0.9 && b.target > 0 && !b.isSaving);
+  overBudgets.forEach(b => {
+    const remaining = data.daysInMonth - data.dayOfMonth;
+    if (b.progress >= 1) {
+      insights.push({ icon: '🚫', text: `Budget ${b.category} sudah terlampaui (${(b.progress * 100).toFixed(0)}%)`, type: 'negative' });
+    } else if (b.progress >= 0.9) {
+      insights.push({ icon: '⚠️', text: `Budget ${b.category} hampir habis (${(b.progress * 100).toFixed(0)}%), sisa ${remaining} hari`, type: 'warning' });
+    }
+  });
+
+  // Invest/saving over target = positive insight
+  const investOver = data.budgetAnalysis.filter(b => b.progress >= 1 && b.target > 0 && b.isSaving);
+  investOver.forEach(b => {
+    insights.push({ icon: '🎉', text: `${b.category} melebihi target alokasi (${(b.progress * 100).toFixed(0)}%) — terus pertahankan!`, type: 'positive' });
+  });
+
+  // Investment performance
+  if (data.investmentData && data.investmentData.profitLoss > 0) {
+    insights.push({ icon: '💰', text: `Nilai investasi profit ${insightIDR(data.investmentData.profitLoss)} (${data.investmentData.returnPercent.toFixed(1)}%)`, type: 'positive' });
+  }
+
+  // Net worth highest
+  if (data.isNetWorthHighest && data.netWorth > 0) {
+    insights.push({ icon: '🎉', text: 'Net Worth mencapai nilai tertinggi sepanjang masa!', type: 'positive' });
+  }
+
+  if (insights.length === 0) return '';
+
+  return `
+    <div class="insight-card">
+      <div class="insight-card-header">
+        <span class="insight-card-icon">💡</span>
+        <h3 class="insight-card-title">Key Insights</h3>
+      </div>
+      <div class="insight-list">
+        ${insights.map(i => `
+          <div class="insight-item insight-item-${i.type}">
+            <span class="insight-item-icon">${i.icon}</span>
+            <span class="insight-item-text">${i.text}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+/* === 4. BUDGET ANALYSIS === */
+function renderBudgetAnalysis(data) {
+  if (!data.budgetAnalysis.length) return '';
+
+  const items = data.budgetAnalysis.filter(b => b.target > 0);
+  if (!items.length) return '';
+
+  const remaining = data.daysInMonth - data.dayOfMonth;
+
+  let conclusion = '';
+  const over = items.filter(b => b.progress >= 1 && !b.isSaving);
+  const nearLimit = items.filter(b => b.progress >= 0.8 && b.progress < 1 && !b.isSaving);
+  const investExceeded = items.filter(b => b.progress >= 1 && b.isSaving);
+  if (over.length > 0) {
+    conclusion = `⚠️ ${over.map(b => b.category).join(', ')} sudah melebihi budget.`;
+  } else if (nearLimit.length > 0) {
+    conclusion = `⚡ ${nearLimit.map(b => b.category).join(', ')} hampir mencapai limit, sisa ${remaining} hari.`;
+  } else {
+    conclusion = '✅ Semua budget masih terkendali.';
+  }
+  if (investExceeded.length > 0) {
+    conclusion += ` 🚀 ${investExceeded.map(b => b.category).join(', ')} melebihi target — great job!`;
+  }
+
+  return `
+    <div class="insight-card">
+      <div class="insight-card-header">
+        <span class="insight-card-icon">🎯</span>
+        <h3 class="insight-card-title">Budget Analysis</h3>
+      </div>
+      <div class="insight-budget-list">
+        ${items.map(b => {
+          const pct = Math.min(b.progress * 100, 100).toFixed(0);
+          let barColor = 'var(--success)';
+          if (b.isSaving) {
+            // Saving/Invest: over target = positive (cyan), under = normal
+            if (b.progress >= 1) barColor = 'var(--accent2)';
+            else if (b.progress >= 0.75) barColor = 'var(--success)';
+          } else {
+            // Expense: over budget = bad (red), near = warning
+            if (b.progress >= 1) barColor = 'var(--error)';
+            else if (b.progress >= 0.75) barColor = 'var(--warning)';
+          }
+          return `
+            <div class="insight-budget-item">
+              <div class="insight-budget-header">
+                <span>${b.isSaving ? '💰 ' : ''}${b.category}</span>
+                <span style="color:${barColor}">${pct}%${b.isSaving && b.progress >= 1 ? ' 🎉' : ''}</span>
+              </div>
+              <div class="insight-budget-bar">
+                <div class="insight-budget-fill" style="width:${Math.min(b.progress * 100, 100)}%;background:${barColor}"></div>
+              </div>
+              <div class="insight-budget-meta">
+                <span>${insightIDR(b.spent)}${b.isSaving ? ' invested' : ' spent'}</span>
+                <span>of ${insightIDR(b.target)}</span>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+      <p class="insight-conclusion">${conclusion}</p>
+    </div>`;
+}
+
+/* === 5. SPENDING ANALYSIS === */
+function renderSpendingAnalysis(data) {
+  if (!data.spendingByCategory.length) return '';
+
+  const top5 = data.spendingByCategory.slice(0, 5);
+  const colors = ['#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#f97316'];
+
+  // Build simple horizontal bar chart
+  const maxAmount = top5[0] ? top5[0].amount : 1;
+
+  let insight = '';
+  if (top5.length > 0 && top5[0].percent > 40) {
+    insight = `💡 Kategori ${top5[0].category} mendominasi ${top5[0].percent.toFixed(0)}% total pengeluaran.`;
+  } else if (top5.length >= 3) {
+    insight = `💡 Pengeluaran cukup terdistribusi antar ${top5.length} kategori utama.`;
+  }
+
+  return `
+    <div class="insight-card">
+      <div class="insight-card-header">
+        <span class="insight-card-icon">📦</span>
+        <h3 class="insight-card-title">Spending Analysis</h3>
+      </div>
+      <div class="insight-spending-chart">
+        ${top5.map((item, i) => `
+          <div class="insight-spending-row">
+            <div class="insight-spending-label">
+              <span class="insight-spending-dot" style="background:${colors[i]}"></span>
+              <span>${item.category}</span>
+            </div>
+            <div class="insight-spending-bar-wrap">
+              <div class="insight-spending-bar" style="width:${(item.amount / maxAmount * 100).toFixed(0)}%;background:${colors[i]}"></div>
+            </div>
+            <div class="insight-spending-values">
+              <span>${insightIDR(item.amount)}</span>
+              <small>${item.percent.toFixed(1)}%</small>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      ${insight ? `<p class="insight-conclusion">${insight}</p>` : ''}
+    </div>`;
+}
+
+/* === 6. INVESTMENT INSIGHT === */
+function renderInvestmentInsight(data) {
+  const inv = data.investmentData;
+  if (!inv) return '';
+
+  const portfolio = inv.portfolio || [];
+  const best = portfolio.length > 0 ? portfolio.reduce((a, b) => a.GrowthPercent > b.GrowthPercent ? a : b) : null;
+  const worst = portfolio.length > 0 ? portfolio.reduce((a, b) => a.GrowthPercent < b.GrowthPercent ? a : b) : null;
+
+  let rebalanceHtml = '';
+  if (inv.rebalanceSuggestions && inv.rebalanceSuggestions.length > 0) {
+    rebalanceHtml = `
+      <div class="insight-rebalance">
+        <h4 class="insight-subtitle">Rebalance Suggestions</h4>
+        ${inv.rebalanceSuggestions.slice(0, 3).map(r => `
+          <div class="insight-rebalance-item">
+            <span>${r.sector}</span>
+            <span class="insight-rebalance-amount">+${insightIDR(r.suggestedAmountIDR)}</span>
+          </div>
+        `).join('')}
+      </div>`;
+  }
+
+  return `
+    <div class="insight-card">
+      <div class="insight-card-header">
+        <span class="insight-card-icon">📈</span>
+        <h3 class="insight-card-title">Investment Insight</h3>
+      </div>
+      <div class="insight-invest-grid">
+        <div class="insight-invest-item">
+          <span>Total Value</span>
+          <strong>${insightIDR(inv.totalValue)}</strong>
+        </div>
+        <div class="insight-invest-item">
+          <span>Profit/Loss</span>
+          <strong style="color:${inv.profitLoss >= 0 ? 'var(--success)' : 'var(--error)'}">${inv.profitLoss >= 0 ? '+' : ''}${insightIDR(inv.profitLoss)}</strong>
+        </div>
+        <div class="insight-invest-item">
+          <span>Return</span>
+          <strong style="color:${inv.returnPercent >= 0 ? 'var(--success)' : 'var(--error)'}">${inv.returnPercent >= 0 ? '+' : ''}${inv.returnPercent.toFixed(2)}%</strong>
+        </div>
+      </div>
+      ${best ? `
+      <div class="insight-perf-section">
+        <div class="insight-perf-item positive">
+          <span class="perf-label">🏆 Best</span>
+          <span class="perf-asset">${best.Asset}</span>
+          <span class="perf-return" style="color:var(--success)">+${(best.GrowthPercent * 100).toFixed(1)}%</span>
+        </div>
+        ${worst && worst.Asset !== best.Asset ? `
+        <div class="insight-perf-item negative">
+          <span class="perf-label">📉 Worst</span>
+          <span class="perf-asset">${worst.Asset}</span>
+          <span class="perf-return" style="color:var(--error)">${(worst.GrowthPercent * 100).toFixed(1)}%</span>
+        </div>` : ''}
+      </div>` : ''}
+      ${rebalanceHtml}
+    </div>`;
+}
+
+/* === 7. CASH FLOW ANALYSIS === */
+function renderCashFlowAnalysis(data) {
+  const history = data.monthlyHistory;
+  if (history.length < 2) return '';
+
+  const maxVal = Math.max(...history.map(h => Math.max(h.income, h.expense)), 1);
+
+  // Trend analysis
+  const recentSavings = history.slice(-3).map(h => h.saving);
+  let trend = '';
+  if (recentSavings.every(s => s > 0)) trend = '📈 Tren cash flow positif dalam 3 bulan terakhir.';
+  else if (recentSavings[recentSavings.length - 1] < 0) trend = '⚠️ Cash flow bulan ini negatif. Perlu perhatian.';
+  else trend = '📊 Cash flow bervariasi — tetap monitor pengeluaran.';
+
+  return `
+    <div class="insight-card">
+      <div class="insight-card-header">
+        <span class="insight-card-icon">💸</span>
+        <h3 class="insight-card-title">Cash Flow Analysis</h3>
+      </div>
+      <div class="insight-cashflow-chart">
+        ${history.map(h => {
+          const incH = (h.income / maxVal * 100).toFixed(0);
+          const expH = (h.expense / maxVal * 100).toFixed(0);
+          return `
+            <div class="insight-cf-col">
+              <div class="insight-cf-bars">
+                <div class="insight-cf-bar income" style="height:${incH}%" title="Income: ${insightIDR(h.income)}"></div>
+                <div class="insight-cf-bar expense" style="height:${expH}%" title="Expense: ${insightIDR(h.expense)}"></div>
+              </div>
+              <span class="insight-cf-label">${h.label}</span>
+            </div>`;
+        }).join('')}
+      </div>
+      <div class="insight-cf-legend">
+        <span><span class="insight-cf-dot income"></span> Income</span>
+        <span><span class="insight-cf-dot expense"></span> Expense</span>
+      </div>
+      <p class="insight-conclusion">${trend}</p>
+    </div>`;
+}
+
+/* === 8. FINANCIAL PREDICTION === */
+function renderPrediction(data) {
+  if (data.dayOfMonth < 5) return ''; // Not enough data to predict
+
+  const pred = data.prediction;
+  return `
+    <div class="insight-card">
+      <div class="insight-card-header">
+        <span class="insight-card-icon">🔮</span>
+        <h3 class="insight-card-title">End-of-Month Prediction</h3>
+      </div>
+      <p class="insight-subtitle-desc">Berdasarkan pola ${data.dayOfMonth} hari berjalan:</p>
+      <div class="insight-prediction-grid">
+        <div class="insight-pred-item">
+          <span>Predicted Income</span>
+          <strong style="color:var(--success)">${insightIDR(pred.income)}</strong>
+        </div>
+        <div class="insight-pred-item">
+          <span>Predicted Expense</span>
+          <strong style="color:var(--error)">${insightIDR(pred.expense)}</strong>
+        </div>
+        <div class="insight-pred-item">
+          <span>Predicted Saving</span>
+          <strong style="color:${pred.saving >= 0 ? 'var(--success)' : 'var(--error)'}">${insightIDR(pred.saving)}</strong>
+        </div>
+        <div class="insight-pred-item">
+          <span>Predicted Net Worth</span>
+          <strong>${insightIDR(pred.netWorth)}</strong>
+        </div>
+      </div>
+      <p class="insight-note">* Prediksi berdasarkan rata-rata harian bulan berjalan</p>
+    </div>`;
+}
+
+/* === 9. RECOMMENDATIONS === */
+function renderRecommendations(data) {
+  const recs = [];
+
+  // Budget recommendations
+  data.budgetAnalysis.forEach(b => {
+    if (b.isSaving) {
+      // Invest/Saving: over target is good, under target is encouragement
+      if (b.progress >= 1 && b.target > 0) {
+        recs.push({ priority: 4, icon: '🌟', text: `${b.category} sudah melebihi target ${insightIDR(b.spent - b.target)} — pertahankan momentum ini!` });
+      } else if (b.progress < 0.5 && b.target > 0) {
+        const remaining = data.daysInMonth - data.dayOfMonth;
+        const needed = b.target - b.spent;
+        recs.push({ priority: 2, icon: '💰', text: `Tingkatkan ${b.category} — masih kurang ${insightIDR(needed)} untuk mencapai target bulan ini (${remaining} hari tersisa).` });
+      }
+    } else {
+      // Regular expense categories
+      if (b.progress >= 0.9 && b.progress < 1 && b.target > 0) {
+        const remaining = data.daysInMonth - data.dayOfMonth;
+        const dailyBudget = (b.target - b.spent) / Math.max(remaining, 1);
+        recs.push({ priority: 1, icon: '🎯', text: `Kurangi pengeluaran ${b.category} — sisa budget ${insightIDR(b.target - b.spent)} untuk ${remaining} hari (${insightIDR(dailyBudget)}/hari).` });
+      } else if (b.progress >= 1 && b.target > 0) {
+        recs.push({ priority: 0, icon: '🚫', text: `Budget ${b.category} sudah terlampaui sebesar ${insightIDR(b.spent - b.target)}. Hindari pengeluaran tambahan di kategori ini.` });
+      }
+    }
+  });
+
+  // Saving rate
+  if (data.savingRate >= 20) {
+    recs.push({ priority: 3, icon: '🌟', text: `Pertahankan saving rate ${data.savingRate.toFixed(1)}% — sudah di atas target ideal 20%.` });
+  } else if (data.savingRate >= 0) {
+    const neededCut = data.totalIncome * 0.2 - data.saving;
+    if (neededCut > 0) {
+      recs.push({ priority: 1, icon: '💪', text: `Tingkatkan saving rate ke 20% dengan mengurangi pengeluaran sebesar ${insightIDR(neededCut)}/bulan.` });
+    }
+  }
+
+  // Investment recommendations
+  if (data.investmentData) {
+    const inv = data.investmentData;
+    if (inv.rebalanceSuggestions && inv.rebalanceSuggestions.length > 0) {
+      const top = inv.rebalanceSuggestions[0];
+      recs.push({ priority: 2, icon: '⚖️', text: `Pertimbangkan tambah investasi di sektor ${top.sector} (${insightIDR(top.suggestedAmountIDR)}) untuk mendekati target alokasi.` });
+    }
+    if (inv.portfolio.length <= 2 && inv.portfolio.length > 0) {
+      recs.push({ priority: 2, icon: '🔀', text: 'Diversifikasi portofolio — saat ini terlalu terkonsentrasi pada sedikit aset.' });
+    }
+  }
+
+  // Emergency fund check (3x monthly expense)
+  const monthlyExpAvg = data.monthlyHistory.length > 0
+    ? data.monthlyHistory.reduce((s, h) => s + h.expense, 0) / data.monthlyHistory.length : 0;
+  const emergencyTarget = monthlyExpAvg * 3;
+  if (emergencyTarget > 0 && data.netWorth < emergencyTarget) {
+    recs.push({ priority: 1, icon: '🛡️', text: `Dana darurat belum mencukupi. Target minimal: ${insightIDR(emergencyTarget)} (3x rata-rata pengeluaran bulanan).` });
+  }
+
+  if (recs.length === 0) return '';
+
+  // Sort by priority (lower = more urgent)
+  recs.sort((a, b) => a.priority - b.priority);
+
+  return `
+    <div class="insight-card insight-recommendations-card">
+      <div class="insight-card-header">
+        <span class="insight-card-icon">🧠</span>
+        <h3 class="insight-card-title">Recommendations</h3>
+      </div>
+      <div class="insight-rec-list">
+        ${recs.map(r => `
+          <div class="insight-rec-item">
+            <span class="insight-rec-icon">${r.icon}</span>
+            <p class="insight-rec-text">${r.text}</p>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+/* === 10. ACHIEVEMENTS === */
+function renderAchievements(data) {
+  const achievements = [];
+
+  // Streak
+  if (data.streak >= 30) {
+    achievements.push({ icon: '🔥', title: `${data.streak} Hari Berturut-turut`, desc: 'Mencatat transaksi setiap hari selama sebulan lebih!' });
+  } else if (data.streak >= 14) {
+    achievements.push({ icon: '⚡', title: `${data.streak} Hari Berturut-turut`, desc: 'Konsisten mencatat transaksi 2 minggu lebih.' });
+  } else if (data.streak >= 7) {
+    achievements.push({ icon: '✨', title: `${data.streak} Hari Berturut-turut`, desc: 'Seminggu penuh mencatat keuangan!' });
+  }
+
+  // Saving rate target
+  if (data.savingRate >= 30) {
+    achievements.push({ icon: '💎', title: 'Super Saver', desc: `Saving rate ${data.savingRate.toFixed(0)}% — di atas 30%!` });
+  } else if (data.savingRate >= 20) {
+    achievements.push({ icon: '🎯', title: 'Target Tercapai', desc: `Saving rate ${data.savingRate.toFixed(0)}% sudah melebihi target 20%.` });
+  }
+
+  // Net worth milestone
+  if (data.isNetWorthHighest && data.netWorth > 0) {
+    achievements.push({ icon: '🏆', title: 'All-Time High', desc: 'Net Worth mencapai nilai tertinggi sepanjang masa!' });
+  }
+
+  // Budget compliance
+  if (data.budgetMetMonths >= 3) {
+    achievements.push({ icon: '🛡️', title: 'Budget Master', desc: `Cash flow positif ${data.budgetMetMonths} bulan berturut-turut.` });
+  }
+
+  // Investment profit
+  if (data.investmentData && data.investmentData.returnPercent >= 10) {
+    achievements.push({ icon: '📈', title: 'Smart Investor', desc: `Return investasi sudah mencapai ${data.investmentData.returnPercent.toFixed(1)}%.` });
+  }
+
+  if (achievements.length === 0) return '';
+
+  return `
+    <div class="insight-card">
+      <div class="insight-card-header">
+        <span class="insight-card-icon">🏅</span>
+        <h3 class="insight-card-title">Achievements</h3>
+      </div>
+      <div class="insight-achievements">
+        ${achievements.map(a => `
+          <div class="insight-achievement-item">
+            <span class="achievement-icon">${a.icon}</span>
+            <div class="achievement-info">
+              <strong>${a.title}</strong>
+              <span>${a.desc}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+</script>

@@ -1,0 +1,1581 @@
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (localStorage.getItem('supabase_url') && localStorage.getItem('supabase_key')) {
+      initApp();
+    }
+  });
+
+  let APP_SETTINGS = {};
+  let ASSET_OPTIONS = [];
+  let ALLOCATION_TARGETS = [];
+  let LATEST_DASHBOARD_DATA = null;
+  let HISTORY_DATA = { transactions: [] };
+  let AMOUNTS_HIDDEN = localStorage.getItem('amountsHidden') === 'true';
+
+  function initApp() {
+    // Initialize Lucide icons
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    setTodayDefaults();
+    setupAssetPickerListeners();
+    setupMoneyInputs();
+    loadSettings();
+    loadAssetOptions();
+    if (typeof loadAllocationTargets === 'function') {
+      loadAllocationTargets();
+    }
+    loadDashboard();
+    // History loads lazily when user visits the page
+
+    // Load Money Management on startup (default workspace)
+    if (typeof mmLoadDashboard === 'function') mmLoadDashboard();
+
+    // Apply global eye visibility state
+    applyGlobalVisibility();
+  }
+
+  /* === GLOBAL AMOUNT VISIBILITY TOGGLE === */
+  function toggleAmountVisibility() {
+    AMOUNTS_HIDDEN = !AMOUNTS_HIDDEN;
+    localStorage.setItem('amountsHidden', AMOUNTS_HIDDEN);
+    applyGlobalVisibility();
+    refreshAllAmounts();
+  }
+
+  function applyGlobalVisibility() {
+    const btn = document.getElementById('globalEyeBtn');
+    if (!btn) return;
+    const openIcon = btn.querySelector('.eye-icon-open');
+    const closedIcon = btn.querySelector('.eye-icon-closed');
+    if (AMOUNTS_HIDDEN) {
+      btn.classList.add('hidden-mode');
+      openIcon.style.display = 'none';
+      closedIcon.style.display = 'block';
+    } else {
+      btn.classList.remove('hidden-mode');
+      openIcon.style.display = 'block';
+      closedIcon.style.display = 'none';
+    }
+  }
+
+  function maskAmount(formatted) {
+    if (AMOUNTS_HIDDEN) return '••••••';
+    return formatted;
+  }
+
+  function refreshAllAmounts() {
+    // Re-render Investment Dashboard
+    if (LATEST_DASHBOARD_DATA) renderDashboard(LATEST_DASHBOARD_DATA);
+    // Re-render MM Dashboard
+    if (typeof MM_DASHBOARD !== 'undefined' && MM_DASHBOARD) mmRenderDashboard(MM_DASHBOARD);
+    // Re-render Insight page
+    if (typeof INSIGHT_DATA !== 'undefined' && INSIGHT_DATA) renderFinancialInsight(INSIGHT_DATA);
+  }
+
+  /* === NAVIGATION === */
+  function showPage(pageId) {
+    document.querySelectorAll('#investWorkspace .page').forEach(p => p.classList.remove('active-page'));
+    const page = document.getElementById(pageId);
+    if (page) page.classList.add('active-page');
+    document.querySelectorAll('#investBottomTabs .tab-item').forEach(b => b.classList.remove('active'));
+    const active = document.querySelector(`#investBottomTabs .tab-item[data-page="${pageId}"]`);
+    if (active) active.classList.add('active');
+    if (pageId === 'historyPage') loadHistory();
+  }
+
+  /* === FAB === */
+  function toggleFab() {
+    const btn = document.getElementById('fabBtn');
+    const menu = document.getElementById('fabMenu');
+    const overlay = document.getElementById('fabOverlay');
+    const isOpen = btn.classList.contains('open');
+    btn.classList.toggle('open');
+    menu.classList.toggle('open');
+    overlay.classList.toggle('hidden', isOpen);
+  }
+
+  /* === ACTION SHEET (Redesigned) === */
+  let IV_TYPE = 'deposit';
+  let IV_SELECTED_PLATFORM = '';
+  let IV_SELECTED_SECTOR = '';
+  let IV_SELECTED_ASSET = '';
+
+  function showActionSheet(mode) {
+    const btn = document.getElementById('fabBtn');
+    const menu = document.getElementById('fabMenu');
+    const overlay = document.getElementById('fabOverlay');
+    if (btn) btn.classList.remove('open');
+    if (menu) menu.classList.remove('open');
+    if (overlay) overlay.classList.add('hidden');
+
+    // Reset state
+    IV_SELECTED_PLATFORM = '';
+    IV_SELECTED_SECTOR = '';
+    IV_SELECTED_ASSET = '';
+
+    // Map old modes to new types
+    const typeMap = { cash: 'deposit', buy: 'buy', sell: 'sell', value: 'value', adjust: 'deposit' };
+    ivSwitchType(typeMap[mode] || 'deposit');
+
+    // Set date
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById('ivDateHidden').value = today;
+    ivUpdateDateDisplay();
+
+    // Clear fields
+    document.getElementById('ivAmountInput').value = '';
+    document.getElementById('ivNotesInput').value = '';
+    const customAsset = document.getElementById('ivAssetCustom');
+    if (customAsset) customAsset.value = '';
+
+    // Show sheet
+    document.getElementById('actionSheet').classList.remove('hidden');
+
+    // Focus amount
+    setTimeout(() => document.getElementById('ivAmountInput').focus(), 300);
+
+    // Render chips
+    ivRenderPlatforms();
+    ivRenderSectors();
+    ivRenderAssets();
+  }
+
+  function closeActionSheet() {
+    document.getElementById('actionSheet').classList.add('hidden');
+  }
+
+  function closeActionSheetBackdrop(event) {
+    if (event.target === event.currentTarget) closeActionSheet();
+  }
+
+  function ivSwitchType(type) {
+    IV_TYPE = type;
+    document.querySelectorAll('#ivTypeTabs .tx-type-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.type === type);
+    });
+
+    const sectorSection = document.getElementById('ivSectorSection');
+    const assetSection = document.getElementById('ivAssetSection');
+    const dateSection = document.getElementById('ivDateSection');
+    const assetLabel = document.getElementById('ivAssetLabel');
+
+    if (type === 'deposit') {
+      sectorSection.style.display = 'none';
+      assetSection.style.display = 'none';
+      dateSection.style.display = 'block';
+    } else if (type === 'value') {
+      sectorSection.style.display = 'block';
+      assetSection.style.display = 'block';
+      dateSection.style.display = 'none';
+      assetLabel.textContent = 'Asset';
+    } else {
+      sectorSection.style.display = 'block';
+      assetSection.style.display = 'block';
+      dateSection.style.display = 'block';
+      assetLabel.textContent = 'Asset';
+    }
+
+    ivRenderPlatforms();
+    ivRenderSectors();
+    ivRenderAssets();
+  }
+
+  function ivUpdateDateDisplay() {
+    const input = document.getElementById('ivDateHidden');
+    const labelEl = document.getElementById('ivDateLabel');
+    const valueEl = document.getElementById('ivDateValue');
+    const val = input.value;
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    if (val === today) labelEl.textContent = 'Today';
+    else if (val === yesterday) labelEl.textContent = 'Yesterday';
+    else labelEl.textContent = '';
+    const d = new Date(val + 'T00:00:00');
+    valueEl.textContent = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  // Amount formatting for investment input
+  document.addEventListener('DOMContentLoaded', () => {
+    const ivAmt = document.getElementById('ivAmountInput');
+    if (ivAmt) {
+      ivAmt.addEventListener('input', () => {
+        let raw = ivAmt.value.replace(/[^\d]/g, '');
+        ivAmt.value = raw ? Number(raw).toLocaleString('id-ID') : '';
+      });
+    }
+  });
+
+  function ivRenderPlatforms() {
+    const container = document.getElementById('ivPlatformChips');
+    if (!container) return;
+    const platforms = (APP_SETTINGS.Platform || []);
+    container.innerHTML = platforms.map(p => {
+      const isActive = IV_SELECTED_PLATFORM === p;
+      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent)" onclick="ivSelectPlatform('${escapeHtml(p)}')">${escapeHtml(p)}</button>`;
+    }).join('');
+  }
+
+  function ivSelectPlatform(name) {
+    IV_SELECTED_PLATFORM = IV_SELECTED_PLATFORM === name ? '' : name;
+    ivRenderPlatforms();
+    ivRenderAssets();
+  }
+
+  function ivRenderSectors() {
+    const container = document.getElementById('ivSectorChips');
+    if (!container) return;
+    const sectors = (APP_SETTINGS.Sector || []);
+    const colors = ['#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#06b6d4'];
+    container.innerHTML = sectors.map((s, i) => {
+      const isActive = IV_SELECTED_SECTOR === s;
+      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:${colors[i % colors.length]}" onclick="ivSelectSector('${escapeHtml(s)}')">${escapeHtml(s)}</button>`;
+    }).join('');
+  }
+
+  function ivSelectSector(name) {
+    IV_SELECTED_SECTOR = IV_SELECTED_SECTOR === name ? '' : name;
+    ivRenderSectors();
+    ivRenderAssets();
+  }
+
+  function ivRenderAssets() {
+    const container = document.getElementById('ivAssetChips');
+    const customInput = document.getElementById('ivAssetCustom');
+    if (!container) return;
+
+    // For sell/value, show existing assets from portfolio
+    if ((IV_TYPE === 'sell' || IV_TYPE === 'value') && ASSET_OPTIONS.length) {
+      let filtered = ASSET_OPTIONS;
+      if (IV_SELECTED_PLATFORM) filtered = filtered.filter(a => a.platform === IV_SELECTED_PLATFORM);
+      if (IV_SELECTED_SECTOR) filtered = filtered.filter(a => a.sector === IV_SELECTED_SECTOR);
+
+      container.innerHTML = filtered.slice(0, 8).map(a => {
+        const isActive = IV_SELECTED_ASSET === a.asset;
+        return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${escapeHtml(a.asset)}')">${escapeHtml(a.asset)}</button>`;
+      }).join('');
+      if (customInput) customInput.style.display = 'none';
+    } else if (IV_TYPE === 'buy') {
+      // Buy: show recent assets + text input for new
+      const recent = ASSET_OPTIONS.slice(0, 6);
+      container.innerHTML = recent.map(a => {
+        const isActive = IV_SELECTED_ASSET === a.asset;
+        return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${escapeHtml(a.asset)}')">${escapeHtml(a.asset)}</button>`;
+      }).join('');
+      if (customInput) customInput.style.display = 'block';
+    } else {
+      container.innerHTML = '';
+      if (customInput) customInput.style.display = 'none';
+    }
+  }
+
+  function ivSelectAsset(name) {
+    IV_SELECTED_ASSET = IV_SELECTED_ASSET === name ? '' : name;
+    const customInput = document.getElementById('ivAssetCustom');
+    if (customInput && IV_SELECTED_ASSET) customInput.value = IV_SELECTED_ASSET;
+    ivRenderAssets();
+  }
+
+  function ivSubmit() {
+    const amountRaw = document.getElementById('ivAmountInput').value.replace(/[^\d]/g, '');
+    const amount = Number(amountRaw);
+    const date = document.getElementById('ivDateHidden').value;
+    const notes = document.getElementById('ivNotesInput').value;
+    const customAsset = document.getElementById('ivAssetCustom');
+
+    if (!amount || amount <= 0) {
+      showToast('Masukkan nominal.', 'error');
+      return;
+    }
+    if (!IV_SELECTED_PLATFORM) {
+      showToast('Pilih platform.', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('ivSaveBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    if (IV_TYPE === 'deposit') {
+      // Deposit cash
+      google.script.run
+        .withSuccessHandler(r => ivHandleSuccess(r, btn))
+        .withFailureHandler(e => ivHandleError(e, btn))
+        .addTransaction({ date, platform: IV_SELECTED_PLATFORM, sector: 'Cash', asset: IV_SELECTED_PLATFORM + ' Cash', amountIDR: amount, transactionType: 'Deposit', notes });
+    } else if (IV_TYPE === 'buy') {
+      const asset = IV_SELECTED_ASSET || (customAsset ? customAsset.value : '');
+      if (!IV_SELECTED_SECTOR || !asset) { showToast('Pilih sector dan asset.', 'error'); btn.disabled = false; btn.textContent = 'Save Transaction'; return; }
+      google.script.run
+        .withSuccessHandler(r => ivHandleSuccess(r, btn))
+        .withFailureHandler(e => ivHandleError(e, btn))
+        .addTransaction({ date, platform: IV_SELECTED_PLATFORM, sector: IV_SELECTED_SECTOR, asset, amountIDR: amount, transactionType: 'Buy', notes });
+    } else if (IV_TYPE === 'sell') {
+      if (!IV_SELECTED_SECTOR || !IV_SELECTED_ASSET) { showToast('Pilih sector dan asset.', 'error'); btn.disabled = false; btn.textContent = 'Save Transaction'; return; }
+      google.script.run
+        .withSuccessHandler(r => ivHandleSuccess(r, btn))
+        .withFailureHandler(e => ivHandleError(e, btn))
+        .addTransaction({ date, platform: IV_SELECTED_PLATFORM, sector: IV_SELECTED_SECTOR, asset: IV_SELECTED_ASSET, amountIDR: amount, transactionType: 'Sell', notes });
+    } else if (IV_TYPE === 'value') {
+      const asset = IV_SELECTED_ASSET || (customAsset ? customAsset.value : '');
+      if (!IV_SELECTED_SECTOR || !asset) { showToast('Pilih sector dan asset.', 'error'); btn.disabled = false; btn.textContent = 'Save Transaction'; return; }
+      google.script.run
+        .withSuccessHandler(r => ivHandleSuccess(r, btn))
+        .withFailureHandler(e => ivHandleError(e, btn))
+        .updateAssetValue({ platform: IV_SELECTED_PLATFORM, sector: IV_SELECTED_SECTOR, asset, currentValueIDR: amount });
+    }
+  }
+
+  function ivHandleSuccess(result, btn) {
+    btn.disabled = false;
+    if (result && result.success) {
+      btn.textContent = '✓ Saved!';
+      btn.style.background = 'var(--success)';
+      setTimeout(() => {
+        btn.textContent = 'Save Transaction';
+        btn.style.background = '';
+        closeActionSheet();
+      }, 800);
+      LATEST_DASHBOARD_DATA = null;
+      loadDashboard();
+      loadAssetOptions();
+    } else {
+      btn.textContent = 'Save Transaction';
+      showToast('Failed.', 'error');
+    }
+  }
+
+  function ivHandleError(err, btn) {
+    btn.disabled = false;
+    btn.textContent = 'Save Transaction';
+    showToast(err.message || 'Failed.', 'error');
+  }
+
+  /* === COLLAPSIBLE PANELS === */
+  function togglePanel(panelId) {
+    const panel = document.getElementById(panelId);
+    const chevron = document.getElementById(panelId.replace('Panel','Chevron'));
+    if (!panel) return;
+    const isHidden = panel.classList.contains('hidden');
+    panel.classList.toggle('hidden');
+    if (chevron) chevron.textContent = isHidden ? '↑' : '↓';
+  }
+
+  /* === ALLOCATION TABS === */
+  function switchAllocTab(tab) {
+    const balanceDiv = document.getElementById('allocTabBalance');
+    const platformDiv = document.getElementById('allocTabPlatform');
+    const btns = document.querySelectorAll('.tab-bar .tab-btn');
+
+    btns.forEach(b => b.classList.remove('active'));
+
+    if (tab === 'balance') {
+      balanceDiv.style.display = 'block';
+      platformDiv.style.display = 'none';
+      btns[0]?.classList.add('active');
+    } else {
+      balanceDiv.style.display = 'none';
+      platformDiv.style.display = 'block';
+      btns[1]?.classList.add('active');
+    }
+  }
+
+  /* === PLATFORM CASH RENDERER === */
+  function renderPlatformCash(portfolio) {
+    const container = document.getElementById('platformCashList');
+    if (!container) return;
+    if (!portfolio || !portfolio.length) {
+      container.innerHTML = '<div class="empty-state">No platform data yet.</div>';
+      return;
+    }
+
+    // Group by platform: sum CurrentValueIDR for all assets (including cash)
+    const platformMap = {};
+    portfolio.forEach(item => {
+      const platform = item.Platform || 'Unknown';
+      if (!platformMap[platform]) platformMap[platform] = 0;
+      platformMap[platform] += Number(item.CurrentValueIDR) || 0;
+    });
+
+    const platforms = Object.entries(platformMap)
+      .map(([platform, valueIDR]) => ({ platform, valueIDR }))
+      .sort((a, b) => b.valueIDR - a.valueIDR);
+
+    const total = platforms.reduce((s, i) => s + i.valueIDR, 0);
+
+    container.innerHTML = platforms
+      .map(item => `
+        <div class="platform-cash-row">
+          <span>${escapeHtml(item.platform)}</span>
+          <strong>${formatIDR(item.valueIDR)}</strong>
+        </div>
+      `).join('') + `
+      <div class="platform-cash-total">
+        <span>Total Portfolio</span>
+        <strong>${formatIDR(total)}</strong>
+      </div>`;
+  }
+
+  /* === DATA LOADING === */
+  function loadDashboard(skipIfCached) {
+    // If skipIfCached is true and we have data, just re-render from cache
+    if (skipIfCached && LATEST_DASHBOARD_DATA) {
+      renderDashboard(LATEST_DASHBOARD_DATA);
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(renderDashboard)
+      .withFailureHandler(showError)
+      .getDashboardData();
+  }
+
+  function loadSettings() {
+    google.script.run
+      .withSuccessHandler(settings => {
+        APP_SETTINGS = settings || {};
+        populateAllDropdowns();
+        renderSettingsPreview();
+        renderAllocationTargetEditor();
+      })
+      .withFailureHandler(showError)
+      .getSettings();
+  }
+
+  function loadAssetOptions() {
+    google.script.run
+      .withSuccessHandler(options => {
+        ASSET_OPTIONS = options || [];
+        populateAssetPickers();
+      })
+      .withFailureHandler(showError)
+      .getAssetOptions();
+  }
+
+  function loadAllocationTargets() {
+    google.script.run
+      .withSuccessHandler(items => {
+        ALLOCATION_TARGETS = items || [];
+        renderAllocationTargetEditor();
+      })
+      .withFailureHandler(showError)
+      .getAllocationTargets();
+  }
+
+  function loadHistory() {
+    google.script.run
+      .withSuccessHandler(data => {
+        HISTORY_DATA = data || { transactions: [] };
+        renderHistory();
+      })
+      .withFailureHandler(error => {
+        console.error('History error:', error);
+        showToast(error.message || 'Failed to load history.', 'error');
+      })
+      .getHistoryData();
+  }
+
+  /* === DROPDOWNS === */
+  function populateAllDropdowns() {
+    const platforms = APP_SETTINGS.Platform || [];
+    const sectors = APP_SETTINGS.Sector || [];
+    const assetSectors = sectors.filter(s => s !== 'Cash');
+
+    fillSelect('cashPlatform', platforms);
+    fillSelect('buyPlatform', platforms);
+    fillSelect('sellPlatform', platforms);
+    fillSelect('smartValuePlatform', platforms);
+    fillSelect('adjustPlatform', platforms);
+    fillSelect('buySector', assetSectors);
+    fillSelect('sellSector', assetSectors);
+    fillSelect('smartValueSector', assetSectors);
+  }
+
+  function fillSelect(id, values) {
+    const select = document.getElementById(id);
+    if (!select) return;
+    select.innerHTML = '<option value="">Select...</option>';
+    values.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v;
+      select.appendChild(opt);
+    });
+  }
+
+  /* === FORM SUBMISSIONS === */
+  function submitSmartCash(event) {
+    event.preventDefault();
+    const form = event.target;
+    const payload = formToPayload(form);
+    payload.amountIDR = parseMoneyInput(payload.amountIDR);
+    payload.sector = 'Cash';
+    payload.asset = `${payload.platform} Cash`;
+    payload.transactionType = 'Deposit';
+    saveSmartTransaction(form, payload, 'Save Cash');
+  }
+
+  function submitSmartBuy(event) {
+    event.preventDefault();
+    const form = event.target;
+    const payload = formToPayload(form);
+    payload.amountIDR = parseMoneyInput(payload.amountIDR);
+    payload.transactionType = 'Buy';
+    saveSmartTransaction(form, payload, 'Save Buy');
+  }
+
+  function submitSmartSell(event) {
+    event.preventDefault();
+    const form = event.target;
+    const payload = formToPayload(form);
+    payload.amountIDR = parseMoneyInput(payload.amountIDR);
+    payload.transactionType = 'Sell';
+    saveSmartTransaction(form, payload, 'Save Sell');
+  }
+
+  function submitSmartValue(event) {
+    event.preventDefault();
+    const form = event.target;
+    const payload = formToPayload(form);
+    payload.currentValueIDR = parseMoneyInput(payload.currentValueIDR);
+    const submitBtn = form.querySelector('button[type="submit"]');
+    setButtonLoading(submitBtn, true, 'Saving...');
+    google.script.run
+      .withSuccessHandler(result => {
+        setButtonLoading(submitBtn, false, 'Save Value');
+        if (result && result.success) {
+          showToast('Asset value updated.', 'success');
+          form.reset(); setTodayDefaults();
+          closeActionSheet();
+          loadAssetOptions(); loadDashboard();
+        } else { showToast('Failed to update value.', 'error'); }
+      })
+      .withFailureHandler(error => {
+        setButtonLoading(submitBtn, false, 'Save Value');
+        showToast(error.message || 'Failed.', 'error');
+      })
+      .updateAssetValue(payload);
+  }
+
+  function submitSmartAdjust(event) {
+    event.preventDefault();
+    const form = event.target;
+    const payload = {
+      platform: form.platform.value,
+      actualBalance: parseMoneyInput(form.actualBalance.value),
+      notes: form.notes.value
+    };
+    const submitBtn = form.querySelector('button[type="submit"]');
+    setButtonLoading(submitBtn, true, 'Syncing...');
+    google.script.run
+      .withSuccessHandler(result => {
+        setButtonLoading(submitBtn, false, 'Sync Balance');
+        if (result && result.success) {
+          showToast(result.message, 'success');
+          form.reset(); setTodayDefaults();
+          closeActionSheet();
+          loadDashboard();
+        } else { showToast('Failed.', 'error'); }
+      })
+      .withFailureHandler(error => {
+        setButtonLoading(submitBtn, false, 'Sync Balance');
+        showToast(error.message || 'Failed.', 'error');
+      })
+      .syncCashBalance(payload);
+  }
+
+  function saveSmartTransaction(form, payload, buttonText) {
+    const submitBtn = form.querySelector('button[type="submit"]');
+    setButtonLoading(submitBtn, true, 'Saving...');
+    google.script.run
+      .withSuccessHandler(result => {
+        setButtonLoading(submitBtn, false, buttonText);
+        if (result && result.success) {
+          showToast('Transaction saved.', 'success');
+          form.reset(); setTodayDefaults();
+          closeActionSheet();
+          loadAssetOptions(); loadDashboard(); loadHistory();
+        } else { showToast('Failed to save.', 'error'); }
+      })
+      .withFailureHandler(error => {
+        setButtonLoading(submitBtn, false, buttonText);
+        showToast(error.message || 'Failed.', 'error');
+      })
+      .addTransaction(payload);
+  }
+
+  function submitTarget(event) {
+    event.preventDefault();
+    const form = event.target;
+    const payload = {
+      targetName: form.targetName.value,
+      targetAmount: form.targetAmount.value,
+      notes: form.notes.value
+    };
+    const button = form.querySelector('button[type="submit"]');
+    setButtonLoading(button, true, 'Updating...');
+    google.script.run
+      .withSuccessHandler(result => {
+        setButtonLoading(button, false, 'Save Goal');
+        if (result && result.success) {
+          showToast('Target updated.', 'success');
+          loadDashboard();
+        } else { showToast('Failed.', 'error'); }
+      })
+      .withFailureHandler(error => {
+        setButtonLoading(button, false, 'Save Goal');
+        showToast(error.message || 'Failed.', 'error');
+      })
+      .updateMainTarget(payload);
+  }
+
+  function submitAllocationTargets(event) {
+    event.preventDefault();
+    updateAllocationTargetFromUI();
+    const cleanedItems = ALLOCATION_TARGETS
+      .filter(item => item.sector)
+      .map(item => ({ sector: item.sector, targetPercent: Number(item.targetPercent) || 0 }));
+    const total = cleanedItems.reduce((s, i) => s + i.targetPercent, 0);
+    if (Math.abs(total - 100) > 0.01) {
+      showToast(`Total must be 100%. Current: ${total.toFixed(2)}%.`, 'error');
+      return;
+    }
+    const form = event.target;
+    const button = form.querySelector('button[type="submit"]');
+    setButtonLoading(button, true, 'Saving...');
+    google.script.run
+      .withSuccessHandler(result => {
+        setButtonLoading(button, false, 'Save Allocation');
+        if (result && result.success) {
+          showToast('Allocation saved.', 'success');
+          loadAllocationTargets(); loadDashboard();
+        } else { showToast('Failed.', 'error'); }
+      })
+      .withFailureHandler(error => {
+        setButtonLoading(button, false, 'Save Allocation');
+        showToast(error.message || 'Failed.', 'error');
+      })
+      .saveAllocationTargets({ items: cleanedItems });
+  }
+
+  function submitQuickSetting(event) {
+    event.preventDefault();
+    const form = event.target;
+    const key = form.key.value;
+    const value = form.value.value.trim();
+    if (!key || !value) return;
+    const button = form.querySelector('button[type="submit"]');
+    setButtonLoading(button, true, 'Saving...');
+    google.script.run
+      .withSuccessHandler(result => {
+        setButtonLoading(button, false, 'Save');
+        if (result && result.success) {
+          showToast(result.message || 'Added.', 'success');
+          closeModal('quickSettingModal');
+          loadSettings();
+        } else { showToast(result.message || 'Already exists.', 'error'); }
+      })
+      .withFailureHandler(error => {
+        setButtonLoading(button, false, 'Save');
+        showToast(error.message || 'Failed.', 'error');
+      })
+      .addSettingItem({ key, value });
+  }
+
+  function openQuickSetting(key) {
+    const title = document.querySelector('#quickSettingModal .modal-head h3');
+    const keyInput = document.getElementById('quickSettingKey');
+    const valueInput = document.getElementById('quickSettingValue');
+    if (title) title.textContent = `Add ${key}`;
+    if (keyInput) keyInput.value = key;
+    if (valueInput) valueInput.value = '';
+    openModal('quickSettingModal');
+  }
+
+  /* === RENDER DASHBOARD === */
+  function renderDashboard(data) {
+    LATEST_DASHBOARD_DATA = data;
+    const summary = data.summary;
+    const target = data.target;
+    fillTargetForm(target);
+
+    const progressRaw = summary.progressPercent || 0;
+    const progressPercent = Math.min(progressRaw, 1);
+    const progressDisplay = Math.round(progressPercent * 100);
+
+    setText('mainTargetTitle', target.name || 'First 100 Million');
+    setText('progressMainValue', formatIDR(summary.totalPortfolioValueIDR));
+    setText('progressTargetText', `of ${formatIDR(target.amount)}`);
+    setText('mainProgressText', `${progressDisplay}%`);
+
+    setStyle('mainProgressFill', 'width', `${progressDisplay}%`);
+    setStyle('mainRunner', 'left', `${progressDisplay}%`);
+
+    setText('heroNote', buildHeroNote(progressDisplay, summary.remainingAmountIDR));
+
+    colorProfit('simpleProfitLoss', summary.totalProfitLossIDR);
+    setText('allocationTotalText', `Total ${formatIDR(summary.totalPortfolioValueIDR)}`);
+
+    renderAllocationFocus(data.allocationBySector || [], summary.totalPortfolioValueIDR || 0);
+    renderNextMove(data.allocationBySector || [], data.cashByPlatform || [], summary);
+    renderDcaSuggestions(data.rebalanceSuggestions || [], summary.totalCashIDR || 0);
+    renderSectorPerformance(data.portfolio || []);
+    renderPortfolio(data.portfolio || []);
+    renderDcaPlanSimulator();
+    renderPlatformCash(data.portfolio || []);
+  }
+
+  function buildHeroNote(progress, remaining) {
+    if (progress <= 0) return 'Start the journey. Your first recorded investment is the spark.';
+    if (progress < 25) return 'Early stage. Keep building the habit.';
+    if (progress < 50) return 'Momentum is forming. Stay consistent.';
+    if (progress < 75) return 'Halfway into serious territory. Protect the rhythm.';
+    if (progress < 100) return `${formatIDR(remaining)} left. Almost there.`;
+    return 'Target unlocked. Time for the next mountain.';
+  }
+
+  function fillTargetForm(target) {
+    const nameInput = document.getElementById('targetNameInput');
+    const amountInput = document.getElementById('targetAmountInput');
+    if (nameInput) nameInput.value = target.name || '';
+    if (amountInput) amountInput.value = target.amount || '';
+  }
+
+  function renderAllocationFocus(items, total) {
+    const container = document.getElementById('allocationFocusList');
+    if (!container) return;
+    if (!items.length || total <= 0) {
+      container.innerHTML = '<div class="empty-state">No allocation data yet.</div>';
+      return;
+    }
+    const colors = ['#10b981','#06b6d4','#f59e0b','#3b82f6','#8b5cf6','#64748b'];
+    container.innerHTML = items
+      .sort((a, b) => b.valueIDR - a.valueIDR)
+      .map((item, i) => {
+        const percent = item.actualPercent ?? (total > 0 ? (item.valueIDR / total) * 100 : 0);
+        // Progress toward target: how much of the target amount is fulfilled
+        const target = item.targetPercent || 0;
+        const targetValueIDR = total * (target / 100); // target amount in IDR
+        const progressToTarget = targetValueIDR > 0 ? Math.min((item.valueIDR / targetValueIDR) * 100, 150) : 0;
+        const isOver = item.valueIDR > targetValueIDR && targetValueIDR > 0;
+        const diff = item.difference || 0;
+        const status = item.status || 'No Target';
+        const color = colors[i % colors.length];
+        return `
+          <div class="allocation-item">
+            <div class="allocation-top">
+              <div class="allocation-name">
+                <span class="sector-dot" style="background:${color}"></span>
+                <span>${escapeHtml(item.sector)}</span>
+              </div>
+              <div class="allocation-percent">${percent.toFixed(1)}%</div>
+            </div>
+            <div class="allocation-bar">
+              <div class="allocation-fill" style="width:${Math.min(progressToTarget, 100)}%;background:${isOver ? '#f59e0b' : color}"></div>
+            </div>
+            <div class="allocation-meta">
+              <span>${formatIDR(item.valueIDR)} ${targetValueIDR > 0 ? `/ ${formatIDR(targetValueIDR)}` : ''}</span>
+              <span>${progressToTarget > 0 ? Math.round(progressToTarget) + '% of target' : ''}</span>
+            </div>
+            <div class="allocation-status ${getStatusClass(status)}">
+              ${escapeHtml(status)}${target ? ` · ${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%` : ''}
+            </div>
+          </div>`;
+      }).join('');
+  }
+
+  function getStatusClass(status) {
+    if (status === 'Balanced') return 'status-balanced';
+    if (status === 'Overweight') return 'status-overweight';
+    if (status === 'Underweight') return 'status-underweight';
+    return 'status-muted';
+  }
+
+  function renderNextMove(allocationItems, cashItems, summary) {
+    const titleEl = document.getElementById('nextMoveTitle');
+    const textEl = document.getElementById('nextMoveText');
+    const mapEl = document.getElementById('balanceMap');
+    if (!titleEl || !textEl || !mapEl) return;
+    const total = summary.totalPortfolioValueIDR || 0;
+    if (!allocationItems.length || total <= 0) {
+      titleEl.textContent = 'Start with your first record.';
+      textEl.textContent = 'Add your holdings first. The tracker will suggest what needs balance.';
+      mapEl.innerHTML = 'No balance map yet.';
+      return;
+    }
+    const underweight = [...allocationItems].filter(i => i.status === 'Underweight').sort((a,b) => a.difference - b.difference);
+    const overweight = [...allocationItems].filter(i => i.status === 'Overweight').sort((a,b) => b.difference - a.difference);
+    const balanced = [...allocationItems].filter(i => i.status === 'Balanced');
+    const cashItem = allocationItems.find(i => i.sector === 'Cash');
+    const cashPercent = cashItem ? cashItem.actualPercent : 0;
+
+    if (underweight.length) {
+      const next = underweight[0];
+      titleEl.textContent = `${next.sector} needs more weight.`;
+      textEl.textContent = `${next.sector} is at ${next.actualPercent.toFixed(1)}%, target is ${next.targetPercent.toFixed(1)}%. Next DCA candidate.`;
+    } else if (overweight.length) {
+      const heavy = overweight[0];
+      titleEl.textContent = `${heavy.sector} is overweight.`;
+      textEl.textContent = `${heavy.sector} at ${heavy.actualPercent.toFixed(1)}%, above ${heavy.targetPercent.toFixed(1)}% target.`;
+    } else if (cashPercent > 10) {
+      titleEl.textContent = 'Cash ready to deploy.';
+      textEl.textContent = `Cash is ${cashPercent.toFixed(1)}% of portfolio. Consider deploying gradually.`;
+    } else {
+      titleEl.textContent = 'Allocation is close to plan.';
+      textEl.textContent = `${balanced.length} sector(s) near target. Keep DCA steady.`;
+    }
+
+    mapEl.innerHTML = allocationItems
+      .sort((a,b) => {
+        const order = {Underweight:1, Overweight:2, Balanced:3, 'No Target':4};
+        return (order[a.status]||9) - (order[b.status]||9);
+      })
+      .map(item => `<span class="balance-chip ${getStatusClass(item.status)}">${escapeHtml(item.sector)} · ${escapeHtml(item.status)}</span>`)
+      .join('');
+  }
+
+  function renderDcaSuggestions(items, totalCashIDR) {
+    const totalEl = document.getElementById('dcaSuggestionTotal');
+    const listEl = document.getElementById('dcaSuggestionList');
+    if (!totalEl || !listEl) return;
+    totalEl.textContent = formatIDR(totalCashIDR);
+    if (!items.length || totalCashIDR <= 0) {
+      listEl.innerHTML = '<div>No DCA suggestion yet.</div>';
+      return;
+    }
+    listEl.innerHTML = items.map(item => {
+      const portionPercent = (item.portion || 0) * 100;
+      return `
+        <div class="dca-suggestion-row">
+          <strong>${escapeHtml(item.sector)}</strong>
+          <span>${formatIDR(item.suggestedAmountIDR)}</span>
+          <div class="dca-mini-bar"><div class="dca-mini-fill" style="width:${Math.min(portionPercent,100)}%"></div></div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderSectorPerformance(portfolio) {
+    const container = document.getElementById('sectorPerformanceCards');
+    if (!container) return;
+    const activeAssets = portfolio.filter(i => i.Sector !== 'Cash');
+    if (!activeAssets.length) {
+      container.innerHTML = '<div class="empty-state">No sector performance yet.</div>';
+      return;
+    }
+    const map = {};
+    activeAssets.forEach(item => {
+      if (!map[item.Sector]) map[item.Sector] = { sector: item.Sector, capital: 0, currentValue: 0, profitLoss: 0 };
+      map[item.Sector].capital += Number(item.TotalCapitalIDR) || 0;
+      map[item.Sector].currentValue += Number(item.CurrentValueIDR) || 0;
+      map[item.Sector].profitLoss += Number(item.ProfitLossIDR) || 0;
+    });
+    const sectors = Object.values(map)
+      .map(i => { i.growth = i.capital > 0 ? i.profitLoss / i.capital : 0; return i; })
+      .sort((a,b) => b.growth - a.growth);
+    container.innerHTML = sectors.map(item => {
+      const gp = item.growth * 100;
+      const cls = gp > 0 ? 'positive' : gp < 0 ? 'negative' : 'neutral';
+      return `
+        <div class="sector-card">
+          <h3>${escapeHtml(item.sector)}</h3>
+          <div class="sector-growth ${cls}">${gp >= 0 ? '+' : ''}${gp.toFixed(1)}%</div>
+          <p>${formatIDR(item.profitLoss)} P/L</p>
+          <p>${formatIDR(item.currentValue)} value</p>
+        </div>`;
+    }).join('');
+  }
+
+  function renderPortfolio(items) {
+    const tbody = document.getElementById('portfolioTable');
+    if (!tbody) return;
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-table">No portfolio data yet.</td></tr>';
+      return;
+    }
+
+    // Group by platform
+    const platformMap = {};
+    items.forEach(item => {
+      const platform = item.Platform || 'Unknown';
+      if (!platformMap[platform]) platformMap[platform] = [];
+      platformMap[platform].push(item);
+    });
+
+    // Sort platforms by total value descending
+    const platforms = Object.entries(platformMap)
+      .map(([platform, assets]) => {
+        const totalValue = assets.reduce((s, a) => s + (Number(a.CurrentValueIDR) || 0), 0);
+        const totalCapital = assets.reduce((s, a) => s + (Number(a.TotalCapitalIDR) || 0), 0);
+        const totalPL = assets.reduce((s, a) => s + (Number(a.ProfitLossIDR) || 0), 0);
+        return { platform, assets, totalValue, totalCapital, totalPL };
+      })
+      .sort((a, b) => b.totalValue - a.totalValue);
+
+    let html = '';
+    platforms.forEach(group => {
+      const plCls = group.totalPL > 0 ? 'positive' : group.totalPL < 0 ? 'negative' : 'neutral';
+      // Platform header row
+      html += `<tr class="platform-header-row">
+        <td colspan="3"><strong>${escapeHtml(group.platform)}</strong></td>
+        <td><strong>${formatIDR(group.totalCapital)}</strong></td>
+        <td><strong>${formatIDR(group.totalValue)}</strong></td>
+        <td class="${plCls}"><strong>${formatIDR(group.totalPL)}</strong></td>
+      </tr>`;
+
+      // Asset rows sorted by value
+      group.assets
+        .sort((a, b) => b.CurrentValueIDR - a.CurrentValueIDR)
+        .forEach(item => {
+          const cls = item.ProfitLossIDR > 0 ? 'positive' : item.ProfitLossIDR < 0 ? 'negative' : 'neutral';
+          const growth = (item.GrowthPercent || 0) * 100;
+          html += `<tr class="asset-row">
+            <td class="indent-cell"><span class="pill">${escapeHtml(item.Sector)}</span></td>
+            <td>${escapeHtml(item.Asset)}</td>
+            <td>${growth.toFixed(1)}%</td>
+            <td>${formatIDR(item.TotalCapitalIDR)}</td>
+            <td>${formatIDR(item.CurrentValueIDR)}</td>
+            <td class="${cls}">${formatIDR(item.ProfitLossIDR)}</td>
+          </tr>`;
+        });
+    });
+
+    tbody.innerHTML = html;
+  }
+
+  function renderDcaPlanSimulator() {
+    const amountInput = document.getElementById('dcaPlanAmount');
+    const resultEl = document.getElementById('dcaPlanResult');
+    if (!amountInput || !resultEl) return;
+    const amount = Number(amountInput.value) || 0;
+    if (amount <= 0) {
+      resultEl.innerHTML = 'Enter an amount to simulate your DCA plan.';
+      return;
+    }
+    const suggestions = LATEST_DASHBOARD_DATA?.rebalanceSuggestions || [];
+    if (!suggestions.length) {
+      resultEl.innerHTML = '<div>No underweight sector. Allocation is near target or not set.</div>';
+      return;
+    }
+    resultEl.innerHTML = suggestions.map(item => {
+      const portion = Number(item.portion) || 0;
+      const suggestedAmount = amount * portion;
+      const portionPercent = portion * 100;
+      return `
+        <div class="dca-suggestion-row">
+          <strong>${escapeHtml(item.sector)}</strong>
+          <span>${formatIDR(suggestedAmount)}</span>
+          <div class="dca-mini-bar"><div class="dca-mini-fill" style="width:${Math.min(portionPercent,100)}%"></div></div>
+        </div>`;
+    }).join('');
+  }
+
+  /* === HISTORY === */
+  function renderHistory() {
+    renderTransactionHistory();
+  }
+
+  function renderTransactionHistory() {
+    const container = document.getElementById('transactionHistoryList');
+    const filter = document.getElementById('historyTypeFilter')?.value || 'All';
+    if (!container) return;
+    let items = HISTORY_DATA.transactions || [];
+    items = items.filter(i => i.status !== 'Deleted');
+    if (filter !== 'All') items = items.filter(i => i.transactionType === filter);
+    if (!items.length) {
+      container.innerHTML = '<div class="empty-state">No transactions found.</div>';
+      return;
+    }
+
+    const MAX_SHOW = 10;
+    const showAll = container.dataset.showAll === 'true';
+    const displayItems = showAll ? items : items.slice(0, MAX_SHOW);
+
+    function investTxIcon(type) {
+      const map = { 'Buy': '🛒', 'Sell': '📤', 'Deposit': '💵', 'Withdraw': '🏧', 'Initial Holding': '📦', 'Cash Adjustment': '⚡' };
+      return map[type] || '📌';
+    }
+
+    function investTxColor(type) {
+      const map = { 'Buy': '#3b82f6', 'Sell': '#f59e0b', 'Deposit': '#10b981', 'Withdraw': '#ef4444', 'Initial Holding': '#8b5cf6', 'Cash Adjustment': '#64748b' };
+      return map[type] || '#64748b';
+    }
+
+    let html = displayItems.map(item => {
+      const color = investTxColor(item.transactionType);
+      const icon = investTxIcon(item.transactionType);
+      const amtColor = ['Buy', 'Withdraw'].includes(item.transactionType) ? 'var(--error)' : 'var(--success)';
+      const prefix = ['Buy', 'Withdraw'].includes(item.transactionType) ? '-' : '+';
+      const label = item.notes || item.asset || item.transactionType;
+      const badge = item.sector !== 'Cash' ? item.sector : item.platform;
+
+      return `
+        <div class="mm-tx-card" onclick="confirmDeleteTransaction(${item.rowNumber})">
+          <div class="mm-tx-card-icon" style="background:${color}20;color:${color}">${icon}</div>
+          <div class="mm-tx-card-body">
+            <span class="mm-tx-card-title">${escapeHtml(label)}</span>
+            <span class="mm-tx-card-badge">${escapeHtml(badge)} · ${formatDateShort(item.date)}</span>
+          </div>
+          <span class="mm-tx-card-amount" style="color:${amtColor}">${prefix}${formatIDR(item.amountIDR)}</span>
+        </div>`;
+    }).join('');
+
+    if (!showAll && items.length > MAX_SHOW) {
+      html += `<button class="btn-ghost btn-full" style="margin-top:10px;" onclick="document.getElementById('transactionHistoryList').dataset.showAll='true';renderTransactionHistory();">Show all (${items.length})</button>`;
+    } else if (showAll && items.length > MAX_SHOW) {
+      html += `<button class="btn-ghost btn-full" style="margin-top:10px;" onclick="document.getElementById('transactionHistoryList').dataset.showAll='false';renderTransactionHistory();">Show less</button>`;
+    }
+
+    container.innerHTML = html;
+  }
+
+  function getHistoryTypeClass(type) {
+    const lower = String(type || '').toLowerCase();
+    if (lower.includes('buy')) return 'buy';
+    if (lower.includes('sell')) return 'sell';
+    if (lower.includes('deposit')) return 'deposit';
+    if (lower.includes('withdraw')) return 'withdraw';
+    return '';
+  }
+
+  function formatDateShort(value) {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return String(value);
+    return new Intl.DateTimeFormat('en-GB', { day:'2-digit', month:'short', year:'numeric' }).format(date);
+  }
+
+  function confirmDeleteTransaction(rowNumber) {
+    const ok = confirm('Delete this transaction?');
+    if (!ok) return;
+    google.script.run
+      .withSuccessHandler(result => {
+        if (result && result.success) {
+          showToast('Deleted.', 'success');
+          loadDashboard(); loadHistory(); loadAssetOptions();
+        } else { showToast('Failed.', 'error'); }
+      })
+      .withFailureHandler(error => {
+        showToast(error.message || 'Failed.', 'error');
+      })
+      .deleteTransaction(rowNumber);
+  }
+
+  /* === SETTINGS RENDERERS === */
+  function renderSettingsPreview() {
+    renderSettingsChips('platformChips', APP_SETTINGS.Platform || []);
+    renderSettingsChips('sectorChips', APP_SETTINGS.Sector || []);
+    renderSettingsChips('transactionTypeChips', APP_SETTINGS.TransactionType || []);
+  }
+
+  function renderSettingsChips(containerId, values) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!values.length) {
+      container.innerHTML = '<span class="empty-state">No data yet.</span>';
+      return;
+    }
+    container.innerHTML = values.map(v => `<span class="settings-chip">${escapeHtml(v)}</span>`).join('');
+  }
+
+  /* === ALLOCATION EDITOR === */
+  function renderAllocationTargetEditor() {
+    const container = document.getElementById('allocationTargetRows');
+    if (!container) return;
+    if (!ALLOCATION_TARGETS.length) {
+      ALLOCATION_TARGETS = [
+        { sector: 'Stocks', targetPercent: 40 },
+        { sector: 'Crypto', targetPercent: 20 },
+        { sector: 'Mutual Funds', targetPercent: 25 },
+        { sector: 'Gold', targetPercent: 10 },
+        { sector: 'Cash', targetPercent: 5 }
+      ];
+    }
+    container.innerHTML = ALLOCATION_TARGETS.map((item, index) => buildAllocationTargetRow(item, index)).join('');
+    updateAllocationTargetTotal();
+  }
+
+  function buildAllocationTargetRow(item, index) {
+    const sectors = APP_SETTINGS.Sector || [];
+    const opts = sectors.map(s => {
+      const sel = s === item.sector ? 'selected' : '';
+      return `<option value="${escapeHtml(s)}" ${sel}>${escapeHtml(s)}</option>`;
+    }).join('');
+    return `
+      <div class="allocation-target-row" data-index="${index}">
+        <select class="allocation-sector-input form-input" onchange="updateAllocationTargetFromUI()">
+          <option value="">Select...</option>${opts}
+        </select>
+        <input class="allocation-percent-input form-input" type="number" step="0.01" min="0" max="100"
+          value="${item.targetPercent}" oninput="updateAllocationTargetFromUI()">
+        <button type="button" class="remove-row-btn" onclick="removeAllocationTargetRow(${index})">×</button>
+      </div>`;
+  }
+
+  function updateAllocationTargetFromUI() {
+    const rows = document.querySelectorAll('.allocation-target-row');
+    ALLOCATION_TARGETS = Array.from(rows).map(row => ({
+      sector: row.querySelector('.allocation-sector-input')?.value || '',
+      targetPercent: Number(row.querySelector('.allocation-percent-input')?.value || 0)
+    }));
+    updateAllocationTargetTotal();
+  }
+
+  function updateAllocationTargetTotal() {
+    const totalEl = document.getElementById('allocationTargetTotal');
+    const box = document.getElementById('allocationTotalBox');
+    if (!totalEl || !box) return;
+    const total = ALLOCATION_TARGETS.reduce((s, i) => s + (Number(i.targetPercent) || 0), 0);
+    totalEl.textContent = `${total.toFixed(2)}%`;
+    box.classList.remove('good', 'bad');
+    if (Math.abs(total - 100) <= 0.01) box.classList.add('good');
+    else box.classList.add('bad');
+  }
+
+  function addAllocationTargetRow() {
+    updateAllocationTargetFromUI();
+    ALLOCATION_TARGETS.push({ sector: '', targetPercent: 0 });
+    renderAllocationTargetEditor();
+  }
+
+  function removeAllocationTargetRow(index) {
+    updateAllocationTargetFromUI();
+    ALLOCATION_TARGETS.splice(index, 1);
+    renderAllocationTargetEditor();
+  }
+
+  /* === ASSET PICKERS === */
+  function setupAssetPickerListeners() {
+    ['sellPlatform','sellSector','smartValuePlatform','smartValueSector'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', populateAssetPickers);
+    });
+  }
+
+  function populateAssetPickers() {
+    populateAssetSelect({ selectId:'sellAsset', platformId:'sellPlatform', sectorId:'sellSector' });
+    populateAssetSelect({ selectId:'smartValueAsset', platformId:'smartValuePlatform', sectorId:'smartValueSector' });
+  }
+
+  function populateAssetSelect(config) {
+    const select = document.getElementById(config.selectId);
+    const platform = document.getElementById(config.platformId)?.value || '';
+    const sector = document.getElementById(config.sectorId)?.value || '';
+    if (!select) return;
+    const filtered = ASSET_OPTIONS.filter(item => {
+      const mp = !platform || item.platform === platform;
+      const ms = !sector || item.sector === sector;
+      return mp && ms;
+    });
+    select.innerHTML = '<option value="">Select asset...</option>';
+    filtered.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = item.asset;
+      opt.textContent = `${item.asset} · ${formatIDR(item.currentValueIDR)}`;
+      select.appendChild(opt);
+    });
+  }
+
+  /* === TOGGLE DETAILS === */
+  function toggleAssetDetails() {
+    const details = document.getElementById('assetDetails');
+    const chevron = document.getElementById('detailsChevron');
+    if (!details) return;
+    const isHidden = details.classList.contains('hidden');
+    details.classList.toggle('hidden');
+    if (chevron) chevron.textContent = isHidden ? '↑' : '↓';
+  }
+
+  /* === UTILITY === */
+  function setTodayDefaults() {
+    const today = new Date().toISOString().slice(0, 10);
+    document.querySelectorAll('input[type="date"]').forEach(i => i.value = today);
+  }
+
+  function setupMoneyInputs() {
+    document.querySelectorAll('.money-input').forEach(input => {
+      if (input.dataset.moneyBound) return;
+      input.dataset.moneyBound = '1';
+      input.addEventListener('input', () => {
+        const pos = input.selectionStart;
+        const oldLen = input.value.length;
+        input.value = formatMoneyInput(input.value);
+        const diff = input.value.length - oldLen;
+        input.setSelectionRange(pos + diff, pos + diff);
+      });
+    });
+  }
+
+  function formatMoneyInput(value) {
+    if (!value) return '';
+    let cleaned = String(value).replace(/,/g, '');
+    // Preserve leading minus sign
+    const isNegative = cleaned.startsWith('-');
+    if (isNegative) cleaned = cleaned.substring(1);
+    const parts = cleaned.split('.');
+    let intPart = parts[0].replace(/\D/g, '');
+    let decPart = parts.length > 1 ? parts.slice(1).join('').replace(/\D/g, '') : '';
+    if (!intPart) intPart = '';
+    const formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const result = parts.length > 1 ? `${formatted}.${decPart}` : formatted;
+    return isNegative ? `-${result}` : result;
+  }
+
+  function parseMoneyInput(value) {
+    if (value == null) return '';
+    return String(value).replace(/,/g, '');
+  }
+
+  function formToPayload(form) {
+    const data = new FormData(form);
+    const payload = {};
+    for (const [key, value] of data.entries()) payload[key] = value;
+    return payload;
+  }
+
+  function setButtonLoading(button, isLoading, text) {
+    if (!button) return;
+    button.disabled = isLoading;
+    button.textContent = text;
+  }
+
+  function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  function setStyle(id, property, value) {
+    const el = document.getElementById(id);
+    if (el) el.style[property] = value;
+  }
+
+  function colorProfit(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('positive','negative');
+    if (value > 0) el.classList.add('positive');
+    if (value < 0) el.classList.add('negative');
+  }
+
+  function formatIDR(value) {
+    if (AMOUNTS_HIDDEN) return '••••••';
+    return new Intl.NumberFormat('id-ID', { style:'currency', currency:'IDR', maximumFractionDigits:0 }).format(Number(value) || 0);
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+  }
+
+  function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.className = `toast ${type}`;
+    setTimeout(() => toast.classList.add('hidden'), 2800);
+  }
+
+  function openModal(id) {
+    const m = document.getElementById(id);
+    if (m) m.classList.remove('hidden');
+  }
+
+  function closeModal(id) {
+    const m = document.getElementById(id);
+    if (m) m.classList.add('hidden');
+  }
+
+  function showError(error) {
+    console.error(error);
+    showToast(error.message || 'Something went wrong.', 'error');
+  }
+
+  /* === WORKSPACE SWITCHER === */
+  let currentWorkspace = 'money'; // 'invest' or 'money'
+
+  function switchWorkspace() {
+    const investWrap = document.getElementById('investWorkspace');
+    const moneyWrap = document.getElementById('moneyWorkspace');
+    const investTabs = document.getElementById('investBottomTabs');
+    const moneyTabs = document.getElementById('mmBottomTabs');
+    const investFab = document.getElementById('investFabContainer');
+    const moneyFab = document.getElementById('mmFabContainer');
+    const title = document.getElementById('workspaceTitle');
+    const subtitle = document.getElementById('wsSubtitle');
+    const dots = document.querySelectorAll('.ws-dot');
+
+    if (currentWorkspace === 'invest') {
+      currentWorkspace = 'money';
+      investWrap.style.display = 'none';
+      moneyWrap.style.display = 'block';
+      investTabs.style.display = 'none';
+      moneyTabs.style.display = 'flex';
+      investFab.style.display = 'none';
+      moneyFab.style.display = 'block';
+      title.textContent = 'Money Management';
+      subtitle.textContent = 'Personal Finance';
+      // Dot indicator: first active
+      dots[0].classList.add('active');
+      dots[1].classList.remove('active');
+      // Only load if no cache
+      if (typeof mmLoadDashboard === 'function') mmLoadDashboard(true);
+    } else {
+      currentWorkspace = 'invest';
+      moneyWrap.style.display = 'none';
+      investWrap.style.display = 'block';
+      moneyTabs.style.display = 'none';
+      investTabs.style.display = 'flex';
+      moneyFab.style.display = 'none';
+      investFab.style.display = 'block';
+      title.textContent = 'Investment Tracker';
+      subtitle.textContent = 'Portfolio & Growth';
+      // Dot indicator: second active
+      dots[0].classList.remove('active');
+      dots[1].classList.add('active');
+      // Only load if no cache
+      loadDashboard(true);
+    }
+
+    // Animate header title
+    title.style.opacity = '0';
+    subtitle.style.opacity = '0';
+    setTimeout(() => {
+      title.style.opacity = '1';
+      subtitle.style.opacity = '0.6';
+    }, 100);
+  }
+
+  /* ============================================================
+     INVESTMENT TRACKER — EXPORT / IMPORT / DELETE
+     ============================================================ */
+
+  /* === EXPORT === */
+  function investExportData(target) {
+    showToast('Exporting...', 'success');
+    google.script.run
+      .withSuccessHandler(data => {
+        if (target === 'transactions') {
+          investDownloadCsv(buildInvestTxCsv(data.transactions), 'invest-transactions');
+        } else if (target === 'portfolio') {
+          investDownloadCsv(buildInvestPortfolioCsv(data.portfolio), 'invest-portfolio');
+        } else {
+          investDownloadCsv(buildInvestTxCsv(data.transactions), 'invest-transactions');
+          setTimeout(() => investDownloadCsv(buildInvestPortfolioCsv(data.portfolio), 'invest-portfolio'), 300);
+          setTimeout(() => investDownloadCsv(buildInvestSettingsCsv(data.settings), 'invest-settings'), 600);
+          setTimeout(() => investDownloadCsv(buildInvestAllocCsv(data.allocationTargets), 'invest-allocation'), 900);
+        }
+        showToast('Export berhasil!', 'success');
+      })
+      .withFailureHandler(err => {
+        showToast(err.message || 'Export gagal.', 'error');
+      })
+      .investExportAllData(target);
+  }
+
+  function investCsvEscape(value) {
+    if (value == null) return '';
+    const str = String(value);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  }
+
+  function buildInvestTxCsv(rows) {
+    const headers = ['date','platform','sector','asset','transactionType','amountIDR','notes'];
+    let csv = headers.join(',') + '\n';
+    (rows || []).forEach(r => {
+      csv += [r.date, investCsvEscape(r.platform), investCsvEscape(r.sector), investCsvEscape(r.asset), r.transactionType, r.amountIDR, investCsvEscape(r.notes)].join(',') + '\n';
+    });
+    return csv;
+  }
+
+  function buildInvestPortfolioCsv(rows) {
+    const headers = ['platform','sector','asset','currentValueIDR'];
+    let csv = headers.join(',') + '\n';
+    (rows || []).forEach(r => {
+      csv += [investCsvEscape(r.platform), investCsvEscape(r.sector), investCsvEscape(r.asset), r.currentValueIDR].join(',') + '\n';
+    });
+    return csv;
+  }
+
+  function buildInvestSettingsCsv(rows) {
+    const headers = ['key','value'];
+    let csv = headers.join(',') + '\n';
+    (rows || []).forEach(r => {
+      csv += [investCsvEscape(r.key), investCsvEscape(r.value)].join(',') + '\n';
+    });
+    return csv;
+  }
+
+  function buildInvestAllocCsv(rows) {
+    const headers = ['sector','targetPercent'];
+    let csv = headers.join(',') + '\n';
+    (rows || []).forEach(r => {
+      csv += [investCsvEscape(r.sector), r.targetPercent].join(',') + '\n';
+    });
+    return csv;
+  }
+
+  function investDownloadCsv(csvContent, name) {
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${name}-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /* === IMPORT === */
+  function investDownloadTemplate() {
+    const csv = 'date,platform,sector,asset,transactionType,amountIDR,notes\n' +
+      '2025-01-10,Bibit,Equity,BBCA,Buy,1000000,DCA Januari\n' +
+      '2025-01-10,Bibit,Cash,Bibit Cash,Deposit,2000000,Top up saldo\n' +
+      '2025-01-15,Stockbit,Crypto,BTC,Buy,500000,Accumulate\n' +
+      '2025-02-01,Bibit,Equity,BBCA,Buy,1000000,DCA Februari\n' +
+      '2025-02-10,Stockbit,Crypto,BTC,Sell,250000,Take profit\n';
+    investDownloadCsv(csv, 'template-invest-transactions');
+    showToast('Template CSV downloaded!', 'success');
+  }
+
+  function investImportData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById('investImportStatus');
+    statusEl.style.display = 'block';
+    statusEl.className = 'import-status';
+    statusEl.textContent = 'Membaca file...';
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const csv = e.target.result;
+        const rows = investParseCsv(csv);
+
+        if (!rows.length) {
+          statusEl.className = 'import-status error';
+          statusEl.textContent = 'File CSV kosong atau format tidak valid.';
+          event.target.value = '';
+          return;
+        }
+
+        const firstRow = rows[0];
+        if (!firstRow.date && !firstRow.platform && !firstRow.transactionType) {
+          statusEl.className = 'import-status error';
+          statusEl.textContent = 'Header CSV tidak valid. Harus ada: date, platform, transactionType, amountIDR.';
+          event.target.value = '';
+          return;
+        }
+
+        if (!confirm(`Import ${rows.length} transaksi investasi dari CSV?\n\nData akan ditambahkan ke data existing.`)) {
+          statusEl.style.display = 'none';
+          event.target.value = '';
+          return;
+        }
+
+        statusEl.textContent = 'Importing...';
+
+        google.script.run
+          .withSuccessHandler(result => {
+            if (result.success) {
+              statusEl.className = 'import-status success';
+              statusEl.textContent = result.message;
+              loadDashboard();
+            } else {
+              statusEl.className = 'import-status error';
+              statusEl.textContent = result.message || 'Import gagal.';
+            }
+            event.target.value = '';
+          })
+          .withFailureHandler(err => {
+            statusEl.className = 'import-status error';
+            statusEl.textContent = err.message || 'Import gagal.';
+            event.target.value = '';
+          })
+          .investImportData({ rows: rows });
+
+      } catch (err) {
+        statusEl.className = 'import-status error';
+        statusEl.textContent = 'Gagal membaca file: ' + err.message;
+        event.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function investParseCsv(csv) {
+    const lines = csv.split('\n').filter(l => l.trim());
+    if (lines.length < 2) return [];
+    const headers = investParseCsvLine(lines[0]);
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = investParseCsvLine(lines[i]);
+      if (values.length === 0) continue;
+      const obj = {};
+      headers.forEach((h, idx) => { obj[h.trim()] = (values[idx] || '').trim(); });
+      rows.push(obj);
+    }
+    return rows;
+  }
+
+  function investParseCsvLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+        else { inQuotes = !inQuotes; }
+      } else if (ch === ',' && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current);
+    return result;
+  }
+
+  /* === DELETE === */
+  function investDeletePrompt(target) {
+    const labels = {
+      transactions: 'SEMUA TRANSAKSI INVESTASI',
+      portfolio: 'PORTFOLIO VALUES',
+      settings: 'SETTINGS & MASTER DATA',
+      all: 'SEMUA DATA INVESTMENT TRACKER (RESET TOTAL)'
+    };
+
+    const label = labels[target] || target;
+
+    if (!confirm(`Anda yakin ingin menghapus ${label}?\n\nTindakan ini TIDAK DAPAT dibatalkan!`)) return;
+
+    const confirmText = target === 'all' ? 'HAPUS SEMUA' : 'HAPUS';
+    const userInput = prompt(`Ketik "${confirmText}" untuk konfirmasi:`);
+
+    if (userInput !== confirmText) {
+      showToast('Penghapusan dibatalkan.', 'error');
+      return;
+    }
+
+    showToast('Menghapus data...', 'error');
+
+    google.script.run
+      .withSuccessHandler(result => {
+        if (result.success) {
+          showToast(result.message, 'success');
+          LATEST_DASHBOARD_DATA = null;
+          loadDashboard();
+          loadSettings();
+        } else {
+          showToast(result.message || 'Gagal menghapus.', 'error');
+        }
+      })
+      .withFailureHandler(err => {
+        showToast(err.message || 'Gagal menghapus.', 'error');
+      })
+      .investDeleteData(target);
+  }
+</script>
+

@@ -1,0 +1,363 @@
+<script>
+/* ============================================================
+   TRANSACTION INPUT — Redesigned UX
+   ============================================================ */
+
+let TX_TYPE = 'expense';
+let TX_SELECTED_CATEGORY = '';
+let TX_SELECTED_SUBCATEGORY = '';
+let TX_SELECTED_ACCOUNT = '';
+let TX_SELECTED_ACCOUNT_TO = '';
+let TX_RECENT = JSON.parse(localStorage.getItem('txRecent') || '[]');
+
+/* === OPEN ACTION SHEET === */
+function mmShowActionSheet(type) {
+  // Close FAB
+  const btn = document.getElementById('mmFabBtn');
+  const menu = document.getElementById('mmFabMenu');
+  const overlay = document.getElementById('mmFabOverlay');
+  if (btn) btn.classList.remove('open');
+  if (menu) menu.classList.remove('open');
+  if (overlay) overlay.classList.add('hidden');
+
+  // Reset state
+  TX_SELECTED_CATEGORY = '';
+  TX_SELECTED_SUBCATEGORY = '';
+  TX_SELECTED_ACCOUNT = '';
+  TX_SELECTED_ACCOUNT_TO = '';
+
+  // Set type
+  txSwitchType(type);
+
+  // Set today's date
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('txDateHidden').value = today;
+  txUpdateDateDisplay();
+
+  // Clear fields
+  document.getElementById('txAmountInput').value = '';
+  document.getElementById('txNotesInput').value = '';
+
+  // Show sheet
+  document.getElementById('mmActionSheet').classList.remove('hidden');
+
+  // Focus amount
+  setTimeout(() => document.getElementById('txAmountInput').focus(), 300);
+
+  // Render chips
+  txRenderCategories();
+  txRenderAccounts();
+  txRenderRecent();
+}
+
+function mmCloseActionSheet() {
+  document.getElementById('mmActionSheet').classList.add('hidden');
+}
+
+function mmCloseActionSheetBackdrop(event) {
+  if (event.target === event.currentTarget) mmCloseActionSheet();
+}
+
+/* === TYPE SWITCHING === */
+function txSwitchType(type) {
+  TX_TYPE = type;
+  document.querySelectorAll('.tx-type-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.type === type);
+  });
+
+  // Show/hide transfer sections
+  const catSection = document.getElementById('txCategorySection');
+  const subSection = document.getElementById('txSubcategorySection');
+  const accToSection = document.getElementById('txAccountToSection');
+  const accLabel = document.getElementById('txAccountLabel');
+
+  if (type === 'transfer') {
+    catSection.style.display = 'none';
+    subSection.style.display = 'none';
+    accToSection.style.display = 'block';
+    accLabel.textContent = 'From Account';
+  } else {
+    catSection.style.display = 'block';
+    subSection.style.display = TX_SELECTED_CATEGORY ? 'block' : 'none';
+    accToSection.style.display = 'none';
+    accLabel.textContent = 'Account';
+  }
+
+  txRenderCategories();
+  txRenderAccounts();
+}
+
+/* === DATE === */
+function txUpdateDateDisplay() {
+  const input = document.getElementById('txDateHidden');
+  const labelEl = document.getElementById('txDateLabel');
+  const valueEl = document.getElementById('txDateValue');
+  const val = input.value;
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+  if (val === today) {
+    labelEl.textContent = 'Today';
+  } else if (val === yesterday) {
+    labelEl.textContent = 'Yesterday';
+  } else {
+    labelEl.textContent = '';
+  }
+  const d = new Date(val + 'T00:00:00');
+  valueEl.textContent = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+/* === AMOUNT FORMATTING === */
+document.addEventListener('DOMContentLoaded', () => {
+  const amtInput = document.getElementById('txAmountInput');
+  if (amtInput) {
+    amtInput.addEventListener('input', () => {
+      let raw = amtInput.value.replace(/[^\d]/g, '');
+      if (raw) {
+        amtInput.value = Number(raw).toLocaleString('id-ID');
+      } else {
+        amtInput.value = '';
+      }
+    });
+  }
+});
+
+/* === CATEGORY CHIPS === */
+function txRenderCategories() {
+  const container = document.getElementById('txCategoryChips');
+  if (!container) return;
+
+  const categories = TX_TYPE === 'income'
+    ? [{ name: 'Bisyaroh', color: '#8b5cf6' }, { name: 'Other', color: '#64748b' }]
+    : [{ name: 'Living', color: '#10b981' }, { name: 'Playing', color: '#f59e0b' }, { name: 'Alms', color: '#ec4899' }, { name: 'Invest', color: '#3b82f6' }];
+
+  container.innerHTML = categories.map(cat => {
+    const isActive = TX_SELECTED_CATEGORY === cat.name;
+    const icon = lucideIconSvg(MM_CATEGORY_CONFIG[cat.name] ? MM_CATEGORY_CONFIG[cat.name].icon : 'tag', 16);
+    return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:${cat.color}" onclick="txSelectCategory('${cat.name}')">
+      <span class="tx-chip-icon">${icon}</span>
+      <span>${cat.name}</span>
+    </button>`;
+  }).join('');
+}
+
+function txSelectCategory(category) {
+  TX_SELECTED_CATEGORY = TX_SELECTED_CATEGORY === category ? '' : category;
+  TX_SELECTED_SUBCATEGORY = '';
+  txRenderCategories();
+  txRenderSubcategories();
+}
+
+/* === SUBCATEGORY CHIPS === */
+function txRenderSubcategories() {
+  const container = document.getElementById('txSubcategoryChips');
+  const section = document.getElementById('txSubcategorySection');
+  if (!container || !section) return;
+
+  if (!TX_SELECTED_CATEGORY) {
+    section.style.display = 'none';
+    return;
+  }
+
+  const subs = MM_CATEGORIES
+    .filter(c => c.type === (TX_TYPE === 'income' ? 'Income' : 'Expense') && c.category === TX_SELECTED_CATEGORY && c.subcategory)
+    .map(c => c.subcategory);
+
+  if (!subs.length) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  const color = mmCategoryColor(TX_SELECTED_CATEGORY);
+  container.innerHTML = subs.map(sub => {
+    const isActive = TX_SELECTED_SUBCATEGORY === sub;
+    return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:${color}" onclick="txSelectSubcategory('${escapeHtml(sub)}')">
+      <span>${escapeHtml(sub)}</span>
+    </button>`;
+  }).join('');
+}
+
+function txSelectSubcategory(sub) {
+  TX_SELECTED_SUBCATEGORY = TX_SELECTED_SUBCATEGORY === sub ? '' : sub;
+  txRenderSubcategories();
+}
+
+/* === ACCOUNT CHIPS === */
+function txRenderAccounts() {
+  const container = document.getElementById('txAccountChips');
+  const containerTo = document.getElementById('txAccountToChips');
+  if (!container) return;
+
+  const accounts = MM_ACCOUNTS.filter(a => a.status !== 'Deleted');
+
+  // Sort by usage frequency from recent
+  const freqMap = {};
+  TX_RECENT.forEach(r => {
+    freqMap[r.account] = (freqMap[r.account] || 0) + 1;
+  });
+  const sorted = [...accounts].sort((a, b) => (freqMap[b.name] || 0) - (freqMap[a.name] || 0));
+
+  container.innerHTML = sorted.map(acc => {
+    const isActive = TX_SELECTED_ACCOUNT === acc.name;
+    return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent)" onclick="txSelectAccount('${escapeHtml(acc.name)}')">
+      <span>${escapeHtml(acc.name)}</span>
+    </button>`;
+  }).join('');
+
+  // Transfer: To Account
+  if (containerTo && TX_TYPE === 'transfer') {
+    containerTo.innerHTML = sorted.map(acc => {
+      const isActive = TX_SELECTED_ACCOUNT_TO === acc.name;
+      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="txSelectAccountTo('${escapeHtml(acc.name)}')">
+        <span>${escapeHtml(acc.name)}</span>
+      </button>`;
+    }).join('');
+  }
+}
+
+function txSelectAccount(name) {
+  TX_SELECTED_ACCOUNT = TX_SELECTED_ACCOUNT === name ? '' : name;
+  txRenderAccounts();
+}
+
+function txSelectAccountTo(name) {
+  TX_SELECTED_ACCOUNT_TO = TX_SELECTED_ACCOUNT_TO === name ? '' : name;
+  txRenderAccounts();
+}
+
+/* === RECENTLY USED === */
+function txRenderRecent() {
+  const container = document.getElementById('txRecentChips');
+  const section = document.getElementById('txRecentlyUsed');
+  if (!container || !section) return;
+
+  const relevant = TX_RECENT.filter(r => r.type === TX_TYPE).slice(0, 4);
+
+  if (!relevant.length) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  container.innerHTML = relevant.map(r => {
+    const label = [r.category, r.account].filter(Boolean).join(' · ');
+    return `<button class="tx-recent-chip" onclick="txApplyRecent('${escapeHtml(r.category)}','${escapeHtml(r.subcategory || '')}','${escapeHtml(r.account)}')">
+      <span class="tx-recent-label">${escapeHtml(label)}</span>
+    </button>`;
+  }).join('');
+}
+
+function txApplyRecent(category, subcategory, account) {
+  TX_SELECTED_CATEGORY = category;
+  TX_SELECTED_SUBCATEGORY = subcategory;
+  TX_SELECTED_ACCOUNT = account;
+  txRenderCategories();
+  txRenderSubcategories();
+  txRenderAccounts();
+}
+
+/* === SUBMIT === */
+function txSubmit() {
+  const amountRaw = document.getElementById('txAmountInput').value.replace(/[^\d]/g, '');
+  const amount = Number(amountRaw);
+  const date = document.getElementById('txDateHidden').value;
+  const notes = document.getElementById('txNotesInput').value;
+
+  if (!amount || amount <= 0) {
+    showToast('Masukkan nominal.', 'error');
+    document.getElementById('txAmountInput').focus();
+    return;
+  }
+
+  if (TX_TYPE !== 'transfer' && !TX_SELECTED_CATEGORY) {
+    showToast('Pilih kategori.', 'error');
+    return;
+  }
+
+  if (!TX_SELECTED_ACCOUNT) {
+    showToast('Pilih akun.', 'error');
+    return;
+  }
+
+  if (TX_TYPE === 'transfer' && !TX_SELECTED_ACCOUNT_TO) {
+    showToast('Pilih akun tujuan.', 'error');
+    return;
+  }
+
+  if (TX_TYPE === 'transfer' && TX_SELECTED_ACCOUNT === TX_SELECTED_ACCOUNT_TO) {
+    showToast('Akun asal dan tujuan harus berbeda.', 'error');
+    return;
+  }
+
+  const payload = {
+    date: date,
+    type: TX_TYPE.charAt(0).toUpperCase() + TX_TYPE.slice(1),
+    account: TX_SELECTED_ACCOUNT,
+    accountTo: TX_TYPE === 'transfer' ? TX_SELECTED_ACCOUNT_TO : '',
+    category: TX_TYPE === 'transfer' ? (TX_SELECTED_CATEGORY || 'Invest') : TX_SELECTED_CATEGORY,
+    subcategory: TX_SELECTED_SUBCATEGORY,
+    amount: amount,
+    notes: notes
+  };
+
+  // For transfer to invest, mark category as Invest
+  if (TX_TYPE === 'transfer' && !TX_SELECTED_CATEGORY) {
+    payload.category = '';
+  }
+
+  const btn = document.getElementById('txSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  google.script.run
+    .withSuccessHandler(result => {
+      btn.disabled = false;
+      btn.textContent = 'Save Transaction';
+      if (result && result.success) {
+        // Success animation
+        btn.textContent = '✓ Saved!';
+        btn.style.background = 'var(--success)';
+        setTimeout(() => {
+          btn.textContent = 'Save Transaction';
+          btn.style.background = '';
+          mmCloseActionSheet();
+        }, 800);
+
+        // Save to recent
+        txSaveRecent(payload);
+
+        // Invalidate cache
+        MM_DASHBOARD = null;
+        mmLoadDashboard();
+      } else {
+        showToast('Gagal menyimpan.', 'error');
+      }
+    })
+    .withFailureHandler(err => {
+      btn.disabled = false;
+      btn.textContent = 'Save Transaction';
+      showToast(err.message || 'Gagal.', 'error');
+    })
+    .mmAddTransaction(payload);
+}
+
+function txSaveRecent(payload) {
+  const entry = {
+    type: payload.type.toLowerCase(),
+    category: payload.category,
+    subcategory: payload.subcategory,
+    account: payload.account
+  };
+
+  // Remove duplicates
+  TX_RECENT = TX_RECENT.filter(r =>
+    !(r.type === entry.type && r.category === entry.category && r.account === entry.account)
+  );
+
+  TX_RECENT.unshift(entry);
+  TX_RECENT = TX_RECENT.slice(0, 10); // Keep max 10
+  localStorage.setItem('txRecent', JSON.stringify(TX_RECENT));
+}
+
+</script>

@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#09090b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <?!= include('Style'); ?>
+</head>
+
+<body>
+  <div class="app-shell">
+
+    <!-- Workspace Switcher Header -->
+    <header class="workspace-header">
+      <div class="ws-title-wrap" onclick="switchWorkspace()">
+        <h1 id="workspaceTitle">Money Management</h1>
+        <span class="ws-subtitle" id="wsSubtitle">Personal Finance</span>
+      </div>
+      <div class="ws-header-actions">
+        <button class="global-eye-btn" id="globalEyeBtn" onclick="toggleAmountVisibility()" aria-label="Toggle nominal visibility">
+          <svg class="eye-icon-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          <svg class="eye-icon-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><line x1="1" y1="1" x2="23" y2="23"></line><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path></svg>
+        </button>
+        <div class="ws-indicator" onclick="switchWorkspace()">
+          <span class="ws-dot active"></span>
+          <span class="ws-dot"></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ========== WORKSPACE 1: INVESTMENT TRACKER ========== -->
+    <div id="investWorkspace" class="workspace" style="display:none;">
+      <main class="main-content">
+
+        <!-- ===== DASHBOARD PAGE ===== -->
+        <div id="dashboardPage" class="page active-page">
+          <section class="dashboard-wrap">
+
+            <!-- Progress Hero -->
+            <div class="progress-hero">
+              <p class="panel-eyebrow" id="mainTargetTitle">First 100 Million</p>
+              <h2 class="progress-big-value" id="progressMainValue">Rp0</h2>
+              <p class="progress-target-text" id="progressTargetText">of Rp100,000,000</p>
+              <div class="progress-slider-track">
+                <div class="progress-slider-fill" id="mainProgressFill"></div>
+                <span class="progress-slider-thumb" id="mainRunner">🏃</span>
+                <span class="progress-slider-finish">🏁</span>
+              </div>
+              <p class="progress-percent-center" id="mainProgressText">0%</p>
+              <p class="progress-note-center" id="heroNote">Start the journey.</p>
+            </div>
+
+            <!-- Allocation -->
+            <section class="panel-card">
+              <button class="panel-toggle" onclick="togglePanel('allocationPanel')">
+                <div>
+                  <p class="panel-eyebrow">Allocation</p>
+                  <h3 class="panel-title">Portfolio Balance</h3>
+                </div>
+                <strong class="panel-chevron" id="allocationChevron">↑</strong>
+              </button>
+              <div id="allocationPanel" class="panel-body">
+                <div class="tab-bar">
+                  <button class="tab-btn active" onclick="switchAllocTab('balance')">Balance</button>
+                  <button class="tab-btn" onclick="switchAllocTab('platform')">By Platform</button>
+                </div>
+                <div id="allocTabBalance">
+                  <span class="panel-meta" id="allocationTotalText">Total Rp0</span>
+                  <div id="allocationFocusList" class="allocation-list">
+                    <div class="empty-state">No allocation data yet.</div>
+                  </div>
+                </div>
+                <div id="allocTabPlatform" style="display:none;">
+                  <div id="platformCashList" class="platform-cash-list">No platform data yet.</div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Next Move / Rebalance -->
+            <section class="panel-card">
+              <button class="panel-toggle" onclick="togglePanel('nextMovePanel')">
+                <div>
+                  <p class="panel-eyebrow">Next Move</p>
+                  <h3 class="panel-title">Rebalance Signal</h3>
+                </div>
+                <strong class="panel-chevron" id="nextMoveChevron">↓</strong>
+              </button>
+              <div id="nextMovePanel" class="panel-body hidden">
+                <div class="insight-box">
+                  <div class="insight-icon">🧭</div>
+                  <div>
+                    <h4 id="nextMoveTitle">Start with your first record.</h4>
+                    <p id="nextMoveText">Add your holdings first. The tracker will suggest what needs balance.</p>
+                  </div>
+                </div>
+                <div id="balanceMap" class="chip-list">No balance map yet.</div>
+                <div class="dca-box">
+                  <div class="dca-box-header">
+                    <span>DCA from Total Cash</span>
+                    <strong id="dcaSuggestionTotal">Rp0</strong>
+                  </div>
+                  <div id="dcaSuggestionList" class="dca-list">No DCA suggestion yet.</div>
+                </div>
+                <div class="dca-box">
+                  <div class="dca-box-header">
+                    <span>DCA Plan Simulator</span>
+                  </div>
+                  <p class="dca-box-desc">Try a monthly amount and see where it should go.</p>
+                  <input type="number" id="dcaPlanAmount" class="form-input" placeholder="Example: 1000000" oninput="renderDcaPlanSimulator()">
+                  <div id="dcaPlanResult" class="dca-list" style="margin-top:12px;">Enter an amount to simulate your DCA plan.</div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Sector Performance -->
+            <section class="panel-card">
+              <button class="panel-toggle" onclick="togglePanel('perfPanel')">
+                <div>
+                  <p class="panel-eyebrow">Performance</p>
+                  <h3 class="panel-title">Sector Growth</h3>
+                </div>
+                <strong class="panel-chevron" id="perfChevron">↓</strong>
+              </button>
+              <div id="perfPanel" class="panel-body hidden">
+                <div id="sectorPerformanceCards" class="sector-grid">
+                  <div class="empty-state">No sector performance yet.</div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Asset Details -->
+            <section class="panel-card">
+              <button class="details-toggle" onclick="toggleAssetDetails()">
+                <span>View Asset Details</span>
+                <strong id="detailsChevron">↓</strong>
+              </button>
+              <div id="assetDetails" class="asset-details hidden">
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Sector</th>
+                        <th>Asset</th>
+                        <th>Growth</th>
+                        <th>Capital</th>
+                        <th>Value</th>
+                        <th>P/L</th>
+                      </tr>
+                    </thead>
+                    <tbody id="portfolioTable">
+                      <tr><td colspan="6" class="empty-table">No portfolio data yet.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+          </section>
+        </div>
+
+        <!-- ===== HISTORY PAGE ===== -->
+        <div id="historyPage" class="page">
+          <section class="page-header-card">
+            <p class="panel-eyebrow">History</p>
+            <h2 class="page-title">Activity Log</h2>
+            <p class="page-desc">Review your transactions.</p>
+          </section>
+          <section class="panel-card">
+            <div class="panel-header">
+              <div>
+                <p class="panel-eyebrow">Transactions</p>
+                <h3 class="panel-title">Recent Moves</h3>
+              </div>
+              <select id="historyTypeFilter" class="filter-select" onchange="renderHistory()">
+                <option value="All">All Types</option>
+                <option value="Initial Holding">Initial Holding</option>
+                <option value="Deposit">Deposit</option>
+                <option value="Buy">Buy</option>
+                <option value="Sell">Sell</option>
+                <option value="Withdraw">Withdraw</option>
+                <option value="Cash Adjustment">Cash Adjustment</option>
+              </select>
+            </div>
+            <div id="transactionHistoryList" class="history-list">Loading transactions...</div>
+          </section>
+        </div>
+
+        <!-- ===== SETTINGS PAGE ===== -->
+        <div id="settingsPage" class="page">
+          <section class="page-header-card">
+            <p class="panel-eyebrow">Settings</p>
+            <h2 class="page-title">Personalize</h2>
+            <p class="page-desc">Manage your goal, allocation, and dropdown data.</p>
+          </section>
+
+          <!-- Goal -->
+          <section class="panel-card">
+            <button class="panel-toggle" onclick="togglePanel('investGoalPanel')">
+              <div>
+                <p class="panel-eyebrow">Goal</p>
+                <h3 class="panel-title">Main Target</h3>
+              </div>
+              <strong class="panel-chevron" id="investGoalChevron">↓</strong>
+            </button>
+            <div id="investGoalPanel" class="panel-body hidden">
+              <form id="targetForm" class="stack-form" onsubmit="submitTarget(event)">
+                <label class="form-label">Target Name <input type="text" name="targetName" id="targetNameInput" class="form-input" placeholder="First 100 Million" required></label>
+                <label class="form-label">Target Amount <input type="number" name="targetAmount" id="targetAmountInput" class="form-input" placeholder="100000000" required></label>
+                <label class="form-label">Notes <textarea name="notes" id="targetNotesInput" class="form-input" rows="2" placeholder="Main investment goal"></textarea></label>
+                <button class="btn-primary" type="submit">Save Goal</button>
+              </form>
+            </div>
+          </section>
+
+          <!-- Allocation Targets -->
+          <section class="panel-card">
+            <button class="panel-toggle" onclick="togglePanel('investAllocPanel')">
+              <div>
+                <p class="panel-eyebrow">Allocation</p>
+                <h3 class="panel-title">Target Balance</h3>
+              </div>
+              <strong class="panel-chevron" id="investAllocChevron">↓</strong>
+            </button>
+            <div id="investAllocPanel" class="panel-body hidden">
+              <form id="allocationTargetForm" onsubmit="submitAllocationTargets(event)">
+                <div id="allocationTargetRows" class="allocation-rows">Loading allocation targets...</div>
+                <div class="allocation-total-box" id="allocationTotalBox">
+                  <span>Total Allocation</span>
+                  <strong id="allocationTargetTotal">0%</strong>
+                </div>
+                <div class="form-actions">
+                  <button type="button" class="btn-ghost" onclick="addAllocationTargetRow()">+ Add Sector</button>
+                  <button type="submit" class="btn-primary">Save Allocation</button>
+                </div>
+              </form>
+            </div>
+          </section>
+
+          <!-- Master Data -->
+          <section class="panel-card">
+            <button class="panel-toggle" onclick="togglePanel('investMasterPanel')">
+              <div>
+                <p class="panel-eyebrow">Master Data</p>
+                <h3 class="panel-title">Dropdown Options</h3>
+              </div>
+              <strong class="panel-chevron" id="investMasterChevron">↓</strong>
+            </button>
+            <div id="investMasterPanel" class="panel-body hidden">
+              <div class="master-grid">
+                <div class="master-box">
+                  <div class="master-box-head">
+                    <h4>Platforms</h4>
+                    <button class="btn-mini" onclick="openQuickSetting('Platform')">+ Add</button>
+                  </div>
+                  <div id="platformChips" class="chip-wrap"></div>
+                </div>
+                <div class="master-box">
+                  <div class="master-box-head">
+                    <h4>Sectors</h4>
+                    <button class="btn-mini" onclick="openQuickSetting('Sector')">+ Add</button>
+                  </div>
+                  <div id="sectorChips" class="chip-wrap"></div>
+                </div>
+                <div class="master-box">
+                  <div class="master-box-head">
+                    <h4>Transaction Types</h4>
+                    <button class="btn-mini" onclick="openQuickSetting('TransactionType')">+ Add</button>
+                  </div>
+                  <div id="transactionTypeChips" class="chip-wrap"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Export Data -->
+          <section class="panel-card">
+            <button class="panel-toggle" onclick="togglePanel('investExportPanel')">
+              <div>
+                <p class="panel-eyebrow">Backup</p>
+                <h3 class="panel-title">Export Data</h3>
+              </div>
+              <strong class="panel-chevron" id="investExportChevron">↓</strong>
+            </button>
+            <div id="investExportPanel" class="panel-body hidden">
+              <p class="settings-desc">Download data investasi dalam format CSV.</p>
+              <div class="export-options">
+                <button class="btn-primary btn-full" onclick="investExportData('all')"><i data-lucide="download" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px;"></i>Export Semua Data</button>
+                <button class="btn-ghost btn-full" onclick="investExportData('transactions')"><i data-lucide="file-text" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Export Transaksi</button>
+                <button class="btn-ghost btn-full" onclick="investExportData('portfolio')"><i data-lucide="file-text" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Export Portfolio</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Import Data -->
+          <section class="panel-card">
+            <button class="panel-toggle" onclick="togglePanel('investImportPanel')">
+              <div>
+                <p class="panel-eyebrow">Restore</p>
+                <h3 class="panel-title">Import Data</h3>
+              </div>
+              <strong class="panel-chevron" id="investImportChevron">↓</strong>
+            </button>
+            <div id="investImportPanel" class="panel-body hidden">
+              <p class="settings-desc">Import transaksi investasi dari file CSV.</p>
+              <div class="import-actions">
+                <button class="btn-ghost btn-full" onclick="investDownloadTemplate()"><i data-lucide="file-down" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Download Template CSV</button>
+                <label class="btn-primary btn-full import-label">
+                  <i data-lucide="upload" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px;"></i>Pilih File CSV &amp; Import
+                  <input type="file" id="investImportFile" accept=".csv" onchange="investImportData(event)" style="display:none;">
+                </label>
+              </div>
+              <div id="investImportStatus" class="import-status" style="display:none;"></div>
+            </div>
+          </section>
+
+          <!-- Danger Zone -->
+          <section class="panel-card danger-zone-card">
+            <button class="panel-toggle" onclick="togglePanel('investDangerPanel')">
+              <div>
+                <p class="panel-eyebrow" style="color:var(--error);">Danger Zone</p>
+                <h3 class="panel-title">Delete Data</h3>
+              </div>
+              <strong class="panel-chevron" id="investDangerChevron">↓</strong>
+            </button>
+            <div id="investDangerPanel" class="panel-body hidden">
+              <p class="settings-desc" style="color:var(--text-muted);">Hapus data investasi secara permanen. <strong style="color:var(--error)">Tidak dapat dibatalkan</strong>.</p>
+              <div class="danger-options">
+                <button class="btn-danger btn-full" onclick="investDeletePrompt('transactions')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Transaksi</button>
+                <button class="btn-danger btn-full" onclick="investDeletePrompt('portfolio')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Portfolio Values</button>
+                <button class="btn-danger btn-full" onclick="investDeletePrompt('settings')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Settings &amp; Master Data</button>
+                <button class="btn-danger-critical btn-full" onclick="investDeletePrompt('all')"><i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Data (Reset Total)</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+      </main>
+    </div>
+    <!-- END WORKSPACE 1 -->
+
+    <!-- ========== WORKSPACE 2: MONEY MANAGEMENT ========== -->
+    <div id="moneyWorkspace" class="workspace active">
+      <main class="main-content">
+
+        <!-- ===== MM DASHBOARD PAGE ===== -->
+        <div id="mmDashboardPage" class="page active-page">
+          <section class="dashboard-wrap">
+
+            <!-- Net Worth Card -->
+            <div class="mm-net-worth-card">
+              <p class="panel-eyebrow">Net Worth</p>
+              <h2 class="mm-net-worth-value" id="mmNetWorthValue">Rp0</h2>
+              <div class="mm-summary-grid">
+                <div class="mm-summary-item income">
+                  <span>Income</span>
+                  <strong id="mmTotalIncome">Rp0</strong>
+                </div>
+                <div class="mm-summary-item expense">
+                  <span>Expense</span>
+                  <strong id="mmTotalExpense">Rp0</strong>
+                </div>
+                <div class="mm-summary-item saving">
+                  <span>Saving</span>
+                  <strong id="mmTotalSaving">Rp0</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Category Chart -->
+            <section class="panel-card chart-section">
+              <button class="panel-toggle" onclick="togglePanel('mmDashChartPanel')">
+                <div><p class="panel-eyebrow">Chart</p><h3 class="panel-title">Categories</h3></div>
+                <strong class="panel-chevron" id="mmDashChartChevron">↑</strong>
+              </button>
+              <div id="mmDashChartPanel" class="panel-body">
+                <div class="tab-bar">
+                  <button class="tab-btn active" onclick="mmRenderChart('expense')">Expense</button>
+                  <button class="tab-btn" onclick="mmRenderChart('income')">Income</button>
+                </div>
+                <!-- Mini stats cards -->
+                <div class="chart-mini-stats" id="chartMiniStats"></div>
+                <!-- Donut chart -->
+                <div id="mmChartDonut" class="chart-donut-wrap"></div>
+                <!-- Category list -->
+                <div id="mmChartCategoryList" class="chart-category-list"></div>
+              </div>
+            </section>
+            
+            <!-- Accounts -->
+            <section class="panel-card">
+              <button class="panel-toggle" onclick="togglePanel('mmDashAccPanel')">
+                <div><p class="panel-eyebrow">Accounts</p><h3 class="panel-title">Balances</h3></div>
+                <strong class="panel-chevron" id="mmDashAccChevron">↓</strong>
+              </button>
+              <div id="mmDashAccPanel" class="panel-body hidden">
+                <div id="mmAccountsList" class="mm-accounts-list">
+                  <div class="empty-state">No accounts yet.</div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Financial Allocation -->
+            <section class="panel-card">
+              <button class="panel-toggle" onclick="togglePanel('mmDashAllocPanel')">
+                <div><p class="panel-eyebrow">Allocation</p><h3 class="panel-title">Monthly Budget</h3></div>
+                <strong class="panel-chevron" id="mmDashAllocChevron">↓</strong>
+              </button>
+              <div id="mmDashAllocPanel" class="panel-body hidden">
+                <div id="mmAllocationCards" class="mm-alloc-grid">
+                  <div class="empty-state">No allocation data yet.</div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Recent Transactions -->
+            <section class="panel-card">
+              <button class="panel-toggle" onclick="togglePanel('mmDashTxPanel')">
+                <div><p class="panel-eyebrow">This Month</p><h3 class="panel-title">Transactions</h3></div>
+                <strong class="panel-chevron" id="mmDashTxChevron">↓</strong>
+              </button>
+              <div id="mmDashTxPanel" class="panel-body hidden">
+                <div id="mmDashboardTransactions" class="mm-dash-tx-list"></div>
+              </div>
+            </section>
+
+          </section>
+        </div>
+
+        <!-- ===== MM HISTORY PAGE ===== -->
+        <div id="mmHistoryPage" class="page">
+          <section class="page-header-card">
+            <p class="panel-eyebrow">History</p>
+            <h2 class="page-title">Transaction History</h2>
+            <p class="page-desc">View income &amp; expense records.</p>
+          </section>
+          <section class="panel-card">
+            <div class="tab-bar mm-history-tabs">
+              <button class="tab-btn active" onclick="mmSwitchHistoryTab('alltime')">All Time</button>
+              <button class="tab-btn" onclick="mmSwitchHistoryTab('month')">Month</button>
+              <button class="tab-btn" onclick="mmSwitchHistoryTab('period')">Period</button>
+            </div>
+            <div id="mmHistoryAllTime" class="mm-history-content"></div>
+            <div id="mmHistoryMonth" class="mm-history-content" style="display:none;">
+              <div class="mm-month-nav">
+                <button class="btn-ghost" onclick="mmPrevMonth()">&lt;</button>
+                <strong id="mmHistoryMonthLabel">-</strong>
+                <button class="btn-ghost" onclick="mmNextMonth()">&gt;</button>
+              </div>
+              <div id="mmHistoryMonthContent"></div>
+            </div>
+            <div id="mmHistoryPeriod" class="mm-history-content" style="display:none;">
+              <div class="mm-period-filter">
+                <input type="date" id="mmPeriodStart" class="form-input">
+                <input type="date" id="mmPeriodEnd" class="form-input">
+                <button class="btn-primary" onclick="mmLoadPeriod()">Filter</button>
+              </div>
+              <div id="mmHistoryPeriodContent"></div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ===== MM CALENDAR PAGE ===== -->
+        <div id="mmCalendarPage" class="page">
+          <section class="page-header-card">
+            <p class="panel-eyebrow">Calendar</p>
+            <h2 class="page-title">Monthly View</h2>
+            <p class="page-desc">See daily income &amp; expense at a glance.</p>
+          </section>
+          <section class="panel-card">
+            <div class="mm-month-nav">
+              <button class="btn-ghost" onclick="mmCalPrevMonth()">&lt;</button>
+              <strong id="mmCalMonthLabel">-</strong>
+              <button class="btn-ghost" onclick="mmCalNextMonth()">&gt;</button>
+            </div>
+            <div id="mmCalendarGrid" class="mm-calendar-grid"></div>
+            <div id="mmCalDayDetail" class="mm-cal-day-detail" style="display:none;"></div>
+          </section>
+        </div>
+
+        <!-- ===== MM SETTINGS PAGE ===== -->
+        <div id="mmSettingsPage" class="page">
+          <section class="page-header-card">
+            <p class="panel-eyebrow">Settings</p>
+            <h2 class="page-title">Money Settings</h2>
+            <p class="page-desc">Manage accounts, categories, and allocation.</p>
+          </section>
+
+          <!-- Accounts Manager -->
+          <section class="panel-card">
+            <button class="panel-toggle" onclick="togglePanel('mmSettingsAccPanel')">
+              <div>
+                <p class="panel-eyebrow">Accounts</p>
+                <h3 class="panel-title">Manage Accounts</h3>
+              </div>
+              <strong class="panel-chevron" id="mmSettingsAccChevron">↓</strong>
+            </button>
+            <div id="mmSettingsAccPanel" class="panel-body hidden">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+                <button class="btn-mini" onclick="mmShowAddAccount()">+ Add</button>
+              </div>
+              <div id="mmSettingsAccountsList" class="mm-settings-accounts"></div>
+            </div>
+          </section>
+
+          <!-- Allocation Editor -->
+          <section class="panel-card">
+            <button class="panel-toggle" onclick="togglePanel('mmSettingsAllocPanel')">
+              <div>
+                <p class="panel-eyebrow">Allocation</p>
+                <h3 class="panel-title">Budget Split</h3>
+              </div>
+              <strong class="panel-chevron" id="mmSettingsAllocChevron">↓</strong>
+            </button>
+            <div id="mmSettingsAllocPanel" class="panel-body hidden">
+              <div id="mmAllocReadOnly" class="mm-alloc-readonly"></div>
+              <button class="btn-ghost btn-full" style="margin-top:10px;" id="mmAllocEditBtn" onclick="mmToggleAllocEdit()">Edit Allocation</button>
+              <form id="mmAllocationForm" onsubmit="mmSubmitAllocation(event)" style="display:none;">
+                <div id="mmAllocationRows" class="allocation-rows"></div>
+                <div class="allocation-total-box" id="mmAllocTotalBox">
+                  <span>Total</span>
+                  <strong id="mmAllocTotal">0%</strong>
+                </div>
+                <div class="form-actions">
+                  <button type="button" class="btn-ghost" onclick="mmAddAllocRow()">+ Add</button>
+                  <button type="button" class="btn-ghost" onclick="mmToggleAllocEdit()">Cancel</button>
+                  <button type="submit" class="btn-primary">Save</button>
+                </div>
+              </form>
+            </div>
+          </section>
+
+          <!-- Category Manager -->
+          <section class="panel-card">
+            <button class="panel-toggle" onclick="togglePanel('mmSettingsCatPanel')">
+              <div>
+                <p class="panel-eyebrow">Categories</p>
+                <h3 class="panel-title">Expense &amp; Income</h3>
+              </div>
+              <strong class="panel-chevron" id="mmSettingsCatChevron">↓</strong>
+            </button>
+            <div id="mmSettingsCatPanel" class="panel-body hidden">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+                <button class="btn-mini" onclick="mmShowAddCategory()">+ Add</button>
+              </div>
+              <div id="mmCategoriesList" class="mm-categories-list"></div>
+            </div>
+          </section>
+
+          <!-- Export Data -->
+          <section class="panel-card">
+            <button class="panel-toggle" onclick="togglePanel('mmSettingsExportPanel')">
+              <div>
+                <p class="panel-eyebrow">Backup</p>
+                <h3 class="panel-title">Export Data</h3>
+              </div>
+              <strong class="panel-chevron" id="mmSettingsExportChevron">↓</strong>
+            </button>
+            <div id="mmSettingsExportPanel" class="panel-body hidden">
+              <p class="settings-desc">Download data keuangan dalam format CSV. Bisa dibuka di Excel/Google Sheets.</p>
+              <div class="export-options">
+                <button class="btn-primary btn-full" onclick="mmExportData('all')"><i data-lucide="download" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px;"></i>Export Semua Data</button>
+                <button class="btn-ghost btn-full" onclick="mmExportData('transactions')"><i data-lucide="file-text" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Export Transaksi</button>
+                <button class="btn-ghost btn-full" onclick="mmExportData('accounts')"><i data-lucide="file-text" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Export Akun</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Import Data -->
+          <section class="panel-card">
+            <button class="panel-toggle" onclick="togglePanel('mmSettingsImportPanel')">
+              <div>
+                <p class="panel-eyebrow">Restore</p>
+                <h3 class="panel-title">Import Data</h3>
+              </div>
+              <strong class="panel-chevron" id="mmSettingsImportChevron">↓</strong>
+            </button>
+            <div id="mmSettingsImportPanel" class="panel-body hidden">
+              <p class="settings-desc">Import transaksi dari file CSV. Data akan <strong>ditambahkan</strong> ke data existing, bukan menimpa.</p>
+              <div class="import-actions">
+                <button class="btn-ghost btn-full" onclick="mmDownloadTemplate()"><i data-lucide="file-down" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Download Template CSV</button>
+                <label class="btn-primary btn-full import-label">
+                  <i data-lucide="upload" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px;"></i>Pilih File CSV &amp; Import
+                  <input type="file" id="mmImportFile" accept=".csv" onchange="mmImportData(event)" style="display:none;">
+                </label>
+              </div>
+              <div id="mmImportStatus" class="import-status" style="display:none;"></div>
+            </div>
+          </section>
+
+          <!-- Danger Zone -->
+          <section class="panel-card danger-zone-card">
+            <button class="panel-toggle" onclick="togglePanel('mmSettingsDangerPanel')">
+              <div>
+                <p class="panel-eyebrow" style="color:var(--error);">Danger Zone</p>
+                <h3 class="panel-title">Delete Data</h3>
+              </div>
+              <strong class="panel-chevron" id="mmSettingsDangerChevron">↓</strong>
+            </button>
+            <div id="mmSettingsDangerPanel" class="panel-body hidden">
+              <p class="settings-desc" style="color:var(--text-muted);">Hapus data secara permanen. Tindakan ini <strong style="color:var(--error)">tidak dapat dibatalkan</strong>.</p>
+              <div class="danger-options">
+                <button class="btn-danger btn-full" onclick="mmDeleteDataPrompt('transactions')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Transaksi</button>
+                <button class="btn-danger btn-full" onclick="mmDeleteDataPrompt('accounts')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Akun</button>
+                <button class="btn-danger btn-full" onclick="mmDeleteDataPrompt('categories')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Kategori</button>
+                <button class="btn-danger-critical btn-full" onclick="mmDeleteDataPrompt('all')"><i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Data (Reset Total)</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ===== FINANCIAL INSIGHT PAGE ===== -->
+        <div id="mmInsightPage" class="page">
+          <section class="page-header-card">
+            <p class="panel-eyebrow">Financial Advisor</p>
+            <h2 class="page-title">Financial Insight</h2>
+            <p class="page-desc">Your personal financial analysis &amp; recommendations.</p>
+          </section>
+          <div id="insightContent">
+            <div class="insight-loading">
+              <div class="mm-spinner"></div>
+              <p>Analyzing your finances...</p>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+    <!-- END WORKSPACE 2 -->
+
+    <!-- ===== INVESTMENT TRACKER FAB ===== -->
+    <div class="fab-container" id="investFabContainer" style="display:none;">
+      <div class="fab-menu" id="fabMenu">
+        <button class="fab-option" onclick="showActionSheet('cash')">
+          <span><i data-lucide="wallet" class="fab-icon"></i></span>
+          <small>Add Cash</small>
+        </button>
+        <button class="fab-option" onclick="showActionSheet('buy')">
+          <span><i data-lucide="trending-up" class="fab-icon"></i></span>
+          <small>Buy Asset</small>
+        </button>
+        <button class="fab-option" onclick="showActionSheet('sell')">
+          <span><i data-lucide="trending-down" class="fab-icon"></i></span>
+          <small>Sell Asset</small>
+        </button>
+        <button class="fab-option" onclick="showActionSheet('value')">
+          <span><i data-lucide="bar-chart-3" class="fab-icon"></i></span>
+          <small>Update Value</small>
+        </button>
+        <button class="fab-option" onclick="showActionSheet('adjust')">
+          <span><i data-lucide="sliders-horizontal" class="fab-icon"></i></span>
+          <small>Cash Adjust</small>
+        </button>
+      </div>
+      <button class="fab-btn" id="fabBtn" onclick="toggleFab()">
+        <i data-lucide="plus" class="fab-main-icon"></i>
+      </button>
+    </div>
+
+    <!-- ===== MONEY MANAGEMENT FAB ===== -->
+    <div class="fab-container mm-fab" id="mmFabContainer">
+      <div class="fab-menu" id="mmFabMenu">
+        <button class="fab-option" onclick="mmShowActionSheet('income')">
+          <span><i data-lucide="arrow-down-left" class="fab-icon"></i></span>
+          <small>Income</small>
+        </button>
+        <button class="fab-option" onclick="mmShowActionSheet('expense')">
+          <span><i data-lucide="arrow-up-right" class="fab-icon"></i></span>
+          <small>Expense</small>
+        </button>
+        <button class="fab-option" onclick="mmShowActionSheet('transfer')">
+          <span><i data-lucide="arrow-right-left" class="fab-icon"></i></span>
+          <small>Transfer</small>
+        </button>
+      </div>
+      <button class="fab-btn" id="mmFabBtn" onclick="mmToggleFab()">
+        <i data-lucide="plus" class="fab-main-icon"></i>
+      </button>
+    </div>
+
+    <!-- ===== INVESTMENT TRACKER BOTTOM TABS ===== -->
+    <nav class="bottom-tabs" id="investBottomTabs" style="display:none;">
+      <button class="tab-item active" data-page="dashboardPage" onclick="showPage('dashboardPage')">
+        <i data-lucide="layout-dashboard" class="tab-icon"></i>
+        <small>Dashboard</small>
+      </button>
+      <button class="tab-item" data-page="historyPage" onclick="showPage('historyPage')">
+        <i data-lucide="clock" class="tab-icon"></i>
+        <small>History</small>
+      </button>
+      <button class="tab-item" data-page="settingsPage" onclick="showPage('settingsPage')">
+        <i data-lucide="settings" class="tab-icon"></i>
+        <small>Settings</small>
+      </button>
+    </nav>
+
+    <!-- ===== MONEY MANAGEMENT BOTTOM TABS ===== -->
+    <nav class="bottom-tabs mm-tabs" id="mmBottomTabs">
+      <button class="tab-item active" data-page="mmDashboardPage" onclick="mmShowPage('mmDashboardPage')">
+        <i data-lucide="layout-dashboard" class="tab-icon"></i>
+        <small>Dashboard</small>
+      </button>
+      <button class="tab-item" data-page="mmHistoryPage" onclick="mmShowPage('mmHistoryPage')">
+        <i data-lucide="clock" class="tab-icon"></i>
+        <small>History</small>
+      </button>
+      <button class="tab-item" data-page="mmCalendarPage" onclick="mmShowPage('mmCalendarPage')">
+        <i data-lucide="calendar" class="tab-icon"></i>
+        <small>Calendar</small>
+      </button>
+      <button class="tab-item" data-page="mmInsightPage" onclick="mmShowPage('mmInsightPage')">
+        <i data-lucide="brain" class="tab-icon"></i>
+        <small>Insight</small>
+      </button>
+      <button class="tab-item" data-page="mmSettingsPage" onclick="mmShowPage('mmSettingsPage')">
+        <i data-lucide="settings" class="tab-icon"></i>
+        <small>Settings</small>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- ===== INVESTMENT TRACKER ACTION SHEET (Redesigned) ===== -->
+  <div id="actionSheet" class="action-sheet-backdrop hidden" onclick="closeActionSheetBackdrop(event)">
+    <div class="action-sheet-content tx-input-sheet">
+      <div class="action-sheet-handle"></div>
+      
+      <!-- Transaction Type Tabs -->
+      <div class="tx-type-tabs" id="ivTypeTabs">
+        <button class="tx-type-tab active" data-type="deposit" onclick="ivSwitchType('deposit')">Deposit</button>
+        <button class="tx-type-tab" data-type="buy" onclick="ivSwitchType('buy')">Buy</button>
+        <button class="tx-type-tab" data-type="sell" onclick="ivSwitchType('sell')">Sell</button>
+        <button class="tx-type-tab" data-type="value" onclick="ivSwitchType('value')">Value</button>
+      </div>
+
+      <!-- Amount Input (Hero) -->
+      <div class="tx-amount-hero">
+        <span class="tx-amount-prefix">Rp</span>
+        <input type="text" id="ivAmountInput" class="tx-amount-field" inputmode="decimal" placeholder="0" autocomplete="off">
+      </div>
+
+      <!-- Date -->
+      <div class="tx-section" id="ivDateSection">
+        <label class="tx-section-label">Date</label>
+        <div class="tx-date-wrapper">
+          <button class="tx-date-card" type="button" onclick="document.getElementById('ivDateHidden').focus();document.getElementById('ivDateHidden').click();">
+            <span class="tx-date-label" id="ivDateLabel">Today</span>
+            <span class="tx-date-value" id="ivDateValue"></span>
+          </button>
+          <input type="date" id="ivDateHidden" class="tx-date-hidden-input" onchange="ivUpdateDateDisplay()">
+        </div>
+      </div>
+
+      <!-- Platform (Chips) -->
+      <div class="tx-section">
+        <label class="tx-section-label">Platform</label>
+        <div class="tx-chips" id="ivPlatformChips"></div>
+      </div>
+
+      <!-- Sector (Chips, hidden for deposit/value) -->
+      <div class="tx-section" id="ivSectorSection">
+        <label class="tx-section-label">Sector</label>
+        <div class="tx-chips" id="ivSectorChips"></div>
+      </div>
+
+      <!-- Asset (shown for buy/sell/value) -->
+      <div class="tx-section" id="ivAssetSection">
+        <label class="tx-section-label" id="ivAssetLabel">Asset</label>
+        <div class="tx-chips" id="ivAssetChips"></div>
+        <input type="text" id="ivAssetCustom" class="tx-notes-input" placeholder="Type asset name..." style="display:none;margin-top:8px;">
+      </div>
+
+      <!-- Notes -->
+      <div class="tx-section">
+        <input type="text" id="ivNotesInput" class="tx-notes-input" placeholder="Optional note...">
+      </div>
+
+      <!-- Save Button -->
+      <button class="btn-primary btn-full tx-save-btn" id="ivSaveBtn" onclick="ivSubmit()">
+        Save Transaction
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== MONEY MANAGEMENT ACTION SHEET ===== -->
+  <!-- ===== MONEY MANAGEMENT ACTION SHEET (Redesigned) ===== -->
+  <div id="mmActionSheet" class="action-sheet-backdrop hidden" onclick="mmCloseActionSheetBackdrop(event)">
+    <div class="action-sheet-content tx-input-sheet">
+      <div class="action-sheet-handle"></div>
+      
+      <!-- Transaction Type Tabs -->
+      <div class="tx-type-tabs" id="txTypeTabs">
+        <button class="tx-type-tab active" data-type="expense" onclick="txSwitchType('expense')">Expense</button>
+        <button class="tx-type-tab" data-type="income" onclick="txSwitchType('income')">Income</button>
+        <button class="tx-type-tab" data-type="transfer" onclick="txSwitchType('transfer')">Transfer</button>
+      </div>
+
+      <!-- Amount Input (Hero) -->
+      <div class="tx-amount-hero">
+        <span class="tx-amount-prefix">Rp</span>
+        <input type="text" id="txAmountInput" class="tx-amount-field" inputmode="decimal" placeholder="0" autocomplete="off">
+      </div>
+
+      <!-- Recently Used -->
+      <div class="tx-section" id="txRecentlyUsed" style="display:none;">
+        <label class="tx-section-label">Recently Used</label>
+        <div class="tx-recent-chips" id="txRecentChips"></div>
+      </div>
+
+      <!-- Date -->
+      <div class="tx-section">
+        <label class="tx-section-label">Date</label>
+        <div class="tx-date-wrapper">
+          <button class="tx-date-card" id="txDateCard" type="button" onclick="document.getElementById('txDateHidden').focus();document.getElementById('txDateHidden').click();">
+            <span class="tx-date-label" id="txDateLabel">Today</span>
+            <span class="tx-date-value" id="txDateValue"></span>
+          </button>
+          <input type="date" id="txDateHidden" class="tx-date-hidden-input" onchange="txUpdateDateDisplay()">
+        </div>
+      </div>
+
+      <!-- Category (Chips) -->
+      <div class="tx-section" id="txCategorySection">
+        <label class="tx-section-label">Category</label>
+        <div class="tx-chips" id="txCategoryChips"></div>
+      </div>
+
+      <!-- Subcategory (Chips, shown after category selected) -->
+      <div class="tx-section" id="txSubcategorySection" style="display:none;">
+        <label class="tx-section-label">Subcategory</label>
+        <div class="tx-chips" id="txSubcategoryChips"></div>
+      </div>
+
+      <!-- Account (Chips) -->
+      <div class="tx-section" id="txAccountSection">
+        <label class="tx-section-label" id="txAccountLabel">Account</label>
+        <div class="tx-chips" id="txAccountChips"></div>
+      </div>
+
+      <!-- Transfer: To Account -->
+      <div class="tx-section" id="txAccountToSection" style="display:none;">
+        <label class="tx-section-label">To Account</label>
+        <div class="tx-chips" id="txAccountToChips"></div>
+      </div>
+
+      <!-- Notes -->
+      <div class="tx-section">
+        <input type="text" id="txNotesInput" class="tx-notes-input" placeholder="Optional note...">
+      </div>
+
+      <!-- Save Button -->
+      <button class="btn-primary btn-full tx-save-btn" id="txSaveBtn" onclick="txSubmit()">
+        Save Transaction
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== MM MODAL (Account / Category) ===== -->
+  <div id="mmModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="mmModalTitle">Add</h3>
+        <button class="modal-close" onclick="closeModal('mmModal')">×</button>
+      </div>
+      <form id="mmModalForm" onsubmit="mmSubmitModal(event)">
+        <div id="mmModalBody"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn-ghost" onclick="closeModal('mmModal')">Cancel</button>
+          <button type="submit" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== MM Category Detail Bottom Sheet ===== -->
+  <div id="mmCategoryDetailSheet" class="action-sheet-backdrop hidden" onclick="mmCloseCategoryDetail(event)">
+    <div class="action-sheet-content">
+      <div class="action-sheet-handle"></div>
+      <div id="mmCategoryDetailContent"></div>
+    </div>
+  </div>
+
+  <!-- ===== MM Transaction Detail Bottom Sheet ===== -->
+  <div id="mmTxDetailSheet" class="action-sheet-backdrop hidden" onclick="mmCloseTxDetail(event)">
+    <div class="action-sheet-content">
+      <div class="action-sheet-handle"></div>
+      <div id="mmTxDetailContent"></div>
+    </div>
+  </div>
+
+  <!-- ===== QUICK SETTING MODAL (Investment Tracker) ===== -->
+  <div id="quickSettingModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Add Item</h3>
+        <button class="modal-close" onclick="closeModal('quickSettingModal')">×</button>
+      </div>
+      <form id="quickSettingForm" onsubmit="submitQuickSetting(event)">
+        <input type="hidden" name="key" id="quickSettingKey">
+        <label class="form-label">
+          Value
+          <input type="text" name="value" id="quickSettingValue" class="form-input" placeholder="Type here..." required>
+        </label>
+        <div class="modal-actions">
+          <button type="button" class="btn-ghost" onclick="closeModal('quickSettingModal')">Cancel</button>
+          <button type="submit" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== FAB OVERLAY ===== -->
+  <div class="fab-overlay hidden" id="fabOverlay" onclick="toggleFab()"></div>
+  <div class="fab-overlay hidden" id="mmFabOverlay" onclick="mmToggleFab()"></div>
+
+  <!-- ===== TOAST ===== -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    (function() {
+      var meta = document.querySelector('meta[name="viewport"]');
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.name = 'viewport';
+        document.head.appendChild(meta);
+      }
+      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+      try {
+        if (window.frameElement) {
+          window.frameElement.style.width = '100%';
+          window.frameElement.style.maxWidth = '100%';
+        }
+      } catch(e) {}
+    })();
+  </script>
+
+  <?!= include('Script_Db'); ?>
+  <?!= include('Script'); ?>
+  <?!= include('Script_Keuangan'); ?>
+  <?!= include('Script_Insight'); ?>
+  <?!= include('Script_TxInput'); ?>
+</body>
+</html>
