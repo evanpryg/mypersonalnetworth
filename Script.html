@@ -1,24 +1,13 @@
 <script>
-  function startAppIfConfigured() {
-    const creds = typeof getSupabaseCredentials === 'function' 
-      ? getSupabaseCredentials() 
-      : { url: safeStorage.getItem('supabase_url'), key: safeStorage.getItem('supabase_key') };
-    if (creds.url && creds.key) {
-      initApp();
-    }
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startAppIfConfigured);
-  } else {
-    startAppIfConfigured();
-  }
+  // Script_Db.html bootstrapper calls initApp() after connecting to Supabase.
+  // No DOMContentLoaded listener needed here.
 
   let APP_SETTINGS = {};
   let ASSET_OPTIONS = [];
   let ALLOCATION_TARGETS = [];
   let LATEST_DASHBOARD_DATA = null;
   let HISTORY_DATA = { transactions: [] };
-  let AMOUNTS_HIDDEN = safeStorage.getItem('amountsHidden') === 'true';
+  let AMOUNTS_HIDDEN = (typeof safeStorage !== 'undefined' ? safeStorage.getItem('amountsHidden') : null) === 'true';
 
   function initApp() {
     if (window.appInitialized) return;
