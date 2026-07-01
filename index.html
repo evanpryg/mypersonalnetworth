@@ -4245,10 +4245,10 @@ select.form-input:focus {
     })();
   </script>
 
-  <!-- supabaseClient CONNECTION & APPS SCRIPT COMPATIBILITY LAYER -->
+  <!-- SUPABASE CONNECTION & APPS SCRIPT COMPATIBILITY LAYER -->
 <style>
-/* supabaseClient Setup Wizard CSS */
-.supabaseClient-setup-overlay {
+/* Supabase Setup Wizard CSS */
+.supabase-setup-overlay {
   position: fixed;
   top: 0; left: 0; width: 100vw; height: 100vh;
   background: #09090b;
@@ -4259,7 +4259,7 @@ select.form-input:focus {
   justify-content: center;
   font-family: 'Inter', sans-serif;
 }
-.supabaseClient-setup-overlay.hidden {
+.supabase-setup-overlay.hidden {
   display: none !important;
 }
 .setup-wizard-card {
@@ -4342,35 +4342,26 @@ select.form-input:focus {
 }
 .setup-status.success { color: #10b981; }
 .setup-status.error { color: #f43f5e; }
-
-/* Custom settings card for database */
-.db-settings-card {
-  margin-bottom: 14px;
-  border-radius: var(--radius-sm);
-  background: rgba(255,255,255,0.02);
-  border: 1px solid var(--border);
-  padding: 16px;
-}
 </style>
 
-<!-- Wizard markup will be injected at page load -->
-<div id="supabaseSetupOverlay" class="supabaseClient-setup-overlay hidden">
+<!-- Wizard overlay (starts hidden, shown only if no credentials found) -->
+<div id="supabaseSetupOverlay" class="supabase-setup-overlay hidden">
   <div class="setup-wizard-card">
     <div class="setup-header">
       <div class="setup-logo">⚡</div>
-      <h2 class="setup-title">supabaseClient Database Setup</h2>
+      <h2 class="setup-title">Supabase Database Setup</h2>
       <p class="setup-desc">
-        To migrate from Google Sheets to supabaseClient, enter your supabaseClient credentials. 
-        Your keys are saved in your browser's local storage and never uploaded to any server.
+        Masukkan kredensial Supabase Anda untuk menghubungkan database.
+        Data disimpan di browser Anda dan tidak pernah diunggah ke server manapun.
       </p>
     </div>
     <form onsubmit="saveSupabaseWizard(event)">
       <div class="setup-form-group">
-        <label class="setup-label">supabaseClient Project URL</label>
-        <input type="url" id="wizardSupabaseUrl" class="setup-input" placeholder="https://your-project.supabaseClient.co" required>
+        <label class="setup-label">Supabase Project URL</label>
+        <input type="url" id="wizardSupabaseUrl" class="setup-input" placeholder="https://your-project.supabase.co" required>
       </div>
       <div class="setup-form-group">
-        <label class="setup-label">supabaseClient Anon Key</label>
+        <label class="setup-label">Supabase Anon Key</label>
         <input type="password" id="wizardSupabaseKey" class="setup-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." required>
       </div>
       <button type="submit" class="setup-btn">Connect &amp; Sync App</button>
@@ -4381,44 +4372,31 @@ select.form-input:focus {
 
 <script>
 // ====================================================================
-// CONFIG CONFIGURATION MANUAL (MANUAL supabaseClient SETUP)
+// KONFIGURASI MANUAL SUPABASE
 // ====================================================================
-// Paste your supabaseClient credentials here to connect your database directly:
-const HARDCODED_SUPABASE_URL = ""; // e.g. "https://vycpefzdpsfsiczdlvbg.supabaseClient.co"
-const HARDCODED_SUPABASE_KEY = ""; // e.g. "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5Y3BlZnpkcHNmc2ljemRsdmJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxODcsImV4cCI6MjA5ODQ1MDE4N30.upr6L-vw0cr0vAlS_m6pGMbZHtNswKQTwJDWY4KoB-I"
+// Isi kredensial Supabase Anda di bawah ini (di dalam tanda kutip):
+const HARDCODED_SUPABASE_URL = ""; // contoh: "https://vycpefzdpsfsiczdlvbg.supabase.co"
+const HARDCODED_SUPABASE_KEY = ""; // contoh: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5Y3BlZnpkcHNmc2ljemRsdmJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NzQxODcsImV4cCI6MjA5ODQ1MDE4N30.upr6L-vw0cr0vAlS_m6pGMbZHtNswKQTwJDWY4KoB-I"
 // ====================================================================
 
-// Safe localStorage wrapper to prevent crashes when tracking prevention/incognito blocks storage access
-const safeStorage = {
-  getItem(key) {
-    try {
-      return localStorage.getItem(key);
-    } catch (e) {
-      return null;
-    }
-  },
-  setItem(key, value) {
-    try {
-      localStorage.setItem(key, value);
-    } catch (e) {}
-  },
-  removeItem(key) {
-    try {
-      localStorage.removeItem(key);
-    } catch (e) {}
-  }
+// Safe localStorage wrapper — prevents crashes when browser blocks storage
+var safeStorage = {
+  getItem: function(key) { try { return localStorage.getItem(key); } catch(e) { return null; } },
+  setItem: function(key, val) { try { localStorage.setItem(key, val); } catch(e) {} },
+  removeItem: function(key) { try { localStorage.removeItem(key); } catch(e) {} }
 };
 
-let supabaseClient = null;
+// The active Supabase client instance
+var _sb = null;
 
 function getSupabaseCredentials() {
-  const url = HARDCODED_SUPABASE_URL || safeStorage.getItem('supabase_url');
-  const key = HARDCODED_SUPABASE_KEY || safeStorage.getItem('supabase_key');
-  return { url, key };
+  var url = HARDCODED_SUPABASE_URL || safeStorage.getItem('supabase_url') || '';
+  var key = HARDCODED_SUPABASE_KEY || safeStorage.getItem('supabase_key') || '';
+  return { url: url, key: key };
 }
 
 // Case-insensitive key mapper dictionaries to bridge PostgreSQL and frontend logic
-const KEY_MAP = {
+var KEY_MAP = {
   'id': 'id',
   'timestamp': 'Timestamp',
   'date': 'Date',
@@ -4456,9 +4434,9 @@ const KEY_MAP = {
 
 function mapRowToFrontend(row) {
   if (!row) return row;
-  const mapped = {};
-  for (let k in row) {
-    const targetKey = KEY_MAP[k.toLowerCase()] || k;
+  var mapped = {};
+  for (var k in row) {
+    var targetKey = KEY_MAP[k.toLowerCase()] || k;
     mapped[targetKey] = row[k];
   }
   return mapped;
@@ -4466,88 +4444,58 @@ function mapRowToFrontend(row) {
 
 function mapRowToDb(row) {
   if (!row) return row;
-  const mapped = {};
-  for (let k in row) {
+  var mapped = {};
+  for (var k in row) {
     mapped[k.toLowerCase()] = row[k];
   }
   return mapped;
 }
 
-// Helpers:
-function normalize_(value) {
-  return String(value || '').trim();
-}
-function normalizeUpper_(value) {
-  return normalize_(value).toUpperCase();
-}
-function toNumber_(value) {
-  const number = Number(value);
-  return isNaN(number) ? 0 : number;
-}
+// Helpers
+function normalize_(value) { return String(value || '').trim(); }
+function normalizeUpper_(value) { return normalize_(value).toUpperCase(); }
+function toNumber_(value) { var n = Number(value); return isNaN(n) ? 0 : n; }
 function makeAssetKey_(platform, sector, asset) {
-  return [
-    normalizeUpper_(platform),
-    normalizeUpper_(sector),
-    normalizeUpper_(asset)
-  ].join('|');
+  return [normalizeUpper_(platform), normalizeUpper_(sector), normalizeUpper_(asset)].join('|');
 }
-function getCashAssetName_(platform) {
-  return `${normalize_(platform)} Cash`;
-}
+function getCashAssetName_(platform) { return normalize_(platform) + ' Cash'; }
 function formatDateForClient_(value) {
   if (!value) return '';
-  const d = new Date(value);
+  var d = new Date(value);
   if (isNaN(d.getTime())) return String(value);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dateStr = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dateStr}`;
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 function formatTimestampForClient_(value) {
   if (!value) return '';
-  const d = new Date(value);
+  var d = new Date(value);
   if (isNaN(d.getTime())) return String(value);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dateStr = String(d.getDate()).padStart(2, '0');
-  const h = String(d.getHours()).padStart(2, '0');
-  const mi = String(d.getMinutes()).padStart(2, '0');
-  const s = String(d.getSeconds()).padStart(2, '0');
-  return `${y}-${m}-${dateStr} ${h}:${mi}:${s}`;
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
 }
 
-// 1. Get raw rows from supabaseClient (auto-mapped to frontend keys)
+// Get raw rows from Supabase (auto-mapped to frontend keys)
 async function getRows_(tableName) {
-  if (!supabaseClient) throw new Error("supabaseClient is not initialized.");
-  const { data, error } = await supabaseClient.from(tableName.toLowerCase()).select('*');
-  if (error) {
-    console.error(`Error reading ${tableName}:`, error);
-    throw error;
-  }
-  // Map database lowercase keys to frontend case-sensitive keys
-  const mappedData = data.map(mapRowToFrontend);
-  
-  // Parse date fields
-  const dateFields = ['Timestamp', 'Date', 'StartDate'];
-  mappedData.forEach(row => {
-    dateFields.forEach(field => {
-      if (row[field] && typeof row[field] === 'string') {
-        row[field] = new Date(row[field]);
-      }
+  if (!_sb) throw new Error("Supabase is not initialized.");
+  var { data, error } = await _sb.from(tableName.toLowerCase()).select('*');
+  if (error) { console.error('Error reading ' + tableName + ':', error); throw error; }
+  var mappedData = data.map(mapRowToFrontend);
+  var dateFields = ['Timestamp', 'Date', 'StartDate'];
+  mappedData.forEach(function(row) {
+    dateFields.forEach(function(field) {
+      if (row[field] && typeof row[field] === 'string') row[field] = new Date(row[field]);
     });
   });
   return mappedData;
 }
 
 // Ported Database API Methods
-const DB_API = {
+var DB_API = {
   // SETTINGS
   async getSettings() {
-    const rows = await getRows_('settings');
-    const settings = {};
-    rows.forEach(row => {
-      const key = normalize_(row.Key);
-      const value = normalize_(row.Value);
+    var rows = await getRows_('settings');
+    var settings = {};
+    rows.forEach(function(row) {
+      var key = normalize_(row.Key);
+      var value = normalize_(row.Value);
       if (!key || !value) return;
       if (!settings[key]) settings[key] = [];
       if (!settings[key].includes(value)) settings[key].push(value);
@@ -4556,65 +4504,37 @@ const DB_API = {
   },
 
   async addSettingItem(payload) {
-    const key = normalize_(payload.key);
-    const value = normalize_(payload.value);
+    var key = normalize_(payload.key);
+    var value = normalize_(payload.value);
     if (!key || !value) throw new Error('Key and value are required.');
-    
-    // Check duplication
-    const rows = await getRows_('settings');
-    const exists = rows.some(row => normalizeUpper_(row.Key) === normalizeUpper_(key) && normalizeUpper_(row.Value) === normalizeUpper_(value));
-    if (exists) {
-      return { success: false, message: `${value} already exists in ${key}.` };
-    }
-    
-    const { error } = await supabaseClient.from('settings').insert(mapRowToDb({ Key: key, Value: value }));
+    var rows = await getRows_('settings');
+    var exists = rows.some(function(row) { return normalizeUpper_(row.Key) === normalizeUpper_(key) && normalizeUpper_(row.Value) === normalizeUpper_(value); });
+    if (exists) return { success: false, message: value + ' already exists in ' + key + '.' };
+    var { error } = await _sb.from('settings').insert(mapRowToDb({ Key: key, Value: value }));
     if (error) throw error;
-    return { success: true, message: `${value} added to ${key}.` };
+    return { success: true, message: value + ' added to ' + key + '.' };
   },
 
   // TARGETS
   async getMainTarget_() {
-    const targets = await getRows_('targets');
-    if (targets.length === 0) {
-      return {
-        TargetID: 'T001',
-        TargetName: 'First 100 Million',
-        TargetAmount: 100000000,
-        TargetCurrency: 'IDR',
-        StartDate: '',
-        Notes: ''
-      };
-    }
+    var targets = await getRows_('targets');
+    if (targets.length === 0) return { TargetID: 'T001', TargetName: 'First 100 Million', TargetAmount: 100000000, TargetCurrency: 'IDR', StartDate: '', Notes: '' };
     return targets[0];
   },
 
   async updateMainTarget(payload) {
-    const targetName = normalize_(payload.targetName);
-    const targetAmount = toNumber_(payload.targetAmount);
-    const targetCurrency = normalizeUpper_(payload.targetCurrency || 'IDR');
-    const notes = normalize_(payload.notes);
-
+    var targetName = normalize_(payload.targetName);
+    var targetAmount = toNumber_(payload.targetAmount);
+    var targetCurrency = normalizeUpper_(payload.targetCurrency || 'IDR');
+    var notes = normalize_(payload.notes);
     if (!targetName) throw new Error('Target name is required.');
     if (targetAmount <= 0) throw new Error('Target amount must be greater than 0.');
-
-    const targets = await getRows_('targets');
+    var targets = await getRows_('targets');
     if (targets.length === 0) {
-      const { error } = await supabaseClient.from('targets').insert(mapRowToDb({
-        TargetID: 'T001',
-        TargetName: targetName,
-        TargetAmount: targetAmount,
-        TargetCurrency: targetCurrency,
-        StartDate: new Date(),
-        Notes: notes
-      }));
+      var { error } = await _sb.from('targets').insert(mapRowToDb({ TargetID: 'T001', TargetName: targetName, TargetAmount: targetAmount, TargetCurrency: targetCurrency, StartDate: new Date(), Notes: notes }));
       if (error) throw error;
     } else {
-      const { error } = await supabaseClient.from('targets').update(mapRowToDb({
-        TargetName: targetName,
-        TargetAmount: targetAmount,
-        TargetCurrency: targetCurrency,
-        Notes: notes
-      })).eq('targetid', targets[0].TargetID);
+      var { error } = await _sb.from('targets').update(mapRowToDb({ TargetName: targetName, TargetAmount: targetAmount, TargetCurrency: targetCurrency, Notes: notes })).eq('targetid', targets[0].TargetID);
       if (error) throw error;
     }
     return { success: true, message: 'Main target updated successfully.' };
@@ -4622,1225 +4542,499 @@ const DB_API = {
 
   // PORTFOLIO
   async getPortfolioSheet_() {
-    const rows = await getRows_('portfolio');
-    const values = {};
-    rows.forEach(row => {
-      const platform = normalize_(row.Platform);
-      const sector = normalize_(row.Sector);
-      const asset = normalize_(row.Asset);
-      const currentValueIDR = toNumber_(row.CurrentValueIDR);
+    var rows = await getRows_('portfolio');
+    var values = {};
+    rows.forEach(function(row) {
+      var platform = normalize_(row.Platform), sector = normalize_(row.Sector), asset = normalize_(row.Asset);
+      var currentValueIDR = toNumber_(row.CurrentValueIDR);
       if (!platform || !sector || !asset) return;
-      const key = makeAssetKey_(platform, sector, asset);
-      values[key] = currentValueIDR;
+      values[makeAssetKey_(platform, sector, asset)] = currentValueIDR;
     });
     return values;
   },
 
   async updateAssetValue(payload) {
-    const platform = normalize_(payload.platform);
-    const sector = normalize_(payload.sector);
-    const asset = normalize_(payload.asset);
-    const currentValueIDR = toNumber_(payload.currentValueIDR);
-
+    var platform = normalize_(payload.platform), sector = normalize_(payload.sector), asset = normalize_(payload.asset);
+    var currentValueIDR = toNumber_(payload.currentValueIDR);
     if (!platform || !sector || !asset) throw new Error('Platform, Sector, and Asset are required.');
-
-    const { error } = await supabaseClient.from('portfolio').upsert(mapRowToDb({
-      Platform: platform,
-      Sector: sector,
-      Asset: asset,
-      CurrentValueIDR: currentValueIDR
-    }));
+    var { error } = await _sb.from('portfolio').upsert(mapRowToDb({ Platform: platform, Sector: sector, Asset: asset, CurrentValueIDR: currentValueIDR }));
     if (error) throw error;
     return { success: true, message: 'Asset value updated successfully.' };
   },
 
   // ALLOCATION TARGETS (INVESTMENT)
   async getAllocationTargets() {
-    const rows = await getRows_('allocation_targets');
-    return rows
-      .filter(row => normalize_(row.Sector))
-      .map(row => ({
-        sector: normalize_(row.Sector),
-        targetPercent: toNumber_(row.TargetPercent)
-      }));
+    var rows = await getRows_('allocation_targets');
+    return rows.filter(function(r) { return normalize_(r.Sector); }).map(function(r) { return { sector: normalize_(r.Sector), targetPercent: toNumber_(r.TargetPercent) }; });
   },
 
   async getAllocationTargets_() {
-    const rows = await getRows_('allocation_targets');
-    const targets = {};
-    rows.forEach(row => {
-      const sector = normalize_(row.Sector);
-      const targetPercent = toNumber_(row.TargetPercent);
-      if (!sector || targetPercent <= 0) return;
-      targets[sector] = targetPercent;
-    });
+    var rows = await getRows_('allocation_targets');
+    var targets = {};
+    rows.forEach(function(r) { var s = normalize_(r.Sector), tp = toNumber_(r.TargetPercent); if (s && tp > 0) targets[s] = tp; });
     return targets;
   },
 
   async saveAllocationTargets(payload) {
-    const items = payload.items || [];
-    const cleanedItems = items
-      .map(item => ({
-        sector: normalize_(item.sector),
-        targetPercent: toNumber_(item.targetPercent)
-      }))
-      .filter(item => item.sector && item.targetPercent >= 0);
-
-    const total = cleanedItems.reduce((sum, item) => sum + item.targetPercent, 0);
-
+    var items = payload.items || [];
+    var cleanedItems = items.map(function(i) { return { sector: normalize_(i.sector), targetPercent: toNumber_(i.targetPercent) }; }).filter(function(i) { return i.sector && i.targetPercent >= 0; });
+    var total = cleanedItems.reduce(function(s, i) { return s + i.targetPercent; }, 0);
     if (cleanedItems.length === 0) throw new Error('Allocation target cannot be empty.');
-    if (Math.abs(total - 100) > 0.01) throw new Error(`Total allocation must be 100%. Current total is ${total}%.`);
-
-    // Truncate and replace
-    const { error: delError } = await supabaseClient.from('allocation_targets').delete().neq('sector', '');
+    if (Math.abs(total - 100) > 0.01) throw new Error('Total allocation must be 100%. Current total is ' + total + '%.');
+    var { error: delError } = await _sb.from('allocation_targets').delete().neq('sector', '');
     if (delError) throw delError;
-
-    const { error: insError } = await supabaseClient.from('allocation_targets').insert(cleanedItems.map(item => mapRowToDb({
-      Sector: item.sector,
-      TargetPercent: item.targetPercent
-    })));
+    var { error: insError } = await _sb.from('allocation_targets').insert(cleanedItems.map(function(i) { return mapRowToDb({ Sector: i.sector, TargetPercent: i.targetPercent }); }));
     if (insError) throw insError;
-
     return { success: true, message: 'Allocation targets saved successfully.' };
   },
 
   // DASHBOARD DATA
   async getDashboardData() {
-    const target = await this.getMainTarget_();
-    const allTransactions = await getRows_('transactions');
-    const transactions = allTransactions.filter(row => normalize_(row.Status || 'Active') !== 'Deleted');
-    const persistedValues = await this.getPortfolioSheet_();
-    const allocationTargets = await this.getAllocationTargets_();
+    var target = await this.getMainTarget_();
+    var allTransactions = await getRows_('transactions');
+    var transactions = allTransactions.filter(function(r) { return normalize_(r.Status || 'Active') !== 'Deleted'; });
+    var persistedValues = await this.getPortfolioSheet_();
+    var allocationTargets = await this.getAllocationTargets_();
+    var portfolioMap = {};
 
-    const portfolioMap = {};
-
-    function ensurePortfolioItem_(portfolioMap, platform, sector, asset) {
-      const key = makeAssetKey_(platform, sector, asset);
-      if (!portfolioMap[key]) {
-        portfolioMap[key] = {
-          Platform: normalize_(platform),
-          Sector: normalize_(sector),
-          Asset: normalize_(asset),
-          TotalCapitalIDR: 0,
-          CurrentValueIDR: 0,
-          ProfitLossIDR: 0,
-          GrowthPercent: 0
-        };
-      }
-      return portfolioMap[key];
+    function ensurePortfolioItem_(pm, platform, sector, asset) {
+      var key = makeAssetKey_(platform, sector, asset);
+      if (!pm[key]) pm[key] = { Platform: normalize_(platform), Sector: normalize_(sector), Asset: normalize_(asset), TotalCapitalIDR: 0, CurrentValueIDR: 0, ProfitLossIDR: 0, GrowthPercent: 0 };
+      return pm[key];
     }
-
-    function addCashMovement_(portfolioMap, platform, amountIDR) {
-      const cashItem = ensurePortfolioItem_(portfolioMap, platform, 'Cash', getCashAssetName_(platform));
+    function addCashMovement_(pm, platform, amountIDR) {
+      var cashItem = ensurePortfolioItem_(pm, platform, 'Cash', getCashAssetName_(platform));
       cashItem.TotalCapitalIDR += amountIDR;
     }
 
-    transactions.forEach(row => {
-      const platform = normalize_(row.Platform);
-      const sector = normalize_(row.Sector);
-      const asset = normalize_(row.Asset);
-      const type = normalize_(row.TransactionType);
+    transactions.forEach(function(row) {
+      var platform = normalize_(row.Platform), sector = normalize_(row.Sector), asset = normalize_(row.Asset), type = normalize_(row.TransactionType);
       if (!platform || !type) return;
-
-      const amountIDR = toNumber_(row.AmountIDR);
-
-      if (type === 'Buy') {
-        if (!sector || !asset) return;
-        const item = ensurePortfolioItem_(portfolioMap, platform, sector, asset);
-        item.TotalCapitalIDR += amountIDR;
-        addCashMovement_(portfolioMap, platform, -amountIDR);
-      } else if (type === 'Sell') {
-        if (!sector || !asset) return;
-        const item = ensurePortfolioItem_(portfolioMap, platform, sector, asset);
-        item.TotalCapitalIDR -= amountIDR;
-        addCashMovement_(portfolioMap, platform, amountIDR);
-      } else if (type === 'Deposit') {
-        addCashMovement_(portfolioMap, platform, amountIDR);
-      } else if (type === 'Withdraw') {
-        addCashMovement_(portfolioMap, platform, -amountIDR);
-      } else if (type === 'Initial Holding') {
-        if (!sector || !asset) return;
-        const item = ensurePortfolioItem_(portfolioMap, platform, sector, asset);
-        item.TotalCapitalIDR += amountIDR;
-      } else if (type === 'Cash Adjustment') {
-        addCashMovement_(portfolioMap, platform, amountIDR);
-      }
+      var amountIDR = toNumber_(row.AmountIDR);
+      if (type === 'Buy') { if (!sector||!asset) return; ensurePortfolioItem_(portfolioMap, platform, sector, asset).TotalCapitalIDR += amountIDR; addCashMovement_(portfolioMap, platform, -amountIDR); }
+      else if (type === 'Sell') { if (!sector||!asset) return; ensurePortfolioItem_(portfolioMap, platform, sector, asset).TotalCapitalIDR -= amountIDR; addCashMovement_(portfolioMap, platform, amountIDR); }
+      else if (type === 'Deposit') { addCashMovement_(portfolioMap, platform, amountIDR); }
+      else if (type === 'Withdraw') { addCashMovement_(portfolioMap, platform, -amountIDR); }
+      else if (type === 'Initial Holding') { if (!sector||!asset) return; ensurePortfolioItem_(portfolioMap, platform, sector, asset).TotalCapitalIDR += amountIDR; }
+      else if (type === 'Cash Adjustment') { addCashMovement_(portfolioMap, platform, amountIDR); }
     });
 
-    const portfolio = Object.values(portfolioMap).map(item => {
-      const key = makeAssetKey_(item.Platform, item.Sector, item.Asset);
-      if (item.Sector === 'Cash') {
-        item.CurrentValueIDR = item.TotalCapitalIDR;
-        item.ProfitLossIDR = 0;
-        item.GrowthPercent = 0;
-        return item;
-      }
-
-      if (persistedValues[key] !== undefined) {
-        item.CurrentValueIDR = persistedValues[key];
-      } else {
-        item.CurrentValueIDR = item.TotalCapitalIDR;
-      }
-
+    var portfolio = Object.values(portfolioMap).map(function(item) {
+      var key = makeAssetKey_(item.Platform, item.Sector, item.Asset);
+      if (item.Sector === 'Cash') { item.CurrentValueIDR = item.TotalCapitalIDR; item.ProfitLossIDR = 0; item.GrowthPercent = 0; return item; }
+      item.CurrentValueIDR = (persistedValues[key] !== undefined) ? persistedValues[key] : item.TotalCapitalIDR;
       item.ProfitLossIDR = item.CurrentValueIDR - item.TotalCapitalIDR;
       item.GrowthPercent = item.TotalCapitalIDR > 0 ? item.ProfitLossIDR / item.TotalCapitalIDR : 0;
       return item;
     });
 
-    const investedAssets = portfolio.filter(item => item.Sector !== 'Cash');
-    const cashItems = portfolio.filter(item => item.Sector === 'Cash');
+    var investedAssets = portfolio.filter(function(i) { return i.Sector !== 'Cash'; });
+    var cashItems = portfolio.filter(function(i) { return i.Sector === 'Cash'; });
+    var totalInvestedAssetsIDR = investedAssets.reduce(function(s,i) { return s + i.CurrentValueIDR; }, 0);
+    var totalCashIDR = cashItems.reduce(function(s,i) { return s + i.CurrentValueIDR; }, 0);
+    var totalPortfolioValueIDR = totalInvestedAssetsIDR + totalCashIDR;
+    var totalCapitalIDR = investedAssets.reduce(function(s,i) { return s + i.TotalCapitalIDR; }, 0);
+    var totalProfitLossIDR = investedAssets.reduce(function(s,i) { return s + i.ProfitLossIDR; }, 0);
+    var targetAmount = toNumber_(target.TargetAmount) || 100000000;
+    var progressPercent = targetAmount > 0 ? totalPortfolioValueIDR / targetAmount : 0;
+    var remainingAmountIDR = Math.max(targetAmount - totalPortfolioValueIDR, 0);
 
-    const totalInvestedAssetsIDR = investedAssets.reduce((sum, item) => sum + item.CurrentValueIDR, 0);
-    const totalCashIDR = cashItems.reduce((sum, item) => sum + item.CurrentValueIDR, 0);
-    const totalPortfolioValueIDR = totalInvestedAssetsIDR + totalCashIDR;
-
-    const totalCapitalIDR = investedAssets.reduce((sum, item) => sum + item.TotalCapitalIDR, 0);
-    const totalProfitLossIDR = investedAssets.reduce((sum, item) => sum + item.ProfitLossIDR, 0);
-
-    const targetAmount = toNumber_(target.TargetAmount) || 100000000;
-    const progressPercent = targetAmount > 0 ? totalPortfolioValueIDR / targetAmount : 0;
-    const remainingAmountIDR = Math.max(targetAmount - totalPortfolioValueIDR, 0);
-
-    const averageMonthlyInvestmentIDR = (function(transactions) {
-      const monthly = {};
-      transactions.forEach(row => {
-        const type = normalize_(row.TransactionType);
-        if (!['Initial Holding', 'Deposit'].includes(type)) return;
-        const date = row.Date;
-        if (!date) return;
-        const d = new Date(date);
-        if (isNaN(d.getTime())) return;
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        const amountIDR = toNumber_(row.AmountIDR);
-        if (!monthly[key]) monthly[key] = 0;
-        monthly[key] += amountIDR;
-      });
-      const values = Object.values(monthly);
-      if (values.length === 0) return 0;
-      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    var averageMonthlyInvestmentIDR = (function(txs) {
+      var monthly = {};
+      txs.forEach(function(r) { var type = normalize_(r.TransactionType); if (!['Initial Holding','Deposit'].includes(type)) return; var d = new Date(r.Date); if (isNaN(d.getTime())) return; var k = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); if (!monthly[k]) monthly[k]=0; monthly[k]+=toNumber_(r.AmountIDR); });
+      var vals = Object.values(monthly); return vals.length === 0 ? 0 : vals.reduce(function(a,b){return a+b;},0)/vals.length;
     })(transactions);
+    var estimatedMonthsLeft = averageMonthlyInvestmentIDR > 0 ? Math.ceil(remainingAmountIDR / averageMonthlyInvestmentIDR) : null;
 
-    const estimatedMonthsLeft = averageMonthlyInvestmentIDR > 0 ? Math.ceil(remainingAmountIDR / averageMonthlyInvestmentIDR) : null;
-
-    // Sector allocation
-    const sectorMap = {};
-    portfolio.forEach(item => {
-      if (!sectorMap[item.Sector]) sectorMap[item.Sector] = 0;
-      sectorMap[item.Sector] += item.CurrentValueIDR;
+    var sectorMap = {};
+    portfolio.forEach(function(i) { if (!sectorMap[i.Sector]) sectorMap[i.Sector]=0; sectorMap[i.Sector]+=i.CurrentValueIDR; });
+    var totalSectorVal = Object.values(sectorMap).reduce(function(s,v){return s+v;},0);
+    var allocationBySector = Object.keys(sectorMap).map(function(sector) {
+      var valueIDR = sectorMap[sector], actualPercent = totalSectorVal > 0 ? (valueIDR/totalSectorVal)*100 : 0;
+      var targetPercent = allocationTargets[sector] || 0, difference = actualPercent - targetPercent;
+      var status = 'No Target';
+      if (targetPercent > 0) { if (Math.abs(difference)<=3) status='Balanced'; else if (difference>3) status='Overweight'; else status='Underweight'; }
+      return { sector:sector, valueIDR:valueIDR, actualPercent:actualPercent, targetPercent:targetPercent, difference:difference, status:status };
     });
-    const totalSectorVal = Object.values(sectorMap).reduce((sum, v) => sum + v, 0);
-    const allocationBySector = Object.keys(sectorMap).map(sector => {
-      const valueIDR = sectorMap[sector];
-      const actualPercent = totalSectorVal > 0 ? (valueIDR / totalSectorVal) * 100 : 0;
-      const targetPercent = allocationTargets[sector] || 0;
-      const difference = actualPercent - targetPercent;
-      let status = 'No Target';
-      if (targetPercent > 0) {
-        if (Math.abs(difference) <= 3) status = 'Balanced';
-        else if (difference > 3) status = 'Overweight';
-        else status = 'Underweight';
-      }
-      return { sector, valueIDR, actualPercent, targetPercent, difference, status };
-    });
+    var cashByPlatform = cashItems.map(function(i) { return { platform:i.Platform, asset:i.Asset, cashBalanceIDR:i.CurrentValueIDR }; });
 
-    const cashByPlatform = cashItems.map(item => ({
-      platform: item.Platform,
-      asset: item.Asset,
-      cashBalanceIDR: item.CurrentValueIDR
-    }));
-
-    // Rebalance suggestions
-    const rebalanceSuggestions = (function(allocationBySector, totalCashIDR) {
-      if (!allocationBySector || allocationBySector.length === 0 || totalCashIDR <= 0) return [];
-      const underweightItems = allocationBySector
-        .filter(item => item.sector !== 'Cash' && item.status === 'Underweight')
-        .map(item => ({
-          sector: item.sector,
-          actualPercent: Number(item.actualPercent) || 0,
-          targetPercent: Number(item.targetPercent) || 0,
-          gapPercent: Math.abs(Number(item.difference) || 0)
-        }))
-        .filter(item => item.gapPercent > 0);
-
-      if (underweightItems.length === 0) return [];
-      const totalGap = underweightItems.reduce((sum, item) => sum + item.gapPercent, 0);
-      return underweightItems.map(item => {
-        const portion = totalGap > 0 ? item.gapPercent / totalGap : 0;
-        const suggestedAmountIDR = totalCashIDR * portion;
-        return { sector: item.sector, actualPercent: item.actualPercent, targetPercent: item.targetPercent, gapPercent: item.gapPercent, portion, suggestedAmountIDR };
-      }).sort((a, b) => b.suggestedAmountIDR - a.suggestedAmountIDR);
+    var rebalanceSuggestions = (function(abs, tc) {
+      if (!abs||abs.length===0||tc<=0) return [];
+      var uw = abs.filter(function(i){return i.sector!=='Cash'&&i.status==='Underweight';}).map(function(i){return{sector:i.sector,actualPercent:Number(i.actualPercent)||0,targetPercent:Number(i.targetPercent)||0,gapPercent:Math.abs(Number(i.difference)||0)};}).filter(function(i){return i.gapPercent>0;});
+      if (uw.length===0) return [];
+      var tg = uw.reduce(function(s,i){return s+i.gapPercent;},0);
+      return uw.map(function(i){var p=tg>0?i.gapPercent/tg:0;return{sector:i.sector,actualPercent:i.actualPercent,targetPercent:i.targetPercent,gapPercent:i.gapPercent,portion:p,suggestedAmountIDR:tc*p};}).sort(function(a,b){return b.suggestedAmountIDR-a.suggestedAmountIDR;});
     })(allocationBySector, totalCashIDR);
 
-    return {
-      target: { name: target.TargetName || 'First 100 Million', amount: targetAmount, currency: target.TargetCurrency || 'IDR' },
-      summary: { totalPortfolioValueIDR, totalInvestedAssetsIDR, totalCashIDR, totalCapitalIDR, totalProfitLossIDR, progressPercent, remainingAmountIDR, averageMonthlyInvestmentIDR, estimatedMonthsLeft },
-      allocationTargets, allocationBySector, cashByPlatform, rebalanceSuggestions, portfolio
-    };
+    return { target:{name:target.TargetName||'First 100 Million',amount:targetAmount,currency:target.TargetCurrency||'IDR'}, summary:{totalPortfolioValueIDR:totalPortfolioValueIDR,totalInvestedAssetsIDR:totalInvestedAssetsIDR,totalCashIDR:totalCashIDR,totalCapitalIDR:totalCapitalIDR,totalProfitLossIDR:totalProfitLossIDR,progressPercent:progressPercent,remainingAmountIDR:remainingAmountIDR,averageMonthlyInvestmentIDR:averageMonthlyInvestmentIDR,estimatedMonthsLeft:estimatedMonthsLeft}, allocationTargets:allocationTargets, allocationBySector:allocationBySector, cashByPlatform:cashByPlatform, rebalanceSuggestions:rebalanceSuggestions, portfolio:portfolio };
   },
 
   async addTransaction(payload) {
-    const platform = normalize_(payload.platform);
-    const transactionType = normalize_(payload.transactionType);
-    const amountIDR = toNumber_(payload.amountIDR);
-    let sector = normalize_(payload.sector);
-    let asset = normalize_(payload.asset);
-
-    if (transactionType === 'Deposit' || transactionType === 'Withdraw') {
-      sector = 'Cash';
-      asset = getCashAssetName_(platform);
-    }
-
-    const { error } = await supabaseClient.from('transactions').insert(mapRowToDb({
-      Date: payload.date,
-      Platform: platform,
-      Sector: sector,
-      Asset: asset,
-      TransactionType: transactionType,
-      AmountIDR: amountIDR,
-      Notes: payload.notes || '',
-      Status: 'Active'
-    }));
+    var platform = normalize_(payload.platform), transactionType = normalize_(payload.transactionType), amountIDR = toNumber_(payload.amountIDR);
+    var sector = normalize_(payload.sector), asset = normalize_(payload.asset);
+    if (transactionType==='Deposit'||transactionType==='Withdraw') { sector='Cash'; asset=getCashAssetName_(platform); }
+    var { error } = await _sb.from('transactions').insert(mapRowToDb({ Date:payload.date, Platform:platform, Sector:sector, Asset:asset, TransactionType:transactionType, AmountIDR:amountIDR, Notes:payload.notes||'', Status:'Active' }));
     if (error) throw error;
-    return { success: true, message: 'Transaction added successfully.' };
+    return { success:true, message:'Transaction added successfully.' };
   },
 
   async syncCashBalance(payload) {
-    const platform = normalize_(payload.platform);
-    const actualBalance = toNumber_(payload.actualBalance);
-    const notes = normalize_(payload.notes) || 'Balance sync';
-
+    var platform = normalize_(payload.platform), actualBalance = toNumber_(payload.actualBalance), notes = normalize_(payload.notes) || 'Balance sync';
     if (!platform) throw new Error('Platform is required.');
-
-    const dashData = await this.getDashboardData();
-    const cashItem = dashData.portfolio.find(item => item.Sector === 'Cash' && item.Platform === platform);
-    const currentCash = cashItem ? cashItem.CurrentValueIDR : 0;
-    const difference = actualBalance - currentCash;
-
-    if (Math.abs(difference) < 1) {
-      return { success: true, message: 'Balance already in sync.' };
-    }
-
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const { error } = await supabaseClient.from('transactions').insert(mapRowToDb({
-      Date: todayStr,
-      Platform: platform,
-      Sector: 'Cash',
-      Asset: getCashAssetName_(platform),
-      TransactionType: 'Cash Adjustment',
-      AmountIDR: difference,
-      Notes: notes,
-      Status: 'Active'
-    }));
+    var dashData = await this.getDashboardData();
+    var cashItem = dashData.portfolio.find(function(i){return i.Sector==='Cash'&&i.Platform===platform;});
+    var currentCash = cashItem ? cashItem.CurrentValueIDR : 0, difference = actualBalance - currentCash;
+    if (Math.abs(difference)<1) return { success:true, message:'Balance already in sync.' };
+    var todayStr = new Date().toISOString().slice(0,10);
+    var { error } = await _sb.from('transactions').insert(mapRowToDb({ Date:todayStr, Platform:platform, Sector:'Cash', Asset:getCashAssetName_(platform), TransactionType:'Cash Adjustment', AmountIDR:difference, Notes:notes, Status:'Active' }));
     if (error) throw error;
-
-    return { success: true, message: `Balance synced. Adjusted ${difference >= 0 ? '+' : ''}${difference.toLocaleString('id-ID')}.` };
+    return { success:true, message:'Balance synced. Adjusted '+(difference>=0?'+':'')+difference.toLocaleString('id-ID')+'.' };
   },
 
   async getAssetOptions() {
-    const dashboardData = await this.getDashboardData();
-    return dashboardData.portfolio
-      .filter(item => item.Sector !== 'Cash' && item.TotalCapitalIDR > 0)
-      .map(item => ({
-        platform: item.Platform,
-        sector: item.Sector,
-        asset: item.Asset,
-        currentValueIDR: item.CurrentValueIDR
-      }))
-      .sort((a, b) => a.platform.localeCompare(b.platform) || a.sector.localeCompare(b.sector) || a.asset.localeCompare(b.asset));
+    var dd = await this.getDashboardData();
+    return dd.portfolio.filter(function(i){return i.Sector!=='Cash'&&i.TotalCapitalIDR>0;}).map(function(i){return{platform:i.Platform,sector:i.Sector,asset:i.Asset,currentValueIDR:i.CurrentValueIDR};}).sort(function(a,b){return a.platform.localeCompare(b.platform)||a.sector.localeCompare(b.sector)||a.asset.localeCompare(b.asset);});
   },
 
   async getHistoryData() {
-    const raw = await getRows_('transactions');
-    const transactions = raw
-      .map(row => ({
-        rowNumber: row.id, // supabaseClient id serves as rowNumber
-        timestamp: formatTimestampForClient_(row.Timestamp),
-        date: formatDateForClient_(row.Date),
-        platform: row.Platform || '',
-        sector: row.Sector || '',
-        asset: row.Asset || '',
-        transactionType: row.TransactionType || '',
-        amountIDR: toNumber_(row.AmountIDR),
-        notes: row.Notes || '',
-        status: row.Status || 'Active'
-      }))
-      .filter(item => item.status !== 'Deleted' && (item.asset || item.transactionType || item.amountIDR))
-      .reverse()
-      .slice(0, 50);
-
-    return { transactions };
+    var raw = await getRows_('transactions');
+    var transactions = raw.map(function(row){return{rowNumber:row.id,timestamp:formatTimestampForClient_(row.Timestamp),date:formatDateForClient_(row.Date),platform:row.Platform||'',sector:row.Sector||'',asset:row.Asset||'',transactionType:row.TransactionType||'',amountIDR:toNumber_(row.AmountIDR),notes:row.Notes||'',status:row.Status||'Active'};}).filter(function(i){return i.status!=='Deleted'&&(i.asset||i.transactionType||i.amountIDR);}).reverse().slice(0,50);
+    return { transactions:transactions };
   },
 
   async deleteTransaction(rowNumber) {
-    const { error } = await supabaseClient.from('transactions').update({ status: 'Deleted' }).eq('id', rowNumber);
+    var { error } = await _sb.from('transactions').update({status:'Deleted'}).eq('id',rowNumber);
     if (error) throw error;
-    return { success: true, message: 'Transaction deleted successfully.' };
+    return { success:true, message:'Transaction deleted successfully.' };
   },
 
   // MONEY MANAGEMENT
-  // --- Accounts ---
   async mmGetAccounts() {
-    const rows = await getRows_('mm_accounts');
-    return rows
-      .filter(r => normalize_(r.Status || 'Active') !== 'Deleted')
-      .map(r => ({
-        id: normalize_(r.AccountID),
-        name: normalize_(r.Name),
-        icon: normalize_(r.Icon) || '💳',
-        initialBalance: toNumber_(r.InitialBalance),
-        order: toNumber_(r.Order),
-        showOnDashboard: normalize_(r.ShowOnDashboard) === 'true',
-        status: normalize_(r.Status) || 'Active'
-      }))
-      .sort((a, b) => a.order - b.order);
+    var rows = await getRows_('mm_accounts');
+    return rows.filter(function(r){return normalize_(r.Status||'Active')!=='Deleted';}).map(function(r){return{id:normalize_(r.AccountID),name:normalize_(r.Name),icon:normalize_(r.Icon)||'💳',initialBalance:toNumber_(r.InitialBalance),order:toNumber_(r.Order),showOnDashboard:normalize_(r.ShowOnDashboard)==='true',status:normalize_(r.Status)||'Active'};}).sort(function(a,b){return a.order-b.order;});
   },
 
   async mmAddAccount(payload) {
-    const id = 'ACC_' + Date.now();
-    const { error } = await supabaseClient.from('mm_accounts').insert(mapRowToDb({
-      AccountID: id,
-      Name: normalize_(payload.name),
-      Icon: normalize_(payload.icon) || '💳',
-      InitialBalance: toNumber_(payload.initialBalance),
-      Order: toNumber_(payload.order) || 999,
-      ShowOnDashboard: payload.showOnDashboard ? 'true' : 'false',
-      Status: 'Active'
-    }));
+    var id = 'ACC_'+Date.now();
+    var { error } = await _sb.from('mm_accounts').insert(mapRowToDb({ AccountID:id, Name:normalize_(payload.name), Icon:normalize_(payload.icon)||'💳', InitialBalance:toNumber_(payload.initialBalance), Order:toNumber_(payload.order)||999, ShowOnDashboard:payload.showOnDashboard?'true':'false', Status:'Active' }));
     if (error) throw error;
-    return { success: true, message: 'Account added.', id };
+    return { success:true, message:'Account added.', id:id };
   },
 
   async mmUpdateAccount(payload) {
-    const updatePayload = {};
-    if (payload.name !== undefined) updatePayload.Name = normalize_(payload.name);
-    if (payload.icon !== undefined) updatePayload.Icon = normalize_(payload.icon);
-    if (payload.initialBalance !== undefined) updatePayload.InitialBalance = toNumber_(payload.initialBalance);
-    if (payload.order !== undefined) updatePayload.Order = toNumber_(payload.order);
-    if (payload.showOnDashboard !== undefined) updatePayload.ShowOnDashboard = payload.showOnDashboard ? 'true' : 'false';
-
-    const { error } = await supabaseClient.from('mm_accounts').update(mapRowToDb(updatePayload)).eq('accountid', payload.id);
+    var up = {};
+    if (payload.name!==undefined) up.Name=normalize_(payload.name);
+    if (payload.icon!==undefined) up.Icon=normalize_(payload.icon);
+    if (payload.initialBalance!==undefined) up.InitialBalance=toNumber_(payload.initialBalance);
+    if (payload.order!==undefined) up.Order=toNumber_(payload.order);
+    if (payload.showOnDashboard!==undefined) up.ShowOnDashboard=payload.showOnDashboard?'true':'false';
+    var { error } = await _sb.from('mm_accounts').update(mapRowToDb(up)).eq('accountid',payload.id);
     if (error) throw error;
-    return { success: true, message: 'Account updated.' };
+    return { success:true, message:'Account updated.' };
   },
 
   async mmDeleteAccount(accountId) {
-    const { error } = await supabaseClient.from('mm_accounts').update({ status: 'Deleted' }).eq('accountid', accountId);
+    var { error } = await _sb.from('mm_accounts').update({status:'Deleted'}).eq('accountid',accountId);
     if (error) throw error;
-    return { success: true, message: 'Account deleted.' };
+    return { success:true, message:'Account deleted.' };
   },
 
-  // --- Categories ---
   async mmGetCategories() {
-    const rows = await getRows_('mm_categories');
-    return rows
-      .filter(r => normalize_(r.Status || 'Active') !== 'Deleted')
-      .map(r => ({
-        type: normalize_(r.Type),
-        category: normalize_(r.Category),
-        subcategory: normalize_(r.Subcategory)
-      }));
+    var rows = await getRows_('mm_categories');
+    return rows.filter(function(r){return normalize_(r.Status||'Active')!=='Deleted';}).map(function(r){return{type:normalize_(r.Type),category:normalize_(r.Category),subcategory:normalize_(r.Subcategory)};});
   },
 
   async mmAddCategory(payload) {
-    const { error } = await supabaseClient.from('mm_categories').insert(mapRowToDb({
-      Type: normalize_(payload.type),
-      Category: normalize_(payload.category),
-      Subcategory: normalize_(payload.subcategory) || '',
-      Status: 'Active'
-    }));
+    var { error } = await _sb.from('mm_categories').insert(mapRowToDb({ Type:normalize_(payload.type), Category:normalize_(payload.category), Subcategory:normalize_(payload.subcategory)||'', Status:'Active' }));
     if (error) throw error;
-    return { success: true, message: 'Category added.' };
+    return { success:true, message:'Category added.' };
   },
 
   async mmDeleteCategory(payload) {
-    const { error } = await supabaseClient.from('mm_categories').update({ status: 'Deleted' })
-      .eq('type', normalize_(payload.type))
-      .eq('category', normalize_(payload.category))
-      .eq('subcategory', normalize_(payload.subcategory || ''));
+    var { error } = await _sb.from('mm_categories').update({status:'Deleted'}).eq('type',normalize_(payload.type)).eq('category',normalize_(payload.category)).eq('subcategory',normalize_(payload.subcategory||''));
     if (error) throw error;
-    return { success: true, message: 'Category deleted.' };
+    return { success:true, message:'Category deleted.' };
   },
 
-  // --- Allocation ---
   async mmGetAllocation() {
-    const rows = await getRows_('mm_allocation');
-    if (!rows.length) {
-      return [
-        { category: 'Living', percent: 50, icon: '🏠', color: '#10b981' },
-        { category: 'Playing', percent: 20, icon: '🎮', color: '#f59e0b' },
-        { category: 'Alms', percent: 10, icon: '🤲', color: '#ec4899' },
-        { category: 'Invest', percent: 20, icon: '📈', color: '#3b82f6' }
-      ];
-    }
-    return rows.map(r => ({
-      category: normalize_(r.Category),
-      percent: toNumber_(r.Percent),
-      icon: normalize_(r.Icon) || '',
-      color: normalize_(r.Color) || ''
-    }));
+    var rows = await getRows_('mm_allocation');
+    if (!rows.length) return [{category:'Living',percent:50,icon:'🏠',color:'#10b981'},{category:'Playing',percent:20,icon:'🎮',color:'#f59e0b'},{category:'Alms',percent:10,icon:'🤲',color:'#ec4899'},{category:'Invest',percent:20,icon:'📈',color:'#3b82f6'}];
+    return rows.map(function(r){return{category:normalize_(r.Category),percent:toNumber_(r.Percent),icon:normalize_(r.Icon)||'',color:normalize_(r.Color)||''};});
   },
 
   async mmSaveAllocation(payload) {
-    const items = payload.items || [];
-    const total = items.reduce((s, i) => s + toNumber_(i.percent), 0);
-    if (Math.abs(total - 100) > 0.01) throw new Error(`Total must be 100%. Current: ${total}%`);
-
-    const { error: delError } = await supabaseClient.from('mm_allocation').delete().neq('category', '');
+    var items = payload.items || [];
+    var total = items.reduce(function(s,i){return s+toNumber_(i.percent);},0);
+    if (Math.abs(total-100)>0.01) throw new Error('Total must be 100%. Current: '+total+'%');
+    var { error: delError } = await _sb.from('mm_allocation').delete().neq('category','');
     if (delError) throw delError;
-
-    const values = items.map(i => mapRowToDb({
-      Category: normalize_(i.category),
-      Percent: toNumber_(i.percent),
-      Icon: normalize_(i.icon) || '',
-      Color: normalize_(i.color) || ''
-    }));
-
-    if (values.length > 0) {
-      const { error: insError } = await supabaseClient.from('mm_allocation').insert(values);
-      if (insError) throw insError;
-    }
-    return { success: true, message: 'Allocation saved.' };
+    var values = items.map(function(i){return mapRowToDb({Category:normalize_(i.category),Percent:toNumber_(i.percent),Icon:normalize_(i.icon)||'',Color:normalize_(i.color)||''});});
+    if (values.length>0) { var { error: insError } = await _sb.from('mm_allocation').insert(values); if (insError) throw insError; }
+    return { success:true, message:'Allocation saved.' };
   },
 
-  // --- MM Transactions ---
   async mmAddTransaction(payload) {
-    const type = normalize_(payload.type);
-    const account = normalize_(payload.account);
-    const accountTo = normalize_(payload.accountTo) || '';
-    const amount = toNumber_(payload.amount);
-    const category = (type === 'Transfer' && accountTo.startsWith('Invest:')) ? 'Invest' : normalize_(payload.category) || '';
-
-    const { error } = await supabaseClient.from('mm_transactions').insert(mapRowToDb({
-      Date: payload.date,
-      Type: type,
-      Account: account,
-      AccountTo: accountTo,
-      Category: category,
-      Subcategory: normalize_(payload.subcategory) || '',
-      Amount: amount,
-      Notes: normalize_(payload.notes) || '',
-      Status: 'Active'
-    }));
+    var type=normalize_(payload.type),account=normalize_(payload.account),accountTo=normalize_(payload.accountTo)||'',amount=toNumber_(payload.amount);
+    var category=(type==='Transfer'&&accountTo.startsWith('Invest:'))?'Invest':normalize_(payload.category)||'';
+    var { error } = await _sb.from('mm_transactions').insert(mapRowToDb({Date:payload.date,Type:type,Account:account,AccountTo:accountTo,Category:category,Subcategory:normalize_(payload.subcategory)||'',Amount:amount,Notes:normalize_(payload.notes)||'',Status:'Active'}));
     if (error) throw error;
-
-    // Cross-workspace: Transfer to Investment Platform
-    if (type === 'Transfer' && accountTo.startsWith('Invest:')) {
-      const platform = accountTo.replace('Invest:', '');
-      await this.addTransaction({
-        date: payload.date,
-        platform: platform,
-        sector: 'Cash',
-        asset: getCashAssetName_(platform),
-        amountIDR: amount,
-        transactionType: 'Deposit',
-        notes: `Transfer from ${account}`
-      });
-    }
-
-    // Cross-workspace: Transfer from Investment Platform to MM account
-    if (type === 'Transfer' && account.startsWith('Invest:')) {
-      const platform = account.replace('Invest:', '');
-      await this.addTransaction({
-        date: payload.date,
-        platform: platform,
-        sector: 'Cash',
-        asset: getCashAssetName_(platform),
-        amountIDR: amount,
-        transactionType: 'Withdraw',
-        notes: `Transfer to ${accountTo}`
-      });
-    }
-
-    return { success: true, message: 'Transaction saved.' };
+    if (type==='Transfer'&&accountTo.startsWith('Invest:')) { var p=accountTo.replace('Invest:',''); await this.addTransaction({date:payload.date,platform:p,sector:'Cash',asset:getCashAssetName_(p),amountIDR:amount,transactionType:'Deposit',notes:'Transfer from '+account}); }
+    if (type==='Transfer'&&account.startsWith('Invest:')) { var p2=account.replace('Invest:',''); await this.addTransaction({date:payload.date,platform:p2,sector:'Cash',asset:getCashAssetName_(p2),amountIDR:amount,transactionType:'Withdraw',notes:'Transfer to '+accountTo}); }
+    return { success:true, message:'Transaction saved.' };
   },
 
   async mmDeleteTransaction(rowNumber) {
-    const { error } = await supabaseClient.from('mm_transactions').delete().eq('id', rowNumber);
+    var { error } = await _sb.from('mm_transactions').delete().eq('id',rowNumber);
     if (error) throw error;
-    return { success: true, message: 'Transaction deleted.' };
+    return { success:true, message:'Transaction deleted.' };
   },
 
   async mmUpdateTransaction(payload) {
-    const { error } = await supabaseClient.from('mm_transactions').update(mapRowToDb({
-      Date: payload.date,
-      Type: normalize_(payload.type),
-      Account: normalize_(payload.account),
-      AccountTo: normalize_(payload.accountTo) || '',
-      Category: normalize_(payload.category) || '',
-      Subcategory: normalize_(payload.subcategory) || '',
-      Amount: toNumber_(payload.amount),
-      Notes: normalize_(payload.notes) || ''
-    })).eq('id', payload.rowNumber);
+    var { error } = await _sb.from('mm_transactions').update(mapRowToDb({Date:payload.date,Type:normalize_(payload.type),Account:normalize_(payload.account),AccountTo:normalize_(payload.accountTo)||'',Category:normalize_(payload.category)||'',Subcategory:normalize_(payload.subcategory)||'',Amount:toNumber_(payload.amount),Notes:normalize_(payload.notes)||''})).eq('id',payload.rowNumber);
     if (error) throw error;
-    return { success: true, message: 'Transaction updated.' };
+    return { success:true, message:'Transaction updated.' };
   },
 
   async mmGetTransactions(options) {
-    const rows = await getRows_('mm_transactions');
-    let filtered = rows.filter(r => normalize_(r.Status || 'Active') !== 'Deleted');
-
-    if (options && options.startDate) {
-      filtered = filtered.filter(r => formatDateForClient_(r.Date) >= options.startDate);
-    }
-    if (options && options.endDate) {
-      filtered = filtered.filter(r => formatDateForClient_(r.Date) <= options.endDate);
-    }
-
-    return filtered.map(r => ({
-      rowNumber: r.id, // supabaseClient id serves as rowNumber
-      timestamp: formatTimestampForClient_(r.Timestamp),
-      date: formatDateForClient_(r.Date),
-      type: normalize_(r.Type),
-      account: normalize_(r.Account),
-      accountTo: normalize_(r.AccountTo),
-      category: normalize_(r.Category),
-      subcategory: normalize_(r.Subcategory),
-      amount: toNumber_(r.Amount),
-      notes: normalize_(r.Notes),
-      status: normalize_(r.Status)
-    })).reverse();
+    var rows = await getRows_('mm_transactions');
+    var filtered = rows.filter(function(r){return normalize_(r.Status||'Active')!=='Deleted';});
+    if (options&&options.startDate) filtered=filtered.filter(function(r){return formatDateForClient_(r.Date)>=options.startDate;});
+    if (options&&options.endDate) filtered=filtered.filter(function(r){return formatDateForClient_(r.Date)<=options.endDate;});
+    return filtered.map(function(r){return{rowNumber:r.id,timestamp:formatTimestampForClient_(r.Timestamp),date:formatDateForClient_(r.Date),type:normalize_(r.Type),account:normalize_(r.Account),accountTo:normalize_(r.AccountTo),category:normalize_(r.Category),subcategory:normalize_(r.Subcategory),amount:toNumber_(r.Amount),notes:normalize_(r.Notes),status:normalize_(r.Status)};}).reverse();
   },
 
-  // --- MM Dashboard ---
   async mmGetDashboard() {
-    const accounts = await this.mmGetAccounts();
-    const allTransactions = await this.mmGetTransactions({});
-    const allocation = await this.mmGetAllocation();
-
-    const balances = {};
-    accounts.forEach(acc => { balances[acc.name] = acc.initialBalance; });
-
-    allTransactions.slice().reverse().forEach(tx => {
-      if (tx.type === 'Income') {
-        balances[tx.account] = (balances[tx.account] || 0) + tx.amount;
-      } else if (tx.type === 'Expense') {
-        balances[tx.account] = (balances[tx.account] || 0) - tx.amount;
-      } else if (tx.type === 'Transfer') {
-        balances[tx.account] = (balances[tx.account] || 0) - tx.amount;
-        balances[tx.accountTo] = (balances[tx.accountTo] || 0) + tx.amount;
-      }
+    var accounts=await this.mmGetAccounts(),allTransactions=await this.mmGetTransactions({}),allocation=await this.mmGetAllocation();
+    var balances={}; accounts.forEach(function(acc){balances[acc.name]=acc.initialBalance;});
+    allTransactions.slice().reverse().forEach(function(tx){
+      if(tx.type==='Income') balances[tx.account]=(balances[tx.account]||0)+tx.amount;
+      else if(tx.type==='Expense') balances[tx.account]=(balances[tx.account]||0)-tx.amount;
+      else if(tx.type==='Transfer'){balances[tx.account]=(balances[tx.account]||0)-tx.amount;balances[tx.accountTo]=(balances[tx.accountTo]||0)+tx.amount;}
     });
-
-    let netWorth = 0;
-    accounts.forEach(acc => {
-      if (acc.showOnDashboard) netWorth += balances[acc.name] || 0;
+    var netWorth=0; accounts.forEach(function(acc){if(acc.showOnDashboard) netWorth+=balances[acc.name]||0;});
+    var now=new Date(),monthStartStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01';
+    var monthTransactions=allTransactions.filter(function(tx){return tx.date>=monthStartStr;});
+    var totalIncome=0,totalExpense=0,categoryExpenses={};
+    allocation.forEach(function(a){categoryExpenses[a.category]=0;});
+    monthTransactions.forEach(function(tx){
+      if(tx.type==='Income') totalIncome+=tx.amount;
+      if(tx.type==='Expense'){totalExpense+=tx.amount;if(categoryExpenses[tx.category]!==undefined) categoryExpenses[tx.category]+=tx.amount;}
+      if(tx.type==='Transfer'&&tx.category==='Invest'){if(categoryExpenses['Invest']!==undefined) categoryExpenses['Invest']+=tx.amount;}
     });
-
-    const now = new Date();
-    const monthStartStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
-    const monthTransactions = allTransactions.filter(tx => tx.date >= monthStartStr);
-
-    let totalIncome = 0, totalExpense = 0;
-    const categoryExpenses = {};
-    allocation.forEach(a => { categoryExpenses[a.category] = 0; });
-
-    monthTransactions.forEach(tx => {
-      if (tx.type === 'Income') totalIncome += tx.amount;
-      if (tx.type === 'Expense') {
-        totalExpense += tx.amount;
-        if (categoryExpenses[tx.category] !== undefined) categoryExpenses[tx.category] += tx.amount;
-      }
-      if (tx.type === 'Transfer' && tx.category === 'Invest') {
-        if (categoryExpenses['Invest'] !== undefined) categoryExpenses['Invest'] += tx.amount;
-      }
-    });
-
-    const saving = totalIncome - totalExpense;
-    const allocationCards = allocation.map(a => {
-      const target = totalIncome * (a.percent / 100);
-      const spent = categoryExpenses[a.category] || 0;
-      const progress = target > 0 ? Math.min(spent / target, 1) : 0;
-      return { category: a.category, percent: a.percent, spent, target, progress };
-    });
-
-    return {
-      accounts: accounts.map(acc => ({ ...acc, balance: balances[acc.name] || 0 })),
-      netWorth, totalIncome, totalExpense, saving, allocationCards, monthTransactions, allocation
-    };
+    var saving=totalIncome-totalExpense;
+    var allocationCards=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.min(spent/target,1):0;return{category:a.category,percent:a.percent,spent:spent,target:target,progress:progress};});
+    return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
   },
 
-  async mmGetMonthlySummary(year, month) {
-    const startDate = `${year}-${String(month).padStart(2,'0')}-01`;
-    const endDay = new Date(year, month, 0).getDate();
-    const endDate = `${year}-${String(month).padStart(2,'0')}-${String(endDay).padStart(2,'0')}`;
-
-    const transactions = await this.mmGetTransactions({ startDate, endDate });
-    let totalIncome = 0, totalExpense = 0;
-    const categoryBreakdown = {};
-
-    transactions.forEach(tx => {
-      if (tx.type === 'Income') totalIncome += tx.amount;
-      if (tx.type === 'Expense') {
-        totalExpense += tx.amount;
-        const cat = tx.category || 'Other';
-        const sub = tx.subcategory || 'General';
-        if (!categoryBreakdown[cat]) categoryBreakdown[cat] = { total: 0, subs: {} };
-        categoryBreakdown[cat].total += tx.amount;
-        if (!categoryBreakdown[cat].subs[sub]) categoryBreakdown[cat].subs[sub] = 0;
-        categoryBreakdown[cat].subs[sub] += tx.amount;
-      }
+  async mmGetMonthlySummary(year,month) {
+    var startDate=year+'-'+String(month).padStart(2,'0')+'-01',endDay=new Date(year,month,0).getDate(),endDate=year+'-'+String(month).padStart(2,'0')+'-'+String(endDay).padStart(2,'0');
+    var transactions=await this.mmGetTransactions({startDate:startDate,endDate:endDate});
+    var totalIncome=0,totalExpense=0,categoryBreakdown={};
+    transactions.forEach(function(tx){
+      if(tx.type==='Income') totalIncome+=tx.amount;
+      if(tx.type==='Expense'){totalExpense+=tx.amount;var cat=tx.category||'Other',sub=tx.subcategory||'General';if(!categoryBreakdown[cat]) categoryBreakdown[cat]={total:0,subs:{}};categoryBreakdown[cat].total+=tx.amount;if(!categoryBreakdown[cat].subs[sub]) categoryBreakdown[cat].subs[sub]=0;categoryBreakdown[cat].subs[sub]+=tx.amount;}
     });
-
-    return { totalIncome, totalExpense, saving: totalIncome - totalExpense, categoryBreakdown, transactions };
+    return {totalIncome:totalIncome,totalExpense:totalExpense,saving:totalIncome-totalExpense,categoryBreakdown:categoryBreakdown,transactions:transactions};
   },
 
   async mmGetAllTimeSummary() {
-    const transactions = await this.mmGetTransactions({});
-    const monthly = {};
-
-    transactions.forEach(tx => {
-      const d = new Date(tx.date);
-      if (isNaN(d.getTime())) return;
-      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-      if (!monthly[key]) monthly[key] = { income: 0, expense: 0 };
-      if (tx.type === 'Income') monthly[key].income += tx.amount;
-      if (tx.type === 'Expense') monthly[key].expense += tx.amount;
-    });
-
-    return Object.entries(monthly)
-      .sort(([a],[b]) => a.localeCompare(b))
-      .map(([month, data]) => ({
-        month, income: data.income, expense: data.expense, saving: data.income - data.expense
-      }));
+    var transactions=await this.mmGetTransactions({}),monthly={};
+    transactions.forEach(function(tx){var d=new Date(tx.date);if(isNaN(d.getTime()))return;var k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');if(!monthly[k])monthly[k]={income:0,expense:0};if(tx.type==='Income')monthly[k].income+=tx.amount;if(tx.type==='Expense')monthly[k].expense+=tx.amount;});
+    return Object.entries(monthly).sort(function(a,b){return a[0].localeCompare(b[0]);}).map(function(e){return{month:e[0],income:e[1].income,expense:e[1].expense,saving:e[1].income-e[1].expense};});
   },
 
-  async mmGetCalendarData(year, month) {
-    const startDate = `${year}-${String(month).padStart(2,'0')}-01`;
-    const endDay = new Date(year, month, 0).getDate();
-    const endDate = `${year}-${String(month).padStart(2,'0')}-${String(endDay).padStart(2,'0')}`;
-
-    const transactions = await this.mmGetTransactions({ startDate, endDate });
-
-    const days = {};
-    for (let d = 1; d <= endDay; d++) {
-      days[d] = { income: 0, expense: 0, transactions: [] };
-    }
-
-    transactions.forEach(tx => {
-      const d = new Date(tx.date);
-      if (isNaN(d.getTime())) return;
-      const day = d.getDate();
-      if (days[day]) {
-        if (tx.type === 'Income') days[day].income += tx.amount;
-        if (tx.type === 'Expense') days[day].expense += tx.amount;
-        days[day].transactions.push(tx);
-      }
-    });
-
-    return { year, month, endDay, days };
+  async mmGetCalendarData(year,month) {
+    var startDate=year+'-'+String(month).padStart(2,'0')+'-01',endDay=new Date(year,month,0).getDate(),endDate=year+'-'+String(month).padStart(2,'0')+'-'+String(endDay).padStart(2,'0');
+    var transactions=await this.mmGetTransactions({startDate:startDate,endDate:endDate});
+    var days={}; for(var d=1;d<=endDay;d++) days[d]={income:0,expense:0,transactions:[]};
+    transactions.forEach(function(tx){var d=new Date(tx.date);if(isNaN(d.getTime()))return;var day=d.getDate();if(days[day]){if(tx.type==='Income')days[day].income+=tx.amount;if(tx.type==='Expense')days[day].expense+=tx.amount;days[day].transactions.push(tx);}});
+    return {year:year,month:month,endDay:endDay,days:days};
   },
 
   async mmGetSubcategories(category) {
-    const categories = await this.mmGetCategories();
-    return categories
-      .filter(c => c.type === 'Expense' && c.category === category && c.subcategory)
-      .map(c => c.subcategory);
+    var categories=await this.mmGetCategories();
+    return categories.filter(function(c){return c.type==='Expense'&&c.category===category&&c.subcategory;}).map(function(c){return c.subcategory;});
   },
 
   async mmGetCategoryExpenseDetail(category) {
-    const now = new Date();
-    const startDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
-    const transactions = await this.mmGetTransactions({ startDate });
-
-    const subs = {};
-    transactions.forEach(tx => {
-      if (tx.type === 'Expense' && tx.category === category) {
-        const sub = tx.subcategory || 'General';
-        if (!subs[sub]) subs[sub] = 0;
-        subs[sub] += tx.amount;
-      }
-    });
-
-    return Object.entries(subs)
-      .map(([subcategory, amount]) => ({ subcategory, amount }))
-      .sort((a, b) => b.amount - a.amount);
+    var now=new Date(),startDate=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01';
+    var transactions=await this.mmGetTransactions({startDate:startDate});
+    var subs={}; transactions.forEach(function(tx){if(tx.type==='Expense'&&tx.category===category){var sub=tx.subcategory||'General';if(!subs[sub])subs[sub]=0;subs[sub]+=tx.amount;}});
+    return Object.entries(subs).map(function(e){return{subcategory:e[0],amount:e[1]};}).sort(function(a,b){return b.amount-a.amount;});
   },
 
-  // --- Financial Insight ---
   async mmGetFinancialInsight() {
-    const accounts = await this.mmGetAccounts();
-    const allTransactions = await this.mmGetTransactions({});
-    const allocation = await this.mmGetAllocation();
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-
-    // Balances
-    const balances = {};
-    accounts.forEach(acc => { balances[acc.name] = acc.initialBalance; });
-    allTransactions.slice().reverse().forEach(tx => {
-      if (tx.type === 'Income') balances[tx.account] = (balances[tx.account] || 0) + tx.amount;
-      else if (tx.type === 'Expense') balances[tx.account] = (balances[tx.account] || 0) - tx.amount;
-      else if (tx.type === 'Transfer') {
-        balances[tx.account] = (balances[tx.account] || 0) - tx.amount;
-        balances[tx.accountTo] = (balances[tx.accountTo] || 0) + tx.amount;
-      }
-    });
-
-    let netWorth = 0;
-    accounts.forEach(acc => {
-      if (acc.showOnDashboard) netWorth += balances[acc.name] || 0;
-    });
-
-    const monthStartStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-    const monthTxs = allTransactions.filter(tx => tx.date >= monthStartStr);
-
-    let totalIncome = 0, totalExpense = 0;
-    const categoryExpenses = {};
-    allocation.forEach(a => { categoryExpenses[a.category] = 0; });
-
-    monthTxs.forEach(tx => {
-      if (tx.type === 'Income') totalIncome += tx.amount;
-      if (tx.type === 'Expense') {
-        totalExpense += tx.amount;
-        if (categoryExpenses[tx.category] !== undefined) categoryExpenses[tx.category] += tx.amount;
-      }
-      if (tx.type === 'Transfer' && tx.category === 'Invest') {
-        if (categoryExpenses['Invest'] !== undefined) categoryExpenses['Invest'] += tx.amount;
-      }
-    });
-
-    const saving = totalIncome - totalExpense;
-    const savingRate = totalIncome > 0 ? (saving / totalIncome) * 100 : 0;
-
-    // Prev month
-    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
-    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-    const prevStartStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}-01`;
-    const prevEndDay = new Date(prevYear, prevMonth, 0).getDate();
-    const prevEndStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(prevEndDay).padStart(2, '0')}`;
-
-    const prevTxs = allTransactions.filter(tx => tx.date >= prevStartStr && tx.date <= prevEndStr);
-    let prevIncome = 0, prevExpense = 0;
-    const prevCategoryExpenses = {};
-    allocation.forEach(a => { prevCategoryExpenses[a.category] = 0; });
-
-    prevTxs.forEach(tx => {
-      if (tx.type === 'Income') prevIncome += tx.amount;
-      if (tx.type === 'Expense') {
-        prevExpense += tx.amount;
-        if (prevCategoryExpenses[tx.category] !== undefined) prevCategoryExpenses[tx.category] += tx.amount;
-      }
-      if (tx.type === 'Transfer' && tx.category === 'Invest') {
-        if (prevCategoryExpenses['Invest'] !== undefined) prevCategoryExpenses['Invest'] += tx.amount;
-      }
-    });
-
-    const prevSaving = prevIncome - prevExpense;
-    const prevSavingRate = prevIncome > 0 ? (prevSaving / prevIncome) * 100 : 0;
-
-    // Budget analysis
-    const budgetAnalysis = allocation.map(a => {
-      const target = totalIncome * (a.percent / 100);
-      const spent = categoryExpenses[a.category] || 0;
-      const progress = target > 0 ? spent / target : 0;
-      const prevSpent = prevCategoryExpenses[a.category] || 0;
-      const isSaving = (a.category.toLowerCase() === 'invest' || a.category.toLowerCase() === 'saving' || a.category.toLowerCase() === 'tabungan');
-      return { category: a.category, percent: a.percent, spent, target, progress, prevSpent, isSaving };
-    });
-
-    const spendingByCategory = Object.entries(categoryExpenses)
-      .filter(([cat, v]) => v > 0 && cat.toLowerCase() !== 'invest' && cat.toLowerCase() !== 'saving' && cat.toLowerCase() !== 'tabungan')
-      .sort((a, b) => b[1] - a[1])
-      .map(([category, amount]) => ({
-        category, amount, percent: totalExpense > 0 ? (amount / totalExpense) * 100 : 0
-      }));
-
-    // Last 6 months history
-    const monthlyHistory = [];
-    for (let i = 5; i >= 0; i--) {
-      const m = new Date(currentYear, currentMonth - 1 - i, 1);
-      const y = m.getFullYear();
-      const mo = m.getMonth() + 1;
-      const startStr = `${y}-${String(mo).padStart(2, '0')}-01`;
-      const endDay = new Date(y, mo, 0).getDate();
-      const endStr = `${y}-${String(mo).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
-
-      let inc = 0, exp = 0;
-      allTransactions.forEach(tx => {
-        if (tx.date >= startStr && tx.date <= endStr) {
-          if (tx.type === 'Income') inc += tx.amount;
-          if (tx.type === 'Expense') exp += tx.amount;
-        }
-      });
-
-      monthlyHistory.push({
-        month: `${y}-${String(mo).padStart(2, '0')}`,
-        label: new Date(y, mo - 1).toLocaleString('default', { month: 'short', year: '2-digit' }),
-        income: inc, expense: exp, saving: inc - exp
-      });
-    }
-
-    // Investment
-    let investmentData = null;
-    try {
-      const dashData = await this.getDashboardData();
-      investmentData = {
-        totalValue: dashData.summary.totalPortfolioValueIDR,
-        totalCapital: dashData.summary.totalCapitalIDR,
-        totalCash: dashData.summary.totalCashIDR,
-        profitLoss: dashData.summary.totalProfitLossIDR,
-        returnPercent: dashData.summary.totalCapitalIDR > 0 ? (dashData.summary.totalProfitLossIDR / dashData.summary.totalCapitalIDR) * 100 : 0,
-        allocationBySector: dashData.allocationBySector || [],
-        rebalanceSuggestions: dashData.rebalanceSuggestions || [],
-        portfolio: (dashData.portfolio || []).filter(p => p.Sector !== 'Cash' && p.TotalCapitalIDR > 0)
-      };
-    } catch (e) {
-      console.warn("Investment data could not be computed:", e);
-    }
-
-    // Predictions
-    const dayOfMonth = now.getDate();
-    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-    const remainingDays = daysInMonth - dayOfMonth;
-
-    const dailyIncomeAvg = dayOfMonth > 0 ? totalIncome / dayOfMonth : 0;
-    const dailyExpenseAvg = dayOfMonth > 0 ? totalExpense / dayOfMonth : 0;
-
-    const predictedIncome = totalIncome + (dailyIncomeAvg * remainingDays);
-    const predictedExpense = totalExpense + (dailyExpenseAvg * remainingDays);
-    const predictedSaving = predictedIncome - predictedExpense;
-    const predictedNetWorth = netWorth + predictedSaving - saving;
-
-    // Streak
-    const uniqueDates = [...new Set(allTransactions.map(tx => tx.date))].sort().reverse();
-    let streak = 0;
-    let checkDate = new Date(now);
-    for (let i = 0; i < uniqueDates.length && i < 365; i++) {
-      const dateStr = checkDate.toISOString().slice(0, 10);
-      if (uniqueDates.includes(dateStr)) {
-        streak++;
-        checkDate.setDate(checkDate.getDate() - 1);
-      } else {
-        break;
-      }
-    }
-
-    // Net Worth History and Record Highest NW
-    let runningBalances = {};
-    accounts.forEach(acc => { runningBalances[acc.name] = acc.initialBalance; });
-    const sortedTxs = allTransactions.slice().reverse();
-    const monthlyNW = {};
-    sortedTxs.forEach(tx => {
-      if (tx.type === 'Income') runningBalances[tx.account] = (runningBalances[tx.account] || 0) + tx.amount;
-      else if (tx.type === 'Expense') runningBalances[tx.account] = (runningBalances[tx.account] || 0) - tx.amount;
-      else if (tx.type === 'Transfer') {
-        runningBalances[tx.account] = (runningBalances[tx.account] || 0) - tx.amount;
-        runningBalances[tx.accountTo] = (runningBalances[tx.accountTo] || 0) + tx.amount;
-      }
-      const mKey = tx.date ? tx.date.substring(0, 7) : '';
-      if (mKey) {
-        let nw = 0;
-        accounts.forEach(acc => { if (acc.showOnDashboard) nw += runningBalances[acc.name] || 0; });
-        monthlyNW[mKey] = nw;
-      }
-    });
-    const nwValues = Object.values(monthlyNW);
-    const isNetWorthHighest = nwValues.length > 0 && netWorth >= Math.max(...nwValues);
-
-    let budgetMetMonths = 0;
-    for (let i = 1; i <= 6; i++) {
-      const m = new Date(currentYear, currentMonth - 1 - i, 1);
-      const h = monthlyHistory.find(mh => mh.month === `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`);
-      if (h && h.saving >= 0) budgetMetMonths++;
-    }
-
-    return {
-      currentMonth, currentYear, dayOfMonth, daysInMonth, netWorth, totalIncome, totalExpense, saving, savingRate,
-      prevIncome, prevExpense, prevSaving, prevSavingRate, budgetAnalysis, spendingByCategory, monthlyHistory, investmentData,
-      prediction: { income: predictedIncome, expense: predictedExpense, saving: predictedSaving, netWorth: predictedNetWorth },
-      streak, isNetWorthHighest, budgetMetMonths
-    };
+    var accounts=await this.mmGetAccounts(),allTransactions=await this.mmGetTransactions({}),allocation=await this.mmGetAllocation();
+    var now=new Date(),currentYear=now.getFullYear(),currentMonth=now.getMonth()+1;
+    var balances={}; accounts.forEach(function(acc){balances[acc.name]=acc.initialBalance;});
+    allTransactions.slice().reverse().forEach(function(tx){if(tx.type==='Income')balances[tx.account]=(balances[tx.account]||0)+tx.amount;else if(tx.type==='Expense')balances[tx.account]=(balances[tx.account]||0)-tx.amount;else if(tx.type==='Transfer'){balances[tx.account]=(balances[tx.account]||0)-tx.amount;balances[tx.accountTo]=(balances[tx.accountTo]||0)+tx.amount;}});
+    var netWorth=0; accounts.forEach(function(acc){if(acc.showOnDashboard) netWorth+=balances[acc.name]||0;});
+    var monthStartStr=currentYear+'-'+String(currentMonth).padStart(2,'0')+'-01';
+    var monthTxs=allTransactions.filter(function(tx){return tx.date>=monthStartStr;});
+    var totalIncome=0,totalExpense=0,categoryExpenses={};
+    allocation.forEach(function(a){categoryExpenses[a.category]=0;});
+    monthTxs.forEach(function(tx){if(tx.type==='Income')totalIncome+=tx.amount;if(tx.type==='Expense'){totalExpense+=tx.amount;if(categoryExpenses[tx.category]!==undefined)categoryExpenses[tx.category]+=tx.amount;}if(tx.type==='Transfer'&&tx.category==='Invest'){if(categoryExpenses['Invest']!==undefined)categoryExpenses['Invest']+=tx.amount;}});
+    var saving=totalIncome-totalExpense,savingRate=totalIncome>0?(saving/totalIncome)*100:0;
+    var prevMonth=currentMonth===1?12:currentMonth-1,prevYear=currentMonth===1?currentYear-1:currentYear;
+    var prevStartStr=prevYear+'-'+String(prevMonth).padStart(2,'0')+'-01',prevEndDay=new Date(prevYear,prevMonth,0).getDate(),prevEndStr=prevYear+'-'+String(prevMonth).padStart(2,'0')+'-'+String(prevEndDay).padStart(2,'0');
+    var prevTxs=allTransactions.filter(function(tx){return tx.date>=prevStartStr&&tx.date<=prevEndStr;});
+    var prevIncome=0,prevExpense=0,prevCategoryExpenses={}; allocation.forEach(function(a){prevCategoryExpenses[a.category]=0;});
+    prevTxs.forEach(function(tx){if(tx.type==='Income')prevIncome+=tx.amount;if(tx.type==='Expense'){prevExpense+=tx.amount;if(prevCategoryExpenses[tx.category]!==undefined)prevCategoryExpenses[tx.category]+=tx.amount;}if(tx.type==='Transfer'&&tx.category==='Invest'){if(prevCategoryExpenses['Invest']!==undefined)prevCategoryExpenses['Invest']+=tx.amount;}});
+    var prevSaving=prevIncome-prevExpense,prevSavingRate=prevIncome>0?(prevSaving/prevIncome)*100:0;
+    var budgetAnalysis=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?spent/target:0,prevSpent=prevCategoryExpenses[a.category]||0;var isSaving=(['invest','saving','tabungan'].indexOf(a.category.toLowerCase())>=0);return{category:a.category,percent:a.percent,spent:spent,target:target,progress:progress,prevSpent:prevSpent,isSaving:isSaving};});
+    var spendingByCategory=Object.entries(categoryExpenses).filter(function(e){return e[1]>0&&['invest','saving','tabungan'].indexOf(e[0].toLowerCase())<0;}).sort(function(a,b){return b[1]-a[1];}).map(function(e){return{category:e[0],amount:e[1],percent:totalExpense>0?(e[1]/totalExpense)*100:0};});
+    var monthlyHistory=[];
+    for(var i=5;i>=0;i--){var m=new Date(currentYear,currentMonth-1-i,1);var y=m.getFullYear(),mo=m.getMonth()+1;var sStr=y+'-'+String(mo).padStart(2,'0')+'-01',eDay=new Date(y,mo,0).getDate(),eStr=y+'-'+String(mo).padStart(2,'0')+'-'+String(eDay).padStart(2,'0');var inc=0,exp=0;allTransactions.forEach(function(tx){if(tx.date>=sStr&&tx.date<=eStr){if(tx.type==='Income')inc+=tx.amount;if(tx.type==='Expense')exp+=tx.amount;}});monthlyHistory.push({month:y+'-'+String(mo).padStart(2,'0'),label:new Date(y,mo-1).toLocaleString('default',{month:'short',year:'2-digit'}),income:inc,expense:exp,saving:inc-exp});}
+    var investmentData=null;
+    try{var dashData=await this.getDashboardData();investmentData={totalValue:dashData.summary.totalPortfolioValueIDR,totalCapital:dashData.summary.totalCapitalIDR,totalCash:dashData.summary.totalCashIDR,profitLoss:dashData.summary.totalProfitLossIDR,returnPercent:dashData.summary.totalCapitalIDR>0?(dashData.summary.totalProfitLossIDR/dashData.summary.totalCapitalIDR)*100:0,allocationBySector:dashData.allocationBySector||[],rebalanceSuggestions:dashData.rebalanceSuggestions||[],portfolio:(dashData.portfolio||[]).filter(function(p){return p.Sector!=='Cash'&&p.TotalCapitalIDR>0;})};}catch(e){console.warn("Investment data could not be computed:",e);}
+    var dayOfMonth=now.getDate(),daysInMonth=new Date(currentYear,currentMonth,0).getDate(),remainingDays=daysInMonth-dayOfMonth;
+    var dailyIncomeAvg=dayOfMonth>0?totalIncome/dayOfMonth:0,dailyExpenseAvg=dayOfMonth>0?totalExpense/dayOfMonth:0;
+    var predictedIncome=totalIncome+(dailyIncomeAvg*remainingDays),predictedExpense=totalExpense+(dailyExpenseAvg*remainingDays),predictedSaving=predictedIncome-predictedExpense,predictedNetWorth=netWorth+predictedSaving-saving;
+    var uniqueDates=[...new Set(allTransactions.map(function(tx){return tx.date;}))].sort().reverse();
+    var streak=0,checkDate=new Date(now);for(var i=0;i<uniqueDates.length&&i<365;i++){var dateStr=checkDate.toISOString().slice(0,10);if(uniqueDates.includes(dateStr)){streak++;checkDate.setDate(checkDate.getDate()-1);}else break;}
+    var runningBalances={}; accounts.forEach(function(acc){runningBalances[acc.name]=acc.initialBalance;});
+    var sortedTxs=allTransactions.slice().reverse(),monthlyNW={};
+    sortedTxs.forEach(function(tx){if(tx.type==='Income')runningBalances[tx.account]=(runningBalances[tx.account]||0)+tx.amount;else if(tx.type==='Expense')runningBalances[tx.account]=(runningBalances[tx.account]||0)-tx.amount;else if(tx.type==='Transfer'){runningBalances[tx.account]=(runningBalances[tx.account]||0)-tx.amount;runningBalances[tx.accountTo]=(runningBalances[tx.accountTo]||0)+tx.amount;}var mKey=tx.date?tx.date.substring(0,7):'';if(mKey){var nw=0;accounts.forEach(function(acc){if(acc.showOnDashboard)nw+=runningBalances[acc.name]||0;});monthlyNW[mKey]=nw;}});
+    var nwValues=Object.values(monthlyNW),isNetWorthHighest=nwValues.length>0&&netWorth>=Math.max.apply(null,nwValues);
+    var budgetMetMonths=0;for(var i=1;i<=6;i++){var m=new Date(currentYear,currentMonth-1-i,1);var h=monthlyHistory.find(function(mh){return mh.month===m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0');});if(h&&h.saving>=0)budgetMetMonths++;}
+    return{currentMonth:currentMonth,currentYear:currentYear,dayOfMonth:dayOfMonth,daysInMonth:daysInMonth,netWorth:netWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,savingRate:savingRate,prevIncome:prevIncome,prevExpense:prevExpense,prevSaving:prevSaving,prevSavingRate:prevSavingRate,budgetAnalysis:budgetAnalysis,spendingByCategory:spendingByCategory,monthlyHistory:monthlyHistory,investmentData:investmentData,prediction:{income:predictedIncome,expense:predictedExpense,saving:predictedSaving,netWorth:predictedNetWorth},streak:streak,isNetWorthHighest:isNetWorthHighest,budgetMetMonths:budgetMetMonths};
   },
 
   // EXPORT / IMPORT / DELETE
   async investExportAllData(target) {
-    const data = { target };
-    if (target === 'transactions' || target === 'all') {
-      const rows = await getRows_('transactions');
-      data.transactions = rows.map(r => ({
-        date: formatDateForClient_(r.Date),
-        platform: normalize_(r.Platform),
-        sector: normalize_(r.Sector),
-        asset: normalize_(r.Asset),
-        transactionType: normalize_(r.TransactionType),
-        amountIDR: toNumber_(r.AmountIDR),
-        notes: normalize_(r.Notes),
-        status: normalize_(r.Status) || 'Active'
-      }));
-    }
-    if (target === 'portfolio' || target === 'all') {
-      const rows = await getRows_('portfolio');
-      data.portfolio = rows.map(r => ({
-        platform: normalize_(r.Platform),
-        sector: normalize_(r.Sector),
-        asset: normalize_(r.Asset),
-        currentValueIDR: toNumber_(r.CurrentValueIDR)
-      }));
-    }
-    if (target === 'all') {
-      const settings = await getRows_('settings');
-      data.settings = settings.map(r => ({ key: normalize_(r.Key), value: normalize_(r.Value) }));
-      const allocTargets = await getRows_('allocation_targets');
-      data.allocationTargets = allocTargets.map(r => ({ sector: normalize_(r.Sector), targetPercent: toNumber_(r.TargetPercent) }));
-    }
+    var data={target:target};
+    if(target==='transactions'||target==='all'){var rows=await getRows_('transactions');data.transactions=rows.map(function(r){return{date:formatDateForClient_(r.Date),platform:normalize_(r.Platform),sector:normalize_(r.Sector),asset:normalize_(r.Asset),transactionType:normalize_(r.TransactionType),amountIDR:toNumber_(r.AmountIDR),notes:normalize_(r.Notes),status:normalize_(r.Status)||'Active'};});}
+    if(target==='portfolio'||target==='all'){var rows=await getRows_('portfolio');data.portfolio=rows.map(function(r){return{platform:normalize_(r.Platform),sector:normalize_(r.Sector),asset:normalize_(r.Asset),currentValueIDR:toNumber_(r.CurrentValueIDR)};});}
+    if(target==='all'){var settings=await getRows_('settings');data.settings=settings.map(function(r){return{key:normalize_(r.Key),value:normalize_(r.Value)};});var at=await getRows_('allocation_targets');data.allocationTargets=at.map(function(r){return{sector:normalize_(r.Sector),targetPercent:toNumber_(r.TargetPercent)};});}
     return data;
   },
 
   async investImportData(payload) {
-    const rows = payload.rows || [];
-    if (!rows.length) return { success: false, message: 'File CSV kosong atau tidak valid.' };
-    const inserts = rows.map(row => {
-      const platform = normalize_(row.platform);
-      const transactionType = normalize_(row.transactionType);
-      return mapRowToDb({
-        Date: row.date,
-        Platform: platform,
-        Sector: (transactionType === 'Deposit' || transactionType === 'Withdraw') ? 'Cash' : normalize_(row.sector),
-        Asset: (transactionType === 'Deposit' || transactionType === 'Withdraw') ? platform + ' Cash' : normalize_(row.asset),
-        TransactionType: transactionType,
-        AmountIDR: toNumber_(row.amountIDR),
-        Notes: normalize_(row.notes) || '',
-        Status: 'Active'
-      });
-    }).filter(r => r.platform && r.transactiontype && r.amountidr > 0);
-
-    if (inserts.length > 0) {
-      const { error } = await supabaseClient.from('transactions').insert(inserts);
-      if (error) throw error;
-    }
-    return { success: true, message: `Import berhasil: ${inserts.length} transaksi investasi ditambahkan.`, imported: inserts.length };
+    var rows=payload.rows||[]; if(!rows.length) return{success:false,message:'File CSV kosong atau tidak valid.'};
+    var inserts=rows.map(function(row){var p=normalize_(row.platform),tt=normalize_(row.transactionType);return mapRowToDb({Date:row.date,Platform:p,Sector:(tt==='Deposit'||tt==='Withdraw')?'Cash':normalize_(row.sector),Asset:(tt==='Deposit'||tt==='Withdraw')?p+' Cash':normalize_(row.asset),TransactionType:tt,AmountIDR:toNumber_(row.amountIDR),Notes:normalize_(row.notes)||'',Status:'Active'});}).filter(function(r){return r.platform&&r.transactiontype&&r.amountidr>0;});
+    if(inserts.length>0){var{error}=await _sb.from('transactions').insert(inserts);if(error) throw error;}
+    return{success:true,message:'Import berhasil: '+inserts.length+' transaksi investasi ditambahkan.',imported:inserts.length};
   },
 
   async investDeleteData(target) {
-    if (target === 'transactions') {
-      await supabaseClient.from('transactions').delete().neq('id', 0);
-    } else if (target === 'portfolio') {
-      await supabaseClient.from('portfolio').delete().neq('platform', '');
-    } else if (target === 'settings') {
-      await supabaseClient.from('settings').delete().neq('id', 0);
-      await supabaseClient.from('allocation_targets').delete().neq('sector', '');
-    } else if (target === 'all') {
-      await supabaseClient.from('transactions').delete().neq('id', 0);
-      await supabaseClient.from('portfolio').delete().neq('platform', '');
-      await supabaseClient.from('settings').delete().neq('id', 0);
-      await supabaseClient.from('allocation_targets').delete().neq('sector', '');
-      await supabaseClient.from('targets').delete().neq('targetid', '');
-    } else {
-      return { success: false, message: 'Target tidak valid.' };
-    }
-    return { success: true, message: 'Data investasi berhasil direset.' };
+    if(target==='transactions') await _sb.from('transactions').delete().neq('id',0);
+    else if(target==='portfolio') await _sb.from('portfolio').delete().neq('platform','');
+    else if(target==='settings'){await _sb.from('settings').delete().neq('id',0);await _sb.from('allocation_targets').delete().neq('sector','');}
+    else if(target==='all'){await _sb.from('transactions').delete().neq('id',0);await _sb.from('portfolio').delete().neq('platform','');await _sb.from('settings').delete().neq('id',0);await _sb.from('allocation_targets').delete().neq('sector','');await _sb.from('targets').delete().neq('targetid','');}
+    else return{success:false,message:'Target tidak valid.'};
+    return{success:true,message:'Data investasi berhasil direset.'};
   },
 
   async mmExportAllData(target) {
-    const data = { target };
-    if (target === 'transactions' || target === 'all') {
-      const rows = await getRows_('mm_transactions');
-      data.transactions = rows.map(r => ({
-        date: formatDateForClient_(r.Date),
-        type: normalize_(r.Type),
-        account: normalize_(r.Account),
-        accountTo: normalize_(r.AccountTo),
-        category: normalize_(r.Category),
-        subcategory: normalize_(r.Subcategory),
-        amount: toNumber_(r.Amount),
-        notes: normalize_(r.Notes),
-        status: normalize_(r.Status) || 'Active'
-      }));
-    }
-    if (target === 'accounts' || target === 'all') {
-      const rows = await getRows_('mm_accounts');
-      data.accounts = rows.map(r => ({
-        name: normalize_(r.Name),
-        icon: normalize_(r.Icon),
-        initialBalance: toNumber_(r.InitialBalance),
-        order: toNumber_(r.Order),
-        showOnDashboard: normalize_(r.ShowOnDashboard) === 'true',
-        status: normalize_(r.Status) || 'Active'
-      }));
-    }
-    if (target === 'all') {
-      const categories = await getRows_('mm_categories');
-      data.categories = categories.map(r => ({
-        type: normalize_(r.Type), category: normalize_(r.Category), subcategory: normalize_(r.Subcategory), status: normalize_(r.Status) || 'Active'
-      }));
-      const allocation = await getRows_('mm_allocation');
-      data.allocation = allocation.map(r => ({
-        category: normalize_(r.Category), percent: toNumber_(r.Percent), icon: normalize_(r.Icon), color: normalize_(r.Color)
-      }));
-    }
+    var data={target:target};
+    if(target==='transactions'||target==='all'){var rows=await getRows_('mm_transactions');data.transactions=rows.map(function(r){return{date:formatDateForClient_(r.Date),type:normalize_(r.Type),account:normalize_(r.Account),accountTo:normalize_(r.AccountTo),category:normalize_(r.Category),subcategory:normalize_(r.Subcategory),amount:toNumber_(r.Amount),notes:normalize_(r.Notes),status:normalize_(r.Status)||'Active'};});}
+    if(target==='accounts'||target==='all'){var rows=await getRows_('mm_accounts');data.accounts=rows.map(function(r){return{name:normalize_(r.Name),icon:normalize_(r.Icon),initialBalance:toNumber_(r.InitialBalance),order:toNumber_(r.Order),showOnDashboard:normalize_(r.ShowOnDashboard)==='true',status:normalize_(r.Status)||'Active'};});}
+    if(target==='all'){var cats=await getRows_('mm_categories');data.categories=cats.map(function(r){return{type:normalize_(r.Type),category:normalize_(r.Category),subcategory:normalize_(r.Subcategory),status:normalize_(r.Status)||'Active'};});var alloc=await getRows_('mm_allocation');data.allocation=alloc.map(function(r){return{category:normalize_(r.Category),percent:toNumber_(r.Percent),icon:normalize_(r.Icon),color:normalize_(r.Color)};});}
     return data;
   },
 
   async mmImportData(payload) {
-    const rows = payload.rows || [];
-    if (!rows.length) return { success: false, message: 'File CSV kosong atau tidak valid.' };
-    const inserts = rows.map(row => mapRowToDb({
-      Date: row.date,
-      Type: normalize_(row.type),
-      Account: normalize_(row.account) || '',
-      AccountTo: normalize_(row.accountTo) || '',
-      Category: normalize_(row.category) || '',
-      Subcategory: normalize_(row.subcategory) || '',
-      Amount: toNumber_(row.amount),
-      Notes: normalize_(row.notes) || '',
-      Status: 'Active'
-    })).filter(r => r.type && r.amount > 0);
-
-    if (inserts.length > 0) {
-      const { error } = await supabaseClient.from('mm_transactions').insert(inserts);
-      if (error) throw error;
-    }
-    return { success: true, message: `Import berhasil: ${inserts.length} transaksi ditambahkan.`, imported: inserts.length };
+    var rows=payload.rows||[]; if(!rows.length) return{success:false,message:'File CSV kosong atau tidak valid.'};
+    var inserts=rows.map(function(row){return mapRowToDb({Date:row.date,Type:normalize_(row.type),Account:normalize_(row.account)||'',AccountTo:normalize_(row.accountTo)||'',Category:normalize_(row.category)||'',Subcategory:normalize_(row.subcategory)||'',Amount:toNumber_(row.amount),Notes:normalize_(row.notes)||'',Status:'Active'});}).filter(function(r){return r.type&&r.amount>0;});
+    if(inserts.length>0){var{error}=await _sb.from('mm_transactions').insert(inserts);if(error) throw error;}
+    return{success:true,message:'Import berhasil: '+inserts.length+' transaksi ditambahkan.',imported:inserts.length};
   },
 
   async mmDeleteData(target) {
-    if (target === 'transactions') {
-      await supabaseClient.from('mm_transactions').delete().neq('id', 0);
-    } else if (target === 'accounts') {
-      await supabaseClient.from('mm_accounts').delete().neq('accountid', '');
-    } else if (target === 'categories') {
-      await supabaseClient.from('mm_categories').delete().neq('id', 0);
-    } else if (target === 'all') {
-      await supabaseClient.from('mm_transactions').delete().neq('id', 0);
-      await supabaseClient.from('mm_accounts').delete().neq('accountid', '');
-      await supabaseClient.from('mm_categories').delete().neq('id', 0);
-      await supabaseClient.from('mm_allocation').delete().neq('category', '');
-    } else {
-      return { success: false, message: 'Target tidak valid.' };
-    }
-    return { success: true, message: 'Data keuangan berhasil direset.' };
+    if(target==='transactions') await _sb.from('mm_transactions').delete().neq('id',0);
+    else if(target==='accounts') await _sb.from('mm_accounts').delete().neq('accountid','');
+    else if(target==='categories') await _sb.from('mm_categories').delete().neq('id',0);
+    else if(target==='all'){await _sb.from('mm_transactions').delete().neq('id',0);await _sb.from('mm_accounts').delete().neq('accountid','');await _sb.from('mm_categories').delete().neq('id',0);await _sb.from('mm_allocation').delete().neq('category','');}
+    else return{success:false,message:'Target tidak valid.'};
+    return{success:true,message:'Data keuangan berhasil direset.'};
   },
 
   async testConnection() {
-    try {
-      const { data, error } = await supabaseClient.from('targets').select('*').limit(1);
-      if (error) throw error;
-      return { success: true, message: 'Koneksi database supabaseClient berhasil!' };
-    } catch (e) {
-      return { success: false, message: 'Koneksi gagal: ' + e.message };
-    }
+    try{var{data,error}=await _sb.from('targets').select('*').limit(1);if(error) throw error;return{success:true,message:'Koneksi database Supabase berhasil!'};}
+    catch(e){return{success:false,message:'Koneksi gagal: '+e.message};}
   }
 };
 
-// 2. Apps Script Runner Mock Builder (Intercepting google.script.run)
-class AppsScriptMockRunner {
-  constructor(successCb, failureCb) {
-    this.successCb = successCb;
-    this.failureCb = failureCb;
-  }
-  withSuccessHandler(cb) {
-    this.successCb = cb;
-    return this;
-  }
-  withFailureHandler(cb) {
-    this.failureCb = cb;
-    return this;
-  }
-}
+// Apps Script Runner Mock (intercepts google.script.run)
+function AppsScriptMockRunner(successCb, failureCb) { this.successCb = successCb; this.failureCb = failureCb; }
+AppsScriptMockRunner.prototype.withSuccessHandler = function(cb) { this.successCb = cb; return this; };
+AppsScriptMockRunner.prototype.withFailureHandler = function(cb) { this.failureCb = cb; return this; };
 
-// Proxy handlers for dynamic method calling
-const runnerProxyHandler = {
-  get(runner, methodName) {
-    if (methodName in runner) {
-      return runner[methodName];
-    }
-    // Intercept any undefined method call and map it to DB_API
-    return async (...args) => {
+var runnerProxyHandler = {
+  get: function(runner, methodName) {
+    if (methodName in runner) return runner[methodName];
+    return async function() {
+      var args = arguments;
       try {
-        if (!DB_API[methodName]) {
-          throw new Error(`Google Apps Script function "${methodName}" is not implemented in the supabaseClient adapter.`);
-        }
-        const result = await DB_API[methodName](...args);
+        if (!DB_API[methodName]) throw new Error('Function "' + methodName + '" is not implemented in the Supabase adapter.');
+        var result = await DB_API[methodName].apply(DB_API, args);
         if (runner.successCb) runner.successCb(result);
       } catch (err) {
-        console.error(`Error executing ${methodName}:`, err);
+        console.error('Error executing ' + methodName + ':', err);
         if (runner.failureCb) runner.failureCb(err);
-        else showToast(`Error: ${err.message || err}`, 'error');
+        else if (typeof showToast === 'function') showToast('Error: ' + (err.message || err), 'error');
       }
     };
   }
 };
 
 function createRunner(successCb, failureCb) {
-  const runner = new AppsScriptMockRunner(successCb, failureCb);
-  return new Proxy(runner, runnerProxyHandler);
+  return new Proxy(new AppsScriptMockRunner(successCb, failureCb), runnerProxyHandler);
 }
 
 // Create global window.google object
 window.google = {
   script: {
     run: new Proxy({}, {
-      get(target, prop) {
-        if (prop === 'withSuccessHandler') {
-          return (cb) => createRunner(cb, null);
-        }
-        if (prop === 'withFailureHandler') {
-          return (cb) => createRunner(null, cb);
-        }
-        // Direct call
-        return async (...args) => {
-          try {
-            if (!DB_API[prop]) throw new Error(`Function "${prop}" is not implemented.`);
-            await DB_API[prop](...args);
-          } catch(err) {
-            console.error(err);
-            showToast(`Error: ${err.message || err}`, 'error');
-          }
+      get: function(target, prop) {
+        if (prop === 'withSuccessHandler') return function(cb) { return createRunner(cb, null); };
+        if (prop === 'withFailureHandler') return function(cb) { return createRunner(null, cb); };
+        return async function() {
+          try { if (!DB_API[prop]) throw new Error('Function "'+prop+'" is not implemented.'); await DB_API[prop].apply(DB_API, arguments); }
+          catch(err) { console.error(err); if (typeof showToast === 'function') showToast('Error: '+(err.message||err),'error'); }
         };
       }
     })
   }
 };
 
-// 3. supabaseClient Credentials Manager
-function initSupabaseClient(isFirstTime) {
-  const creds = getSupabaseCredentials();
-  const url = creds.url;
-  const key = creds.key;
-  
-  if (url && key) {
-    supabaseClient = window.supabase.createClient(url, key);
-    document.getElementById('supabaseSetupOverlay').classList.add('hidden');
-    
-    // Automatically trigger app load if it's the first setup, or if hardcoded variables exist and app is not yet initialized
-    const hasLocalStorage = safeStorage.getItem('supabase_url') && safeStorage.getItem('supabase_key');
-    if (isFirstTime || (!hasLocalStorage && HARDCODED_SUPABASE_URL && HARDCODED_SUPABASE_KEY)) {
-      setTimeout(() => {
-        if (typeof initApp === 'function') initApp();
-      }, 100);
-    }
+// ============================================================
+// INITIALIZATION & WIZARD
+// ============================================================
+function initSupabaseClient() {
+  var creds = getSupabaseCredentials();
+  if (creds.url && creds.key) {
+    _sb = window.supabase.createClient(creds.url, creds.key);
+    var overlay = document.getElementById('supabaseSetupOverlay');
+    if (overlay) overlay.classList.add('hidden');
+    return true;
   } else {
-    document.getElementById('supabaseSetupOverlay').classList.remove('hidden');
+    var overlay = document.getElementById('supabaseSetupOverlay');
+    if (overlay) overlay.classList.remove('hidden');
+    return false;
   }
 }
 
-// Wizard connection saver
 async function saveSupabaseWizard(event) {
   event.preventDefault();
-  const url = document.getElementById('wizardSupabaseUrl').value.trim();
-  const key = document.getElementById('wizardSupabaseKey').value.trim();
-  const statusEl = document.getElementById('wizardStatus');
-  
+  var url = document.getElementById('wizardSupabaseUrl').value.trim();
+  var key = document.getElementById('wizardSupabaseKey').value.trim();
+  var statusEl = document.getElementById('wizardStatus');
   statusEl.textContent = 'Menghubungkan ke database...';
   statusEl.className = 'setup-status';
-  
   try {
-    const tempSupabase = window.supabase.createClient(url, key);
-    const { error } = await tempSupabase.from('targets').select('*').limit(1);
-    
-    if (error) throw error;
-    
-    // Save to safeStorage
+    var tempSb = window.supabase.createClient(url, key);
+    var result = await tempSb.from('targets').select('*').limit(1);
+    if (result.error) throw result.error;
     safeStorage.setItem('supabase_url', url);
     safeStorage.setItem('supabase_key', key);
-    
     statusEl.textContent = 'Koneksi sukses! Memuat data...';
     statusEl.className = 'setup-status success';
-    
-    // Trigger launch
-    setTimeout(() => {
-      initSupabaseClient(true);
+    setTimeout(function() {
+      _sb = tempSb;
+      var overlay = document.getElementById('supabaseSetupOverlay');
+      if (overlay) overlay.classList.add('hidden');
+      if (typeof initApp === 'function') initApp();
     }, 1000);
   } catch (err) {
     statusEl.textContent = 'Gagal terhubung: ' + (err.message || 'Periksa URL / Anon Key.');
@@ -5848,105 +5042,61 @@ async function saveSupabaseWizard(event) {
   }
 }
 
-// 4. supabaseClient UI Settings Page injection
 function saveSupabaseSettingsForm(event) {
   event.preventDefault();
-  const url = document.getElementById('supabaseSettingsUrl').value.trim();
-  const key = document.getElementById('supabaseSettingsKey').value.trim();
-  
+  var url = document.getElementById('supabaseSettingsUrl').value.trim();
+  var key = document.getElementById('supabaseSettingsKey').value.trim();
   safeStorage.setItem('supabase_url', url);
   safeStorage.setItem('supabase_key', key);
-  showToast('supabaseClient settings saved! Reloading...', 'success');
-  setTimeout(() => {
-    window.location.reload();
-  }, 1000);
+  if (typeof showToast === 'function') showToast('Supabase settings saved! Reloading...', 'success');
+  setTimeout(function() { window.location.reload(); }, 1000);
 }
 
 function resetSupabaseSettings() {
-  if (confirm('Apakah Anda yakin ingin memutuskan koneksi database? Data tidak akan hilang di supabaseClient, tapi Anda harus memasukkan URL & Anon Key lagi.')) {
+  if (confirm('Apakah Anda yakin ingin memutuskan koneksi database? Data tidak akan hilang di Supabase, tapi Anda harus memasukkan URL & Anon Key lagi.')) {
     safeStorage.removeItem('supabase_url');
     safeStorage.removeItem('supabase_key');
     window.location.reload();
   }
 }
 
-// Injects supabaseClient Settings Card into settings page
 function injectSupabaseSettingsCard() {
-  const settingsPage = document.getElementById('settingsPage');
+  var settingsPage = document.getElementById('settingsPage');
   if (!settingsPage) return;
-  
-  const currentUrl = safeStorage.getItem('supabase_url') || '';
-  const currentKey = safeStorage.getItem('supabase_key') || '';
-  
-  const cardHtml = `
-    <!-- supabaseClient Connection Config Card -->
-    <section class="panel-card">
-      <button class="panel-toggle" onclick="togglePanel('supabaseSettingsPanel')">
-        <div>
-          <p class="panel-eyebrow">Database</p>
-          <h3 class="panel-title">supabaseClient connection</h3>
-        </div>
-        <strong class="panel-chevron" id="supabaseSettingsChevron">↓</strong>
-      </button>
-      <div id="supabaseSettingsPanel" class="panel-body hidden">
-        <form class="stack-form" onsubmit="saveSupabaseSettingsForm(event)" style="display:flex;flex-direction:column;gap:12px;">
-          <label class="form-label" style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;">
-            supabaseClient URL
-            <input type="url" id="supabaseSettingsUrl" class="form-input" value="${currentUrl}" required placeholder="https://yourproject.supabaseClient.co" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:#fff;">
-          </label>
-          <label class="form-label" style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;">
-            supabaseClient Anon Key
-            <input type="password" id="supabaseSettingsKey" class="form-input" value="${currentKey}" required placeholder="Anon Key" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:#fff;">
-          </label>
-          <div style="display:flex;gap:8px;margin-top:8px;">
-            <button class="btn-primary" type="submit" style="flex:1;">Update Connection</button>
-            <button class="btn-ghost" type="button" onclick="resetSupabaseSettings()" style="color:var(--error);border-color:var(--error);">Disconnect</button>
-          </div>
-        </form>
-      </div>
-    </section>
-  `;
-  
-  // Insert at the top of settings page (after header card)
-  const headerCard = settingsPage.querySelector('.page-header-card');
-  if (headerCard) {
-    headerCard.insertAdjacentHTML('afterend', cardHtml);
-  }
+  var currentUrl = safeStorage.getItem('supabase_url') || '';
+  var currentKey = safeStorage.getItem('supabase_key') || '';
+  var cardHtml = '<section class="panel-card"><button class="panel-toggle" onclick="togglePanel(\'supabaseSettingsPanel\')"><div><p class="panel-eyebrow">Database</p><h3 class="panel-title">Supabase connection</h3></div><strong class="panel-chevron" id="supabaseSettingsChevron">↓</strong></button><div id="supabaseSettingsPanel" class="panel-body hidden"><form class="stack-form" onsubmit="saveSupabaseSettingsForm(event)" style="display:flex;flex-direction:column;gap:12px;"><label class="form-label" style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;">Supabase URL<input type="url" id="supabaseSettingsUrl" class="form-input" value="'+currentUrl+'" required placeholder="https://yourproject.supabase.co" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:#fff;"></label><label class="form-label" style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;">Supabase Anon Key<input type="password" id="supabaseSettingsKey" class="form-input" value="'+currentKey+'" required placeholder="Anon Key" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:#fff;"></label><div style="display:flex;gap:8px;margin-top:8px;"><button class="btn-primary" type="submit" style="flex:1;">Update Connection</button><button class="btn-ghost" type="button" onclick="resetSupabaseSettings()" style="color:var(--error);border-color:var(--error);">Disconnect</button></div></form></div></section>';
+  var headerCard = settingsPage.querySelector('.page-header-card');
+  if (headerCard) headerCard.insertAdjacentHTML('afterend', cardHtml);
 }
 
-// Initial bootstrapper
-function bootstrapDb() {
-  initSupabaseClient(false);
-  setTimeout(injectSupabaseSettingsCard, 300);
-}
-if (document.readyState === 'loading') {
-  window.addEventListener('DOMContentLoaded', bootstrapDb);
-} else {
-  bootstrapDb();
-}
-</script>
-
-  <script>
-  function startAppIfConfigured() {
-    const creds = typeof getSupabaseCredentials === 'function' 
-      ? getSupabaseCredentials() 
-      : { url: safeStorage.getItem('supabase_url'), key: safeStorage.getItem('supabase_key') };
-    if (creds.url && creds.key) {
+// BOOTSTRAPPER — runs immediately
+(function() {
+  function boot() {
+    var connected = initSupabaseClient();
+    setTimeout(injectSupabaseSettingsCard, 300);
+    if (connected && typeof initApp === 'function') {
       initApp();
     }
   }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startAppIfConfigured);
+    document.addEventListener('DOMContentLoaded', boot);
   } else {
-    startAppIfConfigured();
+    boot();
   }
+})();
+</script>
+
+  <script>
+  // Script_Db.html bootstrapper calls initApp() after connecting to Supabase.
+  // No DOMContentLoaded listener needed here.
 
   let APP_SETTINGS = {};
   let ASSET_OPTIONS = [];
   let ALLOCATION_TARGETS = [];
   let LATEST_DASHBOARD_DATA = null;
   let HISTORY_DATA = { transactions: [] };
-  let AMOUNTS_HIDDEN = safeStorage.getItem('amountsHidden') === 'true';
+  let AMOUNTS_HIDDEN = (typeof safeStorage !== 'undefined' ? safeStorage.getItem('amountsHidden') : null) === 'true';
 
   function initApp() {
     if (window.appInitialized) return;
