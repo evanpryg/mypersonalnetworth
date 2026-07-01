@@ -2,7 +2,7 @@
   function startAppIfConfigured() {
     const creds = typeof getSupabaseCredentials === 'function' 
       ? getSupabaseCredentials() 
-      : { url: localStorage.getItem('supabase_url'), key: localStorage.getItem('supabase_key') };
+      : { url: safeStorage.getItem('supabase_url'), key: safeStorage.getItem('supabase_key') };
     if (creds.url && creds.key) {
       initApp();
     }
@@ -18,7 +18,7 @@
   let ALLOCATION_TARGETS = [];
   let LATEST_DASHBOARD_DATA = null;
   let HISTORY_DATA = { transactions: [] };
-  let AMOUNTS_HIDDEN = localStorage.getItem('amountsHidden') === 'true';
+  let AMOUNTS_HIDDEN = safeStorage.getItem('amountsHidden') === 'true';
 
   function initApp() {
     if (window.appInitialized) return;
@@ -48,7 +48,7 @@
   /* === GLOBAL AMOUNT VISIBILITY TOGGLE === */
   function toggleAmountVisibility() {
     AMOUNTS_HIDDEN = !AMOUNTS_HIDDEN;
-    localStorage.setItem('amountsHidden', AMOUNTS_HIDDEN);
+    safeStorage.setItem('amountsHidden', AMOUNTS_HIDDEN);
     applyGlobalVisibility();
     refreshAllAmounts();
   }

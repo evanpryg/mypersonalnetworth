@@ -8,7 +8,7 @@ let TX_SELECTED_CATEGORY = '';
 let TX_SELECTED_SUBCATEGORY = '';
 let TX_SELECTED_ACCOUNT = '';
 let TX_SELECTED_ACCOUNT_TO = '';
-let TX_RECENT = JSON.parse(localStorage.getItem('txRecent') || '[]');
+let TX_RECENT = JSON.parse(safeStorage.getItem('txRecent') || '[]');
 
 /* === OPEN ACTION SHEET === */
 function mmShowActionSheet(type) {
@@ -357,7 +357,7 @@ function txSaveRecent(payload) {
 
   TX_RECENT.unshift(entry);
   TX_RECENT = TX_RECENT.slice(0, 10); // Keep max 10
-  localStorage.setItem('txRecent', JSON.stringify(TX_RECENT));
+  safeStorage.setItem('txRecent', JSON.stringify(TX_RECENT));
 }
 
 </script>
