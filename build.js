@@ -28,10 +28,13 @@ function compile() {
     
     // Wrap it in appropriate tags if it doesn't have them
     let replacement = fileContent;
-    if (fileName.toLowerCase().includes('style') && !fileContent.trim().startsWith('<style>')) {
-      replacement = `<style>\n${fileContent}\n</style>`;
-    } else if (fileName.toLowerCase().includes('script') && !fileContent.trim().startsWith('<script>')) {
-      replacement = `<script>\n${fileContent}\n</script>`;
+    const trimmed = fileContent.trim();
+    if (!trimmed.startsWith('<')) {
+      if (fileName.toLowerCase().includes('style')) {
+        replacement = `<style>\n${fileContent}\n</style>`;
+      } else if (fileName.toLowerCase().includes('script')) {
+        replacement = `<script>\n${fileContent}\n</script>`;
+      }
     }
     
     indexHtml = indexHtml.replace(macro, replacement);

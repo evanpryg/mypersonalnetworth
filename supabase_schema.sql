@@ -123,3 +123,14 @@ INSERT INTO mm_allocation (category, percent, icon, color) VALUES
   ('Alms', 10, '🤲', '#ec4899'),
   ('Invest', 20, '📈', '#3b82f6')
 ON CONFLICT DO NOTHING;
+
+-- Disable Row Level Security (RLS) for simple personal client-side access
+ALTER TABLE targets DISABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolio DISABLE ROW LEVEL SECURITY;
+ALTER TABLE settings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE allocation_targets DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mm_accounts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mm_transactions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mm_categories DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mm_allocation DISABLE ROW LEVEL SECURITY;
