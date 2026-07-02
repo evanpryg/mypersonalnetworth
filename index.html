@@ -839,6 +839,22 @@
         <div class="tx-chips" id="txSubcategoryChips"></div>
       </div>
 
+      <!-- Transfer: Direction Selector -->
+      <div class="tx-section" id="txTransferDirSection" style="display:none;">
+        <label class="tx-section-label">Transfer Type</label>
+        <div class="tx-chips" id="txTransferDirChips">
+          <button class="tx-chip active" style="--chip-color:#60a5fa" onclick="txSelectTransferDir('mm-to-mm')">
+            <span>Account → Account</span>
+          </button>
+          <button class="tx-chip" style="--chip-color:#3b82f6" onclick="txSelectTransferDir('mm-to-invest')">
+            <span>Account → Invest</span>
+          </button>
+          <button class="tx-chip" style="--chip-color:#8b5cf6" onclick="txSelectTransferDir('invest-to-mm')">
+            <span>Invest → Account</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Account (Chips) -->
       <div class="tx-section" id="txAccountSection">
         <label class="tx-section-label" id="txAccountLabel">Account</label>
@@ -847,7 +863,7 @@
 
       <!-- Transfer: To Account -->
       <div class="tx-section" id="txAccountToSection" style="display:none;">
-        <label class="tx-section-label">To Account</label>
+        <label class="tx-section-label" id="txAccountToLabel">To Account</label>
         <div class="tx-chips" id="txAccountToChips"></div>
       </div>
 

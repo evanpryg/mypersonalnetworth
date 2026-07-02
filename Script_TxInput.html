@@ -4,6 +4,7 @@
    ============================================================ */
 
 let TX_TYPE = 'expense';
+let TX_TRANSFER_DIR = 'mm-to-mm';
 let TX_SELECTED_CATEGORY = '';
 let TX_SELECTED_SUBCATEGORY = '';
 let TX_SELECTED_ACCOUNT = '';
@@ -70,21 +71,61 @@ function txSwitchType(type) {
   const subSection = document.getElementById('txSubcategorySection');
   const accToSection = document.getElementById('txAccountToSection');
   const accLabel = document.getElementById('txAccountLabel');
+  const dirSection = document.getElementById('txTransferDirSection');
 
   if (type === 'transfer') {
     catSection.style.display = 'none';
     subSection.style.display = 'none';
     accToSection.style.display = 'block';
-    accLabel.textContent = 'From Account';
+    if (dirSection) dirSection.style.display = 'block';
+    TX_TRANSFER_DIR = 'mm-to-mm';
+    txUpdateTransferDirUI();
   } else {
     catSection.style.display = 'block';
     subSection.style.display = TX_SELECTED_CATEGORY ? 'block' : 'none';
     accToSection.style.display = 'none';
+    if (dirSection) dirSection.style.display = 'none';
     accLabel.textContent = 'Account';
   }
 
+  TX_SELECTED_ACCOUNT = '';
+  TX_SELECTED_ACCOUNT_TO = '';
   txRenderCategories();
   txRenderAccounts();
+}
+
+/* === TRANSFER DIRECTION === */
+function txSelectTransferDir(dir) {
+  TX_TRANSFER_DIR = dir;
+  TX_SELECTED_ACCOUNT = '';
+  TX_SELECTED_ACCOUNT_TO = '';
+  txUpdateTransferDirUI();
+  txRenderAccounts();
+}
+
+function txUpdateTransferDirUI() {
+  const accLabel = document.getElementById('txAccountLabel');
+  const accToLabel = document.getElementById('txAccountToLabel');
+  const dirChips = document.querySelectorAll('#txTransferDirChips .tx-chip');
+
+  dirChips.forEach(chip => {
+    const isActive =
+      (chip.textContent.includes('Account → Account') && TX_TRANSFER_DIR === 'mm-to-mm') ||
+      (chip.textContent.includes('Account → Invest') && TX_TRANSFER_DIR === 'mm-to-invest') ||
+      (chip.textContent.includes('Invest → Account') && TX_TRANSFER_DIR === 'invest-to-mm');
+    chip.classList.toggle('active', isActive);
+  });
+
+  if (TX_TRANSFER_DIR === 'mm-to-mm') {
+    if (accLabel) accLabel.textContent = 'From Account';
+    if (accToLabel) accToLabel.textContent = 'To Account';
+  } else if (TX_TRANSFER_DIR === 'mm-to-invest') {
+    if (accLabel) accLabel.textContent = 'From Account';
+    if (accToLabel) accToLabel.textContent = 'To Platform (Invest)';
+  } else if (TX_TRANSFER_DIR === 'invest-to-mm') {
+    if (accLabel) accLabel.textContent = 'From Platform (Invest)';
+    if (accToLabel) accToLabel.textContent = 'To Account';
+  }
 }
 
 /* === DATE === */
@@ -198,21 +239,47 @@ function txRenderAccounts() {
   });
   const sorted = [...accounts].sort((a, b) => (freqMap[b.name] || 0) - (freqMap[a.name] || 0));
 
-  container.innerHTML = sorted.map(acc => {
-    const isActive = TX_SELECTED_ACCOUNT === acc.name;
-    return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent)" onclick="txSelectAccount('${escapeHtml(acc.name)}')">
-      <span>${escapeHtml(acc.name)}</span>
-    </button>`;
-  }).join('');
+  // Get investment platforms for invest transfers
+  const platforms = (typeof APP_SETTINGS !== 'undefined' && APP_SETTINGS.Platform) ? APP_SETTINGS.Platform : [];
 
-  // Transfer: To Account
-  if (containerTo && TX_TYPE === 'transfer') {
-    containerTo.innerHTML = sorted.map(acc => {
-      const isActive = TX_SELECTED_ACCOUNT_TO === acc.name;
-      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="txSelectAccountTo('${escapeHtml(acc.name)}')">
+  // Determine what to show for "From" chips
+  if (TX_TYPE === 'transfer' && TX_TRANSFER_DIR === 'invest-to-mm') {
+    // From: investment platforms
+    container.innerHTML = platforms.map(p => {
+      const isActive = TX_SELECTED_ACCOUNT === p;
+      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:#8b5cf6" onclick="txSelectAccount('${escapeHtml(p)}')">
+        <span>📈 ${escapeHtml(p)}</span>
+      </button>`;
+    }).join('');
+  } else {
+    // From: regular accounts
+    container.innerHTML = sorted.map(acc => {
+      const isActive = TX_SELECTED_ACCOUNT === acc.name;
+      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent)" onclick="txSelectAccount('${escapeHtml(acc.name)}')">
         <span>${escapeHtml(acc.name)}</span>
       </button>`;
     }).join('');
+  }
+
+  // Transfer: To chips
+  if (containerTo && TX_TYPE === 'transfer') {
+    if (TX_TRANSFER_DIR === 'mm-to-invest') {
+      // To: investment platforms
+      containerTo.innerHTML = platforms.map(p => {
+        const isActive = TX_SELECTED_ACCOUNT_TO === p;
+        return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:#3b82f6" onclick="txSelectAccountTo('${escapeHtml(p)}')">
+          <span>📈 ${escapeHtml(p)}</span>
+        </button>`;
+      }).join('');
+    } else {
+      // To: regular accounts
+      containerTo.innerHTML = sorted.map(acc => {
+        const isActive = TX_SELECTED_ACCOUNT_TO === acc.name;
+        return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="txSelectAccountTo('${escapeHtml(acc.name)}')">
+          <span>${escapeHtml(acc.name)}</span>
+        </button>`;
+      }).join('');
+    }
   }
 }
 
@@ -276,35 +343,43 @@ function txSubmit() {
   }
 
   if (!TX_SELECTED_ACCOUNT) {
-    showToast('Pilih akun.', 'error');
+    showToast(TX_TYPE === 'transfer' && TX_TRANSFER_DIR === 'invest-to-mm' ? 'Pilih platform.' : 'Pilih akun.', 'error');
     return;
   }
 
   if (TX_TYPE === 'transfer' && !TX_SELECTED_ACCOUNT_TO) {
-    showToast('Pilih akun tujuan.', 'error');
+    showToast(TX_TRANSFER_DIR === 'mm-to-invest' ? 'Pilih platform tujuan.' : 'Pilih akun tujuan.', 'error');
     return;
   }
 
-  if (TX_TYPE === 'transfer' && TX_SELECTED_ACCOUNT === TX_SELECTED_ACCOUNT_TO) {
+  if (TX_TYPE === 'transfer' && TX_TRANSFER_DIR === 'mm-to-mm' && TX_SELECTED_ACCOUNT === TX_SELECTED_ACCOUNT_TO) {
     showToast('Akun asal dan tujuan harus berbeda.', 'error');
     return;
+  }
+
+  // Build payload based on transfer direction
+  let account = TX_SELECTED_ACCOUNT;
+  let accountTo = TX_TYPE === 'transfer' ? TX_SELECTED_ACCOUNT_TO : '';
+  let category = TX_TYPE === 'transfer' ? '' : TX_SELECTED_CATEGORY;
+
+  if (TX_TYPE === 'transfer') {
+    if (TX_TRANSFER_DIR === 'mm-to-invest') {
+      accountTo = 'Invest:' + TX_SELECTED_ACCOUNT_TO;
+    } else if (TX_TRANSFER_DIR === 'invest-to-mm') {
+      account = 'Invest:' + TX_SELECTED_ACCOUNT;
+    }
   }
 
   const payload = {
     date: date,
     type: TX_TYPE.charAt(0).toUpperCase() + TX_TYPE.slice(1),
-    account: TX_SELECTED_ACCOUNT,
-    accountTo: TX_TYPE === 'transfer' ? TX_SELECTED_ACCOUNT_TO : '',
-    category: TX_TYPE === 'transfer' ? (TX_SELECTED_CATEGORY || 'Invest') : TX_SELECTED_CATEGORY,
+    account: account,
+    accountTo: accountTo,
+    category: category,
     subcategory: TX_SELECTED_SUBCATEGORY,
     amount: amount,
     notes: notes
   };
-
-  // For transfer to invest, mark category as Invest
-  if (TX_TYPE === 'transfer' && !TX_SELECTED_CATEGORY) {
-    payload.category = '';
-  }
 
   const btn = document.getElementById('txSaveBtn');
   btn.disabled = true;
