@@ -96,7 +96,7 @@ function mmUpdateIncomeSubcategories(category) {
 /* === DASHBOARD === */
 function mmLoadDashboard(skipIfCached) {
   if (!window.supabaseConnected) {
-    const container = document.getElementById('mmAccountsList');
+    const container = document.getElementById('mmAccountsScroll');
     if (container) container.innerHTML = '<div class="empty-state">Database is not connected. Configure connection in Settings.</div>';
     return;
   }
@@ -111,7 +111,7 @@ function mmLoadDashboard(skipIfCached) {
   MM_ALLTIME_CACHE = null;
   MM_MONTH_CACHE = {};
 
-  const container = document.getElementById('mmAccountsList');
+  const container = document.getElementById('mmAccountsScroll');
   if (container) container.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
 
   google.script.run
@@ -134,8 +134,43 @@ function mmLoadDashboard(skipIfCached) {
 }
 
 function mmRenderDashboard(data) {
+  // Greeting
+  const hour = new Date().getHours();
+  let greeting = 'Good evening,';
+  if (hour < 12) greeting = 'Good morning,';
+  else if (hour < 17) greeting = 'Good afternoon,';
+  setText('mmGreeting', greeting);
+
+  // User name
+  const savedName = localStorage.getItem('mm_user_name') || 'User 🌿';
+  setText('mmUserName', savedName);
+
+  // Date display
+  const now = new Date();
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  setText('mmDateText', now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear());
+
   // Net worth
   setText('mmNetWorthValue', mmFormatIDR(data.netWorth));
+
+  // Change badge
+  const badge = document.getElementById('mmChangeBadge');
+  if (badge) {
+    if (data.prevNetWorth && data.prevNetWorth > 0) {
+      const changePct = ((data.netWorth - data.prevNetWorth) / data.prevNetWorth * 100).toFixed(1);
+      const isUp = data.netWorth >= data.prevNetWorth;
+      badge.textContent = (isUp ? '↑ ' : '↓ ') + Math.abs(changePct) + '%';
+      badge.className = 'mm-change-badge ' + (isUp ? 'up' : 'down');
+    } else {
+      badge.textContent = '↑ 0%';
+      badge.className = 'mm-change-badge up';
+    }
+  }
+
+  // Sparkline
+  mmRenderSparkline(data);
+
+  // Summary values
   setText('mmTotalIncome', mmFormatIDR(data.totalIncome));
   setText('mmTotalExpense', mmFormatIDR(data.totalExpense));
   setText('mmTotalSaving', mmFormatIDR(data.saving));
@@ -146,60 +181,145 @@ function mmRenderDashboard(data) {
     savingEl.style.color = data.saving >= 0 ? 'var(--success)' : 'var(--error)';
   }
 
-  // Accounts
-  const accContainer = document.getElementById('mmAccountsList');
-  if (accContainer) {
-    if (!data.accounts.length) {
-      accContainer.innerHTML = '<div class="empty-state">No accounts yet. Add one in Settings.</div>';
-    } else {
-      accContainer.innerHTML = data.accounts
-        .filter(a => a.showOnDashboard)
-        .map(a => `
-          <div class="mm-account-row-mini" onclick="mmShowAccountTransactions('${escapeHtml(a.name)}')">
-            <span style="display:flex;align-items:center;gap:8px;">
-              <span class="mm-account-icon-mini" style="font-size:16px;">${escapeHtml(a.icon || '💳')}</span>
-              <span>${escapeHtml(a.name)}</span>
-            </span>
-            <strong>${mmFormatIDR(a.balance)}</strong>
-          </div>
-        `).join('');
-    }
-  }
+  // Net saving rate
+  const rate = data.totalIncome > 0 ? Math.round((data.saving / data.totalIncome) * 100) : 0;
+  setText('mmNetSavingRate', rate + '%');
 
-  // Allocation cards
-  const allocContainer = document.getElementById('mmAllocationCards');
-  if (allocContainer) {
-    if (!data.allocationCards.length) {
-      allocContainer.innerHTML = '<div class="empty-state">No allocation data yet.</div>';
-    } else {
-      allocContainer.innerHTML = data.allocationCards.map(card => {
-        const progressPct = Math.round(card.progress * 100);
-        const isOver = card.spent > card.target && card.target > 0;
-        const colorStyle = isOver ? 'var(--error)' : (card.color || 'var(--primary)');
-        return `
-          <div class="mm-alloc-card" onclick="mmShowCategoryDetail('${escapeHtml(card.category)}')">
-            <div class="mm-alloc-header">
-              <span class="cat-name">
-                <span class="cat-icon-mini" style="margin-right:6px;font-size:14px;">${escapeHtml(card.icon || '💰')}</span>
-                ${escapeHtml(card.category)}
-              </span>
-              <span class="cat-percent">${card.percent}%</span>
-            </div>
-            <div class="mm-alloc-bar">
-              <div class="mm-alloc-fill" style="width:${Math.min(progressPct, 100)}%; background-color:${colorStyle};"></div>
-            </div>
-            <div class="mm-alloc-meta">
-              <span>${mmFormatIDR(card.spent)} spent</span>
-              <span>of ${mmFormatIDR(card.target)}</span>
-            </div>
-          </div>`;
-      }).join('');
-    }
-  }
+  // Render accounts
+  mmRenderAccountCards(data.accounts || []);
+
+  // Render budget
+  mmRenderBudgetCard(data.allocationCards || [], data.totalIncome || 0);
 
   // Render chart and transactions
   mmRenderChart('expense');
   mmRenderDashboardTransactions();
+}
+
+/* === SPARKLINE === */
+function mmRenderSparkline(data) {
+  const canvas = document.getElementById('mmNetworthSparkline');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width = canvas.offsetWidth * 2;
+  const h = canvas.height = canvas.offsetHeight * 2;
+  ctx.clearRect(0, 0, w, h);
+
+  // Generate sparkline data from daily transaction sums
+  const txs = (data && data.monthTransactions) || [];
+  const dayMap = {};
+  txs.forEach(tx => {
+    if (!tx.date) return;
+    const d = new Date(tx.date).getDate();
+    if (!dayMap[d]) dayMap[d] = 0;
+    if (tx.type === 'Income') dayMap[d] += tx.amount;
+    if (tx.type === 'Expense') dayMap[d] -= tx.amount;
+  });
+
+  const today = new Date().getDate();
+  let cumulative = data.netWorth - Object.values(dayMap).reduce((s, v) => s + v, 0);
+  const points = [];
+  for (let d = 1; d <= today; d++) {
+    cumulative += (dayMap[d] || 0);
+    points.push(cumulative);
+  }
+
+  if (points.length < 2) {
+    // Draw a simple upward line
+    points.length = 0;
+    for (let i = 0; i < 10; i++) points.push(data.netWorth * (0.85 + 0.15 * (i / 9)));
+  }
+
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = max - min || 1;
+  const padTop = h * 0.15;
+  const padBot = h * 0.05;
+  const usableH = h - padTop - padBot;
+
+  ctx.beginPath();
+  points.forEach((val, i) => {
+    const x = (i / (points.length - 1)) * w;
+    const y = padTop + usableH - ((val - min) / range) * usableH;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+
+  ctx.strokeStyle = '#10b981';
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Fill gradient under the line
+  const lastX = w;
+  const lastY = padTop + usableH - ((points[points.length - 1] - min) / range) * usableH;
+  ctx.lineTo(lastX, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, 'rgba(16,185,129,0.25)');
+  grad.addColorStop(1, 'rgba(16,185,129,0)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+/* === ACCOUNT CARDS === */
+function mmRenderAccountCards(accounts) {
+  const container = document.getElementById('mmAccountsScroll');
+  if (!container) return;
+
+  const visible = accounts.filter(a => a.showOnDashboard);
+  if (!visible.length) {
+    container.innerHTML = '<div class="empty-state">No accounts yet. Add one in Settings.</div>';
+    return;
+  }
+
+  const typeColors = {
+    'Bank': '#3b82f6', 'E-Wallet': '#10b981', 'Cash': '#f59e0b',
+    'Credit Card': '#ef4444', 'Investment': '#8b5cf6', 'Other': '#6b7280'
+  };
+
+  container.innerHTML = visible.map(a => {
+    const color = typeColors[a.type] || typeColors['Other'];
+    const initials = (a.name || '').substring(0, 2).toUpperCase();
+    return `
+      <div class="mm-account-card" onclick="mmShowAccountTransactions('${escapeHtml(a.name)}')">
+        <div class="mm-account-top">
+          <div class="mm-account-logo" style="background:${color}22;color:${color}">
+            ${a.icon ? escapeHtml(a.icon) : initials}
+          </div>
+          <div class="mm-account-info-col">
+            <span class="mm-account-name">${escapeHtml(a.name)}</span>
+            <span class="mm-account-type">${escapeHtml(a.type || 'Account')}</span>
+          </div>
+        </div>
+        <div class="mm-account-balance">${mmFormatIDR(a.balance)}</div>
+      </div>`;
+  }).join('');
+}
+
+/* === BUDGET CARD === */
+function mmRenderBudgetCard(allocationCards, totalIncome) {
+  const totalBudget = allocationCards.reduce((s, c) => s + (c.target || 0), 0);
+  const totalSpent = allocationCards.reduce((s, c) => s + (c.spent || 0), 0);
+  const remaining = totalBudget - totalSpent;
+  const pct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+
+  setText('mmBudgetSubtitle', mmFormatIDR(totalBudget) + ' Budget');
+  setText('mmBudgetUsed', mmFormatIDR(totalSpent) + ' used');
+  setText('mmBudgetPercent', pct + '%');
+  setText('mmBudgetRemaining', mmFormatIDR(Math.abs(remaining)) + (remaining >= 0 ? ' left' : ' over'));
+
+  const fill = document.getElementById('mmBudgetBarFill');
+  if (fill) {
+    fill.style.width = Math.min(pct, 100) + '%';
+    if (pct > 100) fill.style.background = 'linear-gradient(90deg, #ef4444, #f59e0b)';
+    else fill.style.background = '';
+  }
+
+  const remaining_el = document.getElementById('mmBudgetRemaining');
+  if (remaining_el) remaining_el.style.color = remaining >= 0 ? 'var(--accent)' : 'var(--error)';
 }
 
 /* === CHART === */
@@ -207,24 +327,22 @@ let mmApexChart = null;
 let mmChartActiveIndex = -1;
 let mmCurrentChartType = 'expense';
 
+function mmSwitchChartTab(btn, type) {
+  document.querySelectorAll('.mm-expense-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  mmRenderChart(type);
+}
+
 function mmRenderChart(type) {
   mmCurrentChartType = type;
   mmChartActiveIndex = -1;
 
   const donutEl = document.getElementById('mmChartDonut');
-  const statsEl = document.getElementById('chartMiniStats');
   const listEl = document.getElementById('mmChartCategoryList');
-  if (!donutEl || !statsEl || !listEl) return;
-
-  // Update tab active state
-  const panelCard = donutEl.closest('.panel-card');
-  const tabs = panelCard.querySelectorAll('.tab-btn');
-  tabs.forEach(t => t.classList.remove('active'));
-  tabs.forEach(t => { if (t.textContent.toLowerCase().includes(type)) t.classList.add('active'); });
+  if (!donutEl || !listEl) return;
 
   if (!MM_DASHBOARD) {
     donutEl.innerHTML = '<div class="empty-state">No data yet.</div>';
-    statsEl.innerHTML = '';
     listEl.innerHTML = '';
     return;
   }
@@ -253,47 +371,17 @@ function mmRenderChart(type) {
 
   if (total <= 0) {
     donutEl.innerHTML = '<div class="empty-state">No data this month.</div>';
-    statsEl.innerHTML = '';
     listEl.innerHTML = '';
     return;
   }
 
-  // Mini stats
-  const txCount = (MM_DASHBOARD.monthTransactions || []).filter(tx => tx.type === (type === 'expense' ? 'Expense' : 'Income')).length;
-  const dayOfMonth = new Date().getDate();
-  const dailyAvg = dayOfMonth > 0 ? total / dayOfMonth : 0;
-
-  statsEl.innerHTML = `
-    <div class="chart-mini-stat">
-      <div class="chart-mini-stat-icon"><i data-lucide="wallet" class="mini-stat-lucide"></i></div>
-      <div class="chart-mini-stat-value">${mmFormatIDR(total)}</div>
-      <div class="chart-mini-stat-label">Total ${type}</div>
-    </div>
-    <div class="chart-mini-stat">
-      <div class="chart-mini-stat-icon"><i data-lucide="receipt" class="mini-stat-lucide"></i></div>
-      <div class="chart-mini-stat-value">${txCount}</div>
-      <div class="chart-mini-stat-label">Transaksi</div>
-    </div>
-    <div class="chart-mini-stat">
-      <div class="chart-mini-stat-icon"><i data-lucide="calendar-days" class="mini-stat-lucide"></i></div>
-      <div class="chart-mini-stat-value">${mmFormatIDR(dailyAvg)}</div>
-      <div class="chart-mini-stat-label">Per Hari</div>
-    </div>`;
-
-  // Re-init Lucide for dynamically added icons
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-
-  // Render ApexCharts donut
   mmRenderDonut(entries, total, type);
-
-  // Render category list
   mmRenderCategoryList(entries, total);
 }
 
 function mmRenderDonut(entries, total, type) {
   const donutEl = document.getElementById('mmChartDonut');
 
-  // Destroy old chart
   if (mmApexChart) {
     mmApexChart.destroy();
     mmApexChart = null;
@@ -305,15 +393,11 @@ function mmRenderDonut(entries, total, type) {
   const labels = entries.map(e => e.name);
   const chartColors = entries.map(e => e.color);
 
-  // Calculate change vs previous (simple: use prevExpense/prevIncome from insight data if available)
-  let changeHtml = '';
-  // We'll show total in center
-
   const options = {
     series: series,
     chart: {
       type: 'donut',
-      height: 220,
+      height: 150,
       background: 'transparent',
       animations: {
         enabled: true,
@@ -333,24 +417,24 @@ function mmRenderDonut(entries, total, type) {
     plotOptions: {
       pie: {
         donut: {
-          size: '68%',
+          size: '65%',
           labels: {
             show: true,
             name: {
               show: true,
-              fontSize: '10px',
+              fontSize: '9px',
               fontFamily: 'Inter',
               fontWeight: 600,
               color: '#a1a1aa',
-              offsetY: -8
+              offsetY: -6
             },
             value: {
               show: true,
-              fontSize: '16px',
+              fontSize: '13px',
               fontFamily: 'Inter',
               fontWeight: 800,
               color: '#fafafa',
-              offsetY: 4,
+              offsetY: 2,
               formatter: function(val) {
                 if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••';
                 return 'Rp' + Number(val).toLocaleString('id-ID');
@@ -359,8 +443,8 @@ function mmRenderDonut(entries, total, type) {
             total: {
               show: true,
               showAlways: true,
-              label: type === 'expense' ? 'Total Expense' : 'Total Income',
-              fontSize: '10px',
+              label: type === 'expense' ? 'Expense' : 'Income',
+              fontSize: '9px',
               fontFamily: 'Inter',
               fontWeight: 600,
               color: '#a1a1aa',
@@ -385,7 +469,7 @@ function mmRenderDonut(entries, total, type) {
     tooltip: {
       enabled: true,
       theme: 'dark',
-      style: { fontSize: '12px', fontFamily: 'Inter' },
+      style: { fontSize: '11px', fontFamily: 'Inter' },
       y: {
         formatter: function(val) {
           if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••';
@@ -398,8 +482,8 @@ function mmRenderDonut(entries, total, type) {
       active: { filter: { type: 'none' } }
     },
     responsive: [{
-      breakpoint: 380,
-      options: { chart: { height: 180 } }
+      breakpoint: 480,
+      options: { chart: { height: 140 } }
     }]
   };
 
@@ -409,8 +493,7 @@ function mmRenderDonut(entries, total, type) {
 
 function mmHighlightCategory(index) {
   mmChartActiveIndex = index;
-  // Highlight category card
-  const items = document.querySelectorAll('.chart-cat-item');
+  const items = document.querySelectorAll('.mm-category-item');
   items.forEach((item, i) => {
     item.classList.toggle('active', i === index);
   });
@@ -418,14 +501,10 @@ function mmHighlightCategory(index) {
 
 function mmSelectCategoryFromList(index) {
   mmChartActiveIndex = index;
-
-  // Toggle ApexCharts selection
   if (mmApexChart) {
     mmApexChart.toggleDataPointSelection(index);
   }
-
-  // Highlight card
-  const items = document.querySelectorAll('.chart-cat-item');
+  const items = document.querySelectorAll('.mm-category-item');
   items.forEach((item, i) => {
     item.classList.toggle('active', i === index);
   });
@@ -435,28 +514,20 @@ function mmRenderCategoryList(entries, total) {
   const listEl = document.getElementById('mmChartCategoryList');
   if (!listEl) return;
 
-  listEl.innerHTML = entries.map((entry, i) => {
-    const pct = ((entry.amount / total) * 100).toFixed(1);
+  // Show max 4 categories in side-by-side view
+  const display = entries.slice(0, 4);
+
+  listEl.innerHTML = display.map((entry, i) => {
+    const pct = ((entry.amount / total) * 100).toFixed(0);
     const icon = mmCategoryEmoji(entry.name);
     return `
-      <div class="chart-cat-item" onclick="mmSelectCategoryFromList(${i});mmShowCategoryDetail('${escapeHtml(entry.name)}')">
-        <div class="chart-cat-icon" style="color:${entry.color}">${icon}</div>
-        <div class="chart-cat-info">
-          <span class="chart-cat-name">${escapeHtml(entry.name)}</span>
-          <div class="chart-cat-bar-wrap">
-            <div class="chart-cat-bar" style="width:${pct}%;background:${entry.color}"></div>
-          </div>
-        </div>
-        <div class="chart-cat-values">
-          <span class="chart-cat-amount">${mmFormatIDR(entry.amount)}</span>
-          <span class="chart-cat-pct">${pct}%</span>
-        </div>
-        <span class="chart-cat-arrow"><i data-lucide="chevron-right" style="width:14px;height:14px;"></i></span>
+      <div class="mm-category-item" onclick="mmSelectCategoryFromList(${i});mmShowCategoryDetail('${escapeHtml(entry.name)}')">
+        <div class="mm-cat-icon" style="background:${entry.color}22;color:${entry.color}">${icon}</div>
+        <span class="mm-cat-name">${escapeHtml(entry.name)}</span>
+        <span class="mm-cat-amount">${mmFormatIDR(entry.amount)}</span>
+        <span class="mm-cat-percent">${pct}%</span>
       </div>`;
   }).join('');
-
-  // Re-init Lucide for dynamic icons
-  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 /* === DASHBOARD TRANSACTIONS === */
@@ -470,64 +541,32 @@ function mmRenderDashboardTransactions() {
     return;
   }
 
-  // Group by date
-  const grouped = {};
-  txs.forEach(tx => {
-    const dateKey = tx.date;
-    if (!grouped[dateKey]) grouped[dateKey] = { transactions: [], net: 0 };
-    grouped[dateKey].transactions.push(tx);
-    if (tx.type === 'Income') grouped[dateKey].net += tx.amount;
-    if (tx.type === 'Expense') grouped[dateKey].net -= tx.amount;
-  });
+  // Sort by date desc, show latest 4
+  const sorted = [...txs].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const display = sorted.slice(0, 4);
 
-  // Sort dates descending
-  const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
-
-  // Show max 5 date groups by default
-  const showAll = container.dataset.showAll === 'true';
-  const displayDates = showAll ? sortedDates : sortedDates.slice(0, 5);
-
-  let html = displayDates.map(dateKey => {
-    const group = grouped[dateKey];
-    const dateLabel = mmFormatDate(dateKey);
-    const netColor = group.net >= 0 ? 'var(--success)' : 'var(--error)';
-    const netPrefix = group.net >= 0 ? '+' : '';
-
-    let txHtml = group.transactions.map(tx => {
-      const prefix = tx.type === 'Income' ? '+' : tx.type === 'Expense' ? '-' : '';
-      const amtColor = tx.type === 'Income' ? 'var(--success)' : tx.type === 'Expense' ? 'var(--error)' : '#60a5fa';
-      const catColor = mmCategoryColor(tx.category, tx.type);
-      const catIcon = mmCategoryEmoji(tx.category, tx.type);
-      const label = tx.notes || tx.subcategory || tx.category || tx.type;
-      const badge = tx.subcategory || tx.category || '';
-      
-      return `<div class="mm-tx-card" onclick="mmShowTxDetail(${tx.rowNumber}, '${escapeHtml(tx.type)}', '${escapeHtml(tx.account)}', '${escapeHtml(tx.accountTo || '')}', '${escapeHtml(tx.category || '')}', '${escapeHtml(tx.subcategory || '')}', ${tx.amount}, '${escapeHtml(tx.notes || '')}', '${escapeHtml(tx.date || '')}')">
-        <div class="mm-tx-card-icon" style="color:${catColor}">${catIcon}</div>
-        <div class="mm-tx-card-body">
-          <span class="mm-tx-card-title">${escapeHtml(label)}</span>
-          ${badge ? `<span class="mm-tx-card-badge">${escapeHtml(badge)}</span>` : ''}
-        </div>
-        <span class="mm-tx-card-amount" style="color:${amtColor}">${prefix}${mmFormatIDR(tx.amount)}</span>
-      </div>`;
-    }).join('');
+  container.innerHTML = display.map(tx => {
+    const prefix = tx.type === 'Income' ? '+' : tx.type === 'Expense' ? '-' : '';
+    const colorClass = tx.type === 'Income' ? 'income-color' : tx.type === 'Expense' ? 'expense-color' : 'transfer-color';
+    const catColor = mmCategoryColor(tx.category, tx.type);
+    const catIcon = mmCategoryEmoji(tx.category, tx.type);
+    const label = tx.notes || tx.subcategory || tx.category || tx.type;
+    const category = tx.subcategory || tx.category || tx.type;
+    const dateStr = mmFormatDate(tx.date);
 
     return `
-      <div class="mm-dash-date-group">
-        <div class="mm-dash-date-header">
-          <span>${dateLabel}</span>
-          <strong style="color:${netColor}">(${netPrefix}${mmFormatIDR(Math.abs(group.net))})</strong>
+      <div class="mm-transaction-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${escapeHtml(tx.type)}', '${escapeHtml(tx.account)}', '${escapeHtml(tx.accountTo || '')}', '${escapeHtml(tx.category || '')}', '${escapeHtml(tx.subcategory || '')}', ${tx.amount}, '${escapeHtml(tx.notes || '')}', '${escapeHtml(tx.date || '')}')">
+        <div class="mm-tx-icon-dash" style="background:${catColor}18;color:${catColor}">${catIcon}</div>
+        <div class="mm-tx-info-dash">
+          <div class="mm-tx-name-dash">${escapeHtml(label)}</div>
+          <div class="mm-tx-category-dash">${escapeHtml(category)}</div>
         </div>
-        ${txHtml}
+        <div class="mm-tx-right-dash">
+          <div class="mm-tx-date-dash">${dateStr}</div>
+          <div class="mm-tx-amount-dash ${colorClass}">${prefix}${mmFormatIDR(tx.amount)}</div>
+        </div>
       </div>`;
   }).join('');
-
-  if (!showAll && sortedDates.length > 5) {
-    html += `<button class="btn-ghost btn-full" style="margin-top:10px;" onclick="document.getElementById('mmDashboardTransactions').dataset.showAll='true';mmRenderDashboardTransactions();">Show all days</button>`;
-  } else if (showAll && sortedDates.length > 5) {
-    html += `<button class="btn-ghost btn-full" style="margin-top:10px;" onclick="document.getElementById('mmDashboardTransactions').dataset.showAll='false';mmRenderDashboardTransactions();">Show less</button>`;
-  }
-
-  container.innerHTML = html;
 }
 
 /* === TRANSACTION DETAIL BOTTOM SHEET === */
