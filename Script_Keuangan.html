@@ -4,11 +4,10 @@
    ============================================================ */
 
 let MM_DASHBOARD = null;
+let MM_ALLOC_CARDS = [];
 let MM_ACCOUNTS = [];
 let MM_CATEGORIES = [];
 let MM_ALLOCATION = [];
-let MM_CAL_YEAR = new Date().getFullYear();
-let MM_CAL_MONTH = new Date().getMonth() + 1;
 let MM_HIST_YEAR = new Date().getFullYear();
 let MM_HIST_MONTH = new Date().getMonth() + 1;
 let mmHistoryChart = null;
@@ -25,7 +24,6 @@ function mmShowPage(pageId) {
   // Only load data if not cached
   if (pageId === 'mmDashboardPage') mmLoadDashboard(true);
   if (pageId === 'mmHistoryPage' && !document.getElementById('mmHistoryAllTime').innerHTML.trim()) mmLoadHistory();
-  if (pageId === 'mmCalendarPage' && !document.getElementById('mmCalendarGrid').children.length) mmLoadCalendar(MM_CAL_YEAR, MM_CAL_MONTH);
   if (pageId === 'mmSettingsPage' && !document.getElementById('mmSettingsAccountsList').innerHTML.includes('mm-settings-acc-row')) mmLoadSettings();
   if (pageId === 'mmInsightPage') loadFinancialInsight();
 }
@@ -181,10 +179,6 @@ function mmRenderDashboard(data) {
     savingEl.style.color = data.saving >= 0 ? 'var(--success)' : 'var(--error)';
   }
 
-  // Net saving rate
-  const rate = data.totalIncome > 0 ? Math.round((data.saving / data.totalIncome) * 100) : 0;
-  setText('mmNetSavingRate', rate + '%');
-
   // Render accounts
   mmRenderAccountCards(data.accounts || []);
 
@@ -301,13 +295,19 @@ function mmRenderAccountCards(accounts) {
 
 /* === BUDGET CARD === */
 function mmRenderBudgetCard(allocationCards, totalIncome) {
-  const totalBudget = allocationCards.reduce((s, c) => s + (c.target || 0), 0);
-  const totalSpent = allocationCards.reduce((s, c) => s + (c.spent || 0), 0);
-  const remaining = totalBudget - totalSpent;
-  const pct = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+  // Keep the full allocation list for the detail sheet
+  MM_ALLOC_CARDS = allocationCards || [];
 
-  setText('mmBudgetSubtitle', mmFormatIDR(totalBudget) + ' Budget');
-  setText('mmBudgetUsed', mmFormatIDR(totalSpent) + ' used');
+  // The dashboard card shows the primary "Living" budget (fallback to first card)
+  const living = MM_ALLOC_CARDS.find(c => c.category === 'Living') || MM_ALLOC_CARDS[0] || { category: 'Living', target: 0, spent: 0 };
+  const target = living.target || 0;
+  const spent = living.spent || 0;
+  const remaining = target - spent;
+  const pct = target > 0 ? Math.round((spent / target) * 100) : 0;
+
+  setText('mmBudgetTitle', living.category);
+  setText('mmBudgetSubtitle', mmFormatIDR(target) + ' Budget');
+  setText('mmBudgetUsed', mmFormatIDR(spent) + ' used');
   setText('mmBudgetPercent', pct + '%');
   setText('mmBudgetRemaining', mmFormatIDR(Math.abs(remaining)) + (remaining >= 0 ? ' left' : ' over'));
 
@@ -320,6 +320,52 @@ function mmRenderBudgetCard(allocationCards, totalIncome) {
 
   const remaining_el = document.getElementById('mmBudgetRemaining');
   if (remaining_el) remaining_el.style.color = remaining >= 0 ? 'var(--accent)' : 'var(--error)';
+}
+
+/* Bottom sheet: full budget breakdown across all allocation categories */
+function mmShowBudgetDetail() {
+  const cards = (MM_ALLOC_CARDS && MM_ALLOC_CARDS.length) ? MM_ALLOC_CARDS
+    : ((MM_DASHBOARD && MM_DASHBOARD.allocationCards) || []);
+  const sheet = document.getElementById('mmCategoryDetailSheet');
+  const content = document.getElementById('mmCategoryDetailContent');
+  if (!content || !sheet) return;
+
+  if (!cards.length) {
+    content.innerHTML = '<h3 class="sheet-title">Monthly Budget</h3><p class="sheet-desc">Belum ada data alokasi. Atur di Settings → Budget Split.</p>';
+    sheet.classList.remove('hidden');
+    return;
+  }
+
+  const totalTarget = cards.reduce((s, c) => s + (c.target || 0), 0);
+  const totalSpent = cards.reduce((s, c) => s + (c.spent || 0), 0);
+
+  let html = '<h3 class="sheet-title">Monthly Budget</h3>';
+  html += `<p class="sheet-desc">${mmFormatIDR(totalSpent)} used of ${mmFormatIDR(totalTarget)}</p>`;
+  html += '<div class="mm-budget-detail-list">';
+  html += cards.map(c => {
+    const target = c.target || 0;
+    const spent = c.spent || 0;
+    const remaining = target - spent;
+    const pct = target > 0 ? Math.round((spent / target) * 100) : 0;
+    const over = pct > 100;
+    const barBg = over ? 'linear-gradient(90deg,#ef4444,#f59e0b)' : (c.color || 'var(--accent)');
+    return `
+      <div class="mm-budget-detail-row">
+        <div class="mm-budget-detail-head">
+          <span class="mm-budget-detail-name">${c.icon || ''} ${escapeHtml(c.category)} <small>${c.percent || 0}%</small></span>
+          <strong>${mmFormatIDR(spent)} <span>/ ${mmFormatIDR(target)}</span></strong>
+        </div>
+        <div class="mm-budget-bar"><div class="mm-budget-bar-fill" style="width:${Math.min(pct, 100)}%;background:${barBg}"></div></div>
+        <div class="mm-budget-detail-foot">
+          <span>${pct}% used</span>
+          <span style="color:${remaining >= 0 ? 'var(--accent)' : 'var(--error)'}">${mmFormatIDR(Math.abs(remaining))} ${remaining >= 0 ? 'left' : 'over'}</span>
+        </div>
+      </div>`;
+  }).join('');
+  html += '</div>';
+
+  content.innerHTML = html;
+  sheet.classList.remove('hidden');
 }
 
 /* === CHART === */
@@ -929,38 +975,120 @@ function mmNextMonth() {
 }
 
 function mmLoadMonthHistory() {
-  const container = document.getElementById('mmHistoryMonthContent');
   const cacheKey = `${MM_HIST_YEAR}-${MM_HIST_MONTH}`;
+  const container = document.getElementById('mmHistoryMonthContent');
 
   // Use cache if available
   if (MM_MONTH_CACHE[cacheKey]) {
-    mmRenderMonth(MM_MONTH_CACHE[cacheKey], container);
+    mmRenderMonthView(MM_MONTH_CACHE[cacheKey]);
     return;
   }
 
-  container.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
+  const grid = document.getElementById('mmHistoryCalendarGrid');
+  if (grid) grid.innerHTML = '';
+  if (container) container.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
   google.script.run
     .withSuccessHandler(data => {
       MM_MONTH_CACHE[cacheKey] = data;
-      mmRenderMonth(data, container);
+      mmRenderMonthView(data);
     })
-    .withFailureHandler(err => { container.innerHTML = '<div class="empty-state">Failed to load.</div>'; })
-    .mmGetMonthlySummary(MM_HIST_YEAR, MM_HIST_MONTH);
+    .withFailureHandler(err => { if (container) container.innerHTML = '<div class="empty-state">Failed to load.</div>'; })
+    .mmGetCalendarData(MM_HIST_YEAR, MM_HIST_MONTH);
 }
 
-function mmRenderMonth(data, container) {
-  if (!data) {
-    container.innerHTML = '<div class="empty-state">No data.</div>';
+/* Merged month view: totals + calendar + (default) full-month transaction list */
+function mmRenderMonthView(data) {
+  if (!data || !data.days) {
+    const c = document.getElementById('mmHistoryMonthContent');
+    if (c) c.innerHTML = '<div class="empty-state">No data.</div>';
     return;
   }
-  let html = `
-    <div class="mm-month-summary">
-      <div class="item"><span>Income</span><strong class="positive">${mmFormatIDR(data.totalIncome)}</strong></div>
-      <div class="item"><span>Expense</span><strong class="negative">${mmFormatIDR(data.totalExpense)}</strong></div>
-      <div class="item"><span>Saving</span><strong>${mmFormatIDR(data.saving)}</strong></div>
+
+  // Totals aggregated from per-day data
+  let totalIncome = 0, totalExpense = 0;
+  Object.keys(data.days).forEach(d => {
+    totalIncome += data.days[d].income || 0;
+    totalExpense += data.days[d].expense || 0;
+  });
+  setText('mmHistIncome', mmFormatIDR(totalIncome));
+  setText('mmHistExpense', mmFormatIDR(totalExpense));
+
+  mmRenderMonthCalendar(data);
+  mmHistShowAll();
+}
+
+function mmRenderMonthCalendar(data) {
+  const grid = document.getElementById('mmHistoryCalendarGrid');
+  if (!grid) return;
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  let html = dayNames.map(d => `<div class="mm-cal-header">${d}</div>`).join('');
+
+  const firstDay = new Date(data.year, data.month - 1, 1).getDay();
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === data.year && (today.getMonth() + 1) === data.month;
+
+  for (let i = 0; i < firstDay; i++) html += '<div class="mm-cal-day empty"></div>';
+
+  for (let d = 1; d <= data.endDay; d++) {
+    const dayData = data.days[d] || { income: 0, expense: 0, transactions: [] };
+    const isToday = isCurrentMonth && today.getDate() === d;
+    const net = (dayData.income || 0) - (dayData.expense || 0);
+    let netHtml = '';
+    if (net !== 0) {
+      const color = net > 0 ? 'var(--success)' : 'var(--error)';
+      const prefix = net > 0 ? '+' : '';
+      netHtml = `<span class="mm-cal-amount" style="color:${color}">${prefix}${mmFormatShort(net)}</span>`;
+    }
+    html += `<div class="mm-cal-day ${isToday ? 'today' : ''}" onclick="mmHistShowDay(${d})">
+      <span class="mm-cal-num">${d}</span>${netHtml}
     </div>`;
-  html += mmRenderTransactionList(data.transactions || []);
-  container.innerHTML = html;
+  }
+
+  grid.innerHTML = html;
+}
+
+/* Show all transactions for the currently loaded month (default view) */
+function mmHistShowAll() {
+  const cacheKey = `${MM_HIST_YEAR}-${MM_HIST_MONTH}`;
+  const data = MM_MONTH_CACHE[cacheKey];
+  const container = document.getElementById('mmHistoryMonthContent');
+  if (!data || !container) return;
+
+  document.querySelectorAll('#mmHistoryCalendarGrid .mm-cal-day.selected').forEach(el => el.classList.remove('selected'));
+  setText('mmHistoryListLabel', 'Transactions this month');
+  const btn = document.getElementById('mmHistoryShowAllBtn');
+  if (btn) btn.style.display = 'none';
+
+  let all = [];
+  Object.keys(data.days).forEach(d => { all = all.concat(data.days[d].transactions || []); });
+  all.sort((a, b) => new Date(b.date) - new Date(a.date));
+  container.innerHTML = mmRenderTransactionList(all);
+}
+
+/* Show transactions for a single day when its calendar cell is tapped */
+function mmHistShowDay(day) {
+  const cacheKey = `${MM_HIST_YEAR}-${MM_HIST_MONTH}`;
+  const data = MM_MONTH_CACHE[cacheKey];
+  const container = document.getElementById('mmHistoryMonthContent');
+  if (!data || !container) return;
+
+  const dayData = data.days[day] || { transactions: [] };
+
+  // Highlight selected cell
+  document.querySelectorAll('#mmHistoryCalendarGrid .mm-cal-day.selected').forEach(el => el.classList.remove('selected'));
+  document.querySelectorAll('#mmHistoryCalendarGrid .mm-cal-day:not(.empty)').forEach(el => {
+    const n = el.querySelector('.mm-cal-num');
+    if (n && parseInt(n.textContent, 10) === day) el.classList.add('selected');
+  });
+
+  const label = mmFormatMonthLabel(`${MM_HIST_YEAR}-${String(MM_HIST_MONTH).padStart(2, '0')}`);
+  setText('mmHistoryListLabel', `${day} ${label}`);
+  const btn = document.getElementById('mmHistoryShowAllBtn');
+  if (btn) btn.style.display = '';
+
+  const txs = (dayData.transactions || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+  container.innerHTML = mmRenderTransactionList(txs);
 }
 
 function mmLoadPeriod() {
@@ -1034,96 +1162,13 @@ function mmRenderTransactionList(transactions) {
   }).join('');
 }
 
-/* === CALENDAR === */
-function mmLoadCalendar(year, month) {
-  MM_CAL_YEAR = year;
-  MM_CAL_MONTH = month;
-  const label = document.getElementById('mmCalMonthLabel');
-  if (label) label.textContent = mmFormatMonthLabel(`${year}-${String(month).padStart(2,'0')}`);
-
-  const grid = document.getElementById('mmCalendarGrid');
-  grid.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
-
-  google.script.run
-    .withSuccessHandler(data => mmRenderCalendar(data))
-    .withFailureHandler(err => { grid.innerHTML = '<div class="empty-state">Failed to load.</div>'; })
-    .mmGetCalendarData(year, month);
-}
-
-function mmCalPrevMonth() {
-  MM_CAL_MONTH--;
-  if (MM_CAL_MONTH < 1) { MM_CAL_MONTH = 12; MM_CAL_YEAR--; }
-  mmLoadCalendar(MM_CAL_YEAR, MM_CAL_MONTH);
-}
-
-function mmCalNextMonth() {
-  MM_CAL_MONTH++;
-  if (MM_CAL_MONTH > 12) { MM_CAL_MONTH = 1; MM_CAL_YEAR++; }
-  mmLoadCalendar(MM_CAL_YEAR, MM_CAL_MONTH);
-}
-
+/* === CALENDAR HELPERS === */
 function mmFormatShort(value) {
   const abs = Math.abs(value);
   if (abs >= 1000000000) return (value / 1000000000).toFixed(1) + ' M';
   if (abs >= 1000000) return (value / 1000000).toFixed(1) + ' jt';
   if (abs >= 1000) return (value / 1000).toFixed(1) + ' rb';
   return String(value);
-}
-
-function mmRenderCalendar(data) {
-  const grid = document.getElementById('mmCalendarGrid');
-  const detail = document.getElementById('mmCalDayDetail');
-  if (detail) detail.style.display = 'none';
-
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  let html = dayNames.map(d => `<div class="mm-cal-header">${d}</div>`).join('');
-
-  const firstDay = new Date(data.year, data.month - 1, 1).getDay();
-  const today = new Date();
-  const isCurrentMonth = today.getFullYear() === data.year && (today.getMonth() + 1) === data.month;
-
-  // Empty cells before first day
-  for (let i = 0; i < firstDay; i++) {
-    html += '<div class="mm-cal-day empty"></div>';
-  }
-
-  for (let d = 1; d <= data.endDay; d++) {
-    const dayData = data.days[d] || { income: 0, expense: 0, transactions: [] };
-    const isToday = isCurrentMonth && today.getDate() === d;
-    const net = dayData.income - dayData.expense;
-    let netHtml = '';
-    if (net !== 0) {
-      const color = net > 0 ? 'var(--success)' : 'var(--error)';
-      const prefix = net > 0 ? '+' : '';
-      netHtml = `<span class="mm-cal-amount" style="color:${color}">${prefix}${mmFormatShort(net)}</span>`;
-    }
-
-    html += `<div class="mm-cal-day ${isToday ? 'today' : ''}" onclick="mmShowDayDetail(${d}, ${JSON.stringify(dayData).replace(/"/g, '&quot;')})">
-      <span class="mm-cal-num">${d}</span>${netHtml}
-    </div>`;
-  }
-
-  grid.innerHTML = html;
-}
-
-function mmShowDayDetail(day, dayData) {
-  const detail = document.getElementById('mmCalDayDetail');
-  if (!detail) return;
-
-  if (!dayData.transactions || !dayData.transactions.length) {
-    detail.style.display = 'block';
-    detail.innerHTML = `<p style="font-size:13px;color:var(--text-muted);margin:0;">${day} ${mmFormatMonthLabel(MM_CAL_YEAR+'-'+String(MM_CAL_MONTH).padStart(2,'0'))} — No transactions</p>`;
-    return;
-  }
-
-  let html = `<p style="font-size:14px;font-weight:700;color:var(--text);margin:0 0 10px;">${day} ${mmFormatMonthLabel(MM_CAL_YEAR+'-'+String(MM_CAL_MONTH).padStart(2,'0'))}</p>`;
-
-  if (dayData.income > 0) html += `<p style="font-size:12px;color:var(--success);margin:0 0 4px;">Income: ${mmFormatIDR(dayData.income)}</p>`;
-  if (dayData.expense > 0) html += `<p style="font-size:12px;color:var(--error);margin:0 0 8px;">Expense: ${mmFormatIDR(dayData.expense)}</p>`;
-
-  html += mmRenderTransactionList(dayData.transactions);
-  detail.style.display = 'block';
-  detail.innerHTML = html;
 }
 
 /* === SETTINGS === */

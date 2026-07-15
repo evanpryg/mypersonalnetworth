@@ -98,6 +98,12 @@ body {
   width: 100%;
 }
 
+/* Dashboard full-bleed: cancel main-content horizontal padding so the
+   dashboard sections own a single 16px gutter (no doubled margins on phones) */
+.dashboard-wrap { margin-left: -16px; margin-right: -16px; }
+@media (min-width: 769px) { .dashboard-wrap { margin-left: -32px; margin-right: -32px; } }
+@media (max-width: 480px) { .dashboard-wrap { margin-left: -12px; margin-right: -12px; } }
+
 /* === PAGES === */
 .page { display: none; }
 .page.active-page {
@@ -1523,7 +1529,7 @@ select.form-input:focus {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 16px 20px 8px;
+  padding: 16px 16px 8px;
 }
 .mm-header-left { flex: 1; }
 .mm-greeting {
@@ -1579,7 +1585,7 @@ select.form-input:focus {
 
 /* --- Networth Card --- */
 .mm-networth-card {
-  margin: 12px 20px;
+  margin: 12px 16px;
   padding: 20px;
   background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(6,182,212,0.05) 100%);
   border-radius: var(--radius);
@@ -1669,9 +1675,9 @@ select.form-input:focus {
 /* --- Summary Row --- */
 .mm-summary-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  padding: 0 20px;
+  padding: 0 16px;
   margin-bottom: 16px;
 }
 .mm-summary-card {
@@ -1718,7 +1724,7 @@ select.form-input:focus {
 
 /* --- Expense/Income Section --- */
 .mm-expense-section {
-  margin: 0 20px 16px;
+  margin: 0 16px 16px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1828,7 +1834,7 @@ select.form-input:focus {
 
 /* --- Accounts Section --- */
 .mm-accounts-section {
-  padding: 0 20px;
+  padding: 0 16px;
   margin-bottom: 16px;
 }
 .mm-section-header {
@@ -1916,7 +1922,7 @@ select.form-input:focus {
 
 /* --- Budget Section --- */
 .mm-budget-section {
-  padding: 0 20px;
+  padding: 0 16px;
   margin-bottom: 16px;
 }
 .mm-budget-card {
@@ -1998,9 +2004,30 @@ select.form-input:focus {
   margin-top: 4px;
 }
 
+/* --- Budget detail sheet rows --- */
+.mm-budget-detail-list { display: flex; flex-direction: column; gap: 16px; margin-top: 4px; }
+.mm-budget-detail-row { display: flex; flex-direction: column; gap: 6px; }
+.mm-budget-detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.mm-budget-detail-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.mm-budget-detail-name small { color: var(--text-muted); font-size: 11px; font-weight: 500; }
+.mm-budget-detail-head strong { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.mm-budget-detail-head strong span { color: var(--text-muted); font-weight: 500; }
+.mm-budget-detail-foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
 /* --- Transactions Section --- */
 .mm-transactions-section {
-  padding: 0 20px;
+  padding: 0 16px;
   margin-bottom: 16px;
 }
 .mm-transaction-list {
@@ -2180,7 +2207,17 @@ select.form-input:focus {
 
 .mm-cal-day:hover { background: rgba(255,255,255,0.04); }
 .mm-cal-day.today { background: rgba(16,185,129,0.1); color: var(--accent); border: 1px solid rgba(16,185,129,0.3); }
+.mm-cal-day.selected { background: rgba(16,185,129,0.22); color: var(--text); border: 1px solid var(--accent); }
 .mm-cal-day.empty { cursor: default; }
+
+/* History month: list header with day label + reset button */
+.mm-month-list-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 16px 0 10px;
+}
+.mm-month-list-head strong { font-size: 14px; font-weight: 700; color: var(--text); }
 
 .mm-cal-day-detail {
   margin-top: 14px;

@@ -421,14 +421,6 @@
                 <div class="mm-summary-label">Total Saving</div>
                 <div class="mm-summary-sub">This month</div>
               </div>
-              <div class="mm-summary-card">
-                <div class="mm-summary-icon rate">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8l-8 8"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"/></svg>
-                </div>
-                <div class="mm-summary-value" id="mmNetSavingRate">0%</div>
-                <div class="mm-summary-label">Net Saving Rate</div>
-                <div class="mm-summary-sub">This month</div>
-              </div>
             </div>
 
             <!-- Expense/Income Section -->
@@ -468,10 +460,10 @@
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                   </div>
                   <div class="mm-budget-info">
-                    <div class="mm-budget-title">Monthly Budget</div>
+                    <div class="mm-budget-title" id="mmBudgetTitle">Living</div>
                     <div class="mm-budget-subtitle" id="mmBudgetSubtitle">Rp 0 Budget</div>
                   </div>
-                  <button class="mm-budget-arrow" id="mmBudgetDetailBtn">
+                  <button class="mm-budget-arrow" id="mmBudgetDetailBtn" onclick="mmShowBudgetDetail()">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
                   </button>
                 </div>
@@ -521,6 +513,15 @@
                 <strong id="mmHistoryMonthLabel">-</strong>
                 <button class="btn-ghost" onclick="mmNextMonth()">&gt;</button>
               </div>
+              <div class="mm-month-summary">
+                <div class="item"><span>Income</span><strong class="positive" id="mmHistIncome">Rp 0</strong></div>
+                <div class="item"><span>Expense</span><strong class="negative" id="mmHistExpense">Rp 0</strong></div>
+              </div>
+              <div id="mmHistoryCalendarGrid" class="mm-calendar-grid"></div>
+              <div class="mm-month-list-head">
+                <strong id="mmHistoryListLabel">Transactions this month</strong>
+                <button class="btn-ghost btn-mini" id="mmHistoryShowAllBtn" style="display:none;" onclick="mmHistShowAll()">Show all</button>
+              </div>
               <div id="mmHistoryMonthContent"></div>
             </div>
             <div id="mmHistoryPeriod" class="mm-history-content" style="display:none;">
@@ -531,24 +532,6 @@
               </div>
               <div id="mmHistoryPeriodContent"></div>
             </div>
-          </section>
-        </div>
-
-        <!-- ===== MM CALENDAR PAGE ===== -->
-        <div id="mmCalendarPage" class="page">
-          <section class="page-header-card">
-            <p class="panel-eyebrow">Calendar</p>
-            <h2 class="page-title">Monthly View</h2>
-            <p class="page-desc">See daily income &amp; expense at a glance.</p>
-          </section>
-          <section class="panel-card">
-            <div class="mm-month-nav">
-              <button class="btn-ghost" onclick="mmCalPrevMonth()">&lt;</button>
-              <strong id="mmCalMonthLabel">-</strong>
-              <button class="btn-ghost" onclick="mmCalNextMonth()">&gt;</button>
-            </div>
-            <div id="mmCalendarGrid" class="mm-calendar-grid"></div>
-            <div id="mmCalDayDetail" class="mm-cal-day-detail" style="display:none;"></div>
           </section>
         </div>
 
@@ -777,10 +760,6 @@
       <button class="tab-item" data-page="mmHistoryPage" onclick="mmShowPage('mmHistoryPage')">
         <i data-lucide="clock" class="tab-icon"></i>
         <small>History</small>
-      </button>
-      <button class="tab-item" data-page="mmCalendarPage" onclick="mmShowPage('mmCalendarPage')">
-        <i data-lucide="calendar" class="tab-icon"></i>
-        <small>Calendar</small>
       </button>
       <button class="tab-item" data-page="mmInsightPage" onclick="mmShowPage('mmInsightPage')">
         <i data-lucide="brain" class="tab-icon"></i>
