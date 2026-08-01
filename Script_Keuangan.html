@@ -521,8 +521,10 @@ function mmRenderCategoryList(entries, total) {
     return `
       <div class="mm-category-item" onclick="mmSelectCategoryFromList(${i});mmShowCategoryDetail('${jsStr(entry.name)}')">
         <div class="mm-cat-icon" style="background:${entry.color}22;color:${entry.color}">${icon}</div>
-        <span class="mm-cat-name">${escapeHtml(entry.name)}</span>
-        <span class="mm-cat-amount">${mmFormatIDR(entry.amount)}</span>
+        <div class="mm-cat-text">
+          <span class="mm-cat-name">${escapeHtml(entry.name)}</span>
+          <span class="mm-cat-amount">${mmFormatIDR(entry.amount)}</span>
+        </div>
         <span class="mm-cat-percent">${pct}%</span>
       </div>`;
   }).join('');

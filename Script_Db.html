@@ -550,6 +550,23 @@ var DB_API = {
     });
     var netWorth=0; accounts.forEach(function(acc){if(acc.showOnDashboard) netWorth+=balances[acc.name]||0;});
     var now=new Date(),monthStartStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01';
+
+    // Net worth as it stood at the end of last month, so the dashboard badge
+    // can show a real change instead of a hardcoded 0%. Same walk as above,
+    // stopping before this month.
+    var prevBalances={}; accounts.forEach(function(acc){prevBalances[acc.name]=acc.initialBalance;});
+    allTransactions.slice().reverse().forEach(function(tx){
+      if(tx.date>=monthStartStr) return;
+      var accName=findExactAccountName(tx.account), accToName=findExactAccountName(tx.accountTo);
+      if(tx.type==='Income'){ if(accName) prevBalances[accName]=(prevBalances[accName]||0)+tx.amount; }
+      else if(tx.type==='Expense'){ if(accName) prevBalances[accName]=(prevBalances[accName]||0)-tx.amount; }
+      else if(tx.type==='Transfer'){
+        if(accName) prevBalances[accName]=(prevBalances[accName]||0)-tx.amount;
+        if(accToName) prevBalances[accToName]=(prevBalances[accToName]||0)+tx.amount;
+      }
+    });
+    var prevNetWorth=0; accounts.forEach(function(acc){if(acc.showOnDashboard) prevNetWorth+=prevBalances[acc.name]||0;});
+
     var monthTransactions=allTransactions.filter(function(tx){return tx.date>=monthStartStr;});
     var totalIncome=0,totalExpense=0,categoryExpenses={};
     allocation.forEach(function(a){categoryExpenses[a.category]=0;});
@@ -560,7 +577,7 @@ var DB_API = {
     });
     var saving=totalIncome-totalExpense;
     var allocationCards=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.min(spent/target,1):0;return{category:a.category,percent:a.percent,icon:a.icon,color:a.color,spent:spent,target:target,progress:progress};});
-    return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
+    return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,prevNetWorth:prevNetWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
   },
 
   // Years whose detail has been archived live in mm_summary instead of
