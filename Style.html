@@ -3192,7 +3192,21 @@ select.form-input:focus {
   margin-bottom: 16px;
 }
 
-.insight-card-icon { font-size: 20px; }
+/* Held an emoji, now holds a Lucide SVG — give it a tinted tile so the
+   section marker still reads at a glance without the colour of an emoji. */
+.insight-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(16,185,129,0.10);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.insight-card-icon svg { width: 17px; height: 17px; }
 
 .insight-card-title {
   font-size: 16px;

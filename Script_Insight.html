@@ -88,6 +88,9 @@ function renderFinancialInsight(data) {
   html += '</div>';
 
   container.innerHTML = html;
+  // The cards are injected as HTML, so Lucide has to swap the <i data-lucide>
+  // placeholders for SVG after every render.
+  if (window.lucide) lucide.createIcons();
 }
 
 /* === 1. FINANCIAL HEALTH SCORE === */
@@ -180,7 +183,7 @@ function renderMonthlySummary(data) {
   return `
     <div class="insight-card">
       <div class="insight-card-header">
-        <span class="insight-card-icon">📊</span>
+        <span class="insight-card-icon"><i data-lucide="bar-chart-3"></i></span>
         <h3 class="insight-card-title">Monthly Summary</h3>
       </div>
       <div class="insight-summary-grid">
@@ -269,7 +272,7 @@ function renderYearlyProgress(data) {
   return `
     <div class="insight-card">
       <div class="insight-card-header">
-        <span class="insight-card-icon">📅</span>
+        <span class="insight-card-icon"><i data-lucide="calendar-range"></i></span>
         <h3 class="insight-card-title">Perkembangan per Tahun</h3>
       </div>
       <div class="insight-yoy">${rows}</div>
@@ -348,7 +351,7 @@ function renderKeyInsights(data) {
   return `
     <div class="insight-card">
       <div class="insight-card-header">
-        <span class="insight-card-icon">💡</span>
+        <span class="insight-card-icon"><i data-lucide="lightbulb"></i></span>
         <h3 class="insight-card-title">Key Insights</h3>
       </div>
       <div class="insight-list">
@@ -389,7 +392,7 @@ function renderBudgetAnalysis(data) {
   return `
     <div class="insight-card">
       <div class="insight-card-header">
-        <span class="insight-card-icon">🎯</span>
+        <span class="insight-card-icon"><i data-lucide="target"></i></span>
         <h3 class="insight-card-title">Budget Analysis</h3>
       </div>
       <div class="insight-budget-list">
@@ -445,7 +448,7 @@ function renderSpendingAnalysis(data) {
   return `
     <div class="insight-card">
       <div class="insight-card-header">
-        <span class="insight-card-icon">📦</span>
+        <span class="insight-card-icon"><i data-lucide="package"></i></span>
         <h3 class="insight-card-title">Spending Analysis</h3>
       </div>
       <div class="insight-spending-chart">
@@ -495,7 +498,7 @@ function renderInvestmentInsight(data) {
   return `
     <div class="insight-card">
       <div class="insight-card-header">
-        <span class="insight-card-icon">📈</span>
+        <span class="insight-card-icon"><i data-lucide="trending-up"></i></span>
         <h3 class="insight-card-title">Investment Insight</h3>
       </div>
       <div class="insight-invest-grid">
@@ -547,7 +550,7 @@ function renderCashFlowAnalysis(data) {
   return `
     <div class="insight-card">
       <div class="insight-card-header">
-        <span class="insight-card-icon">💸</span>
+        <span class="insight-card-icon"><i data-lucide="banknote"></i></span>
         <h3 class="insight-card-title">Cash Flow Analysis</h3>
       </div>
       <div class="insight-cashflow-chart">
@@ -580,7 +583,7 @@ function renderPrediction(data) {
   return `
     <div class="insight-card">
       <div class="insight-card-header">
-        <span class="insight-card-icon">🔮</span>
+        <span class="insight-card-icon"><i data-lucide="sparkles"></i></span>
         <h3 class="insight-card-title">End-of-Month Prediction</h3>
       </div>
       <p class="insight-subtitle-desc">Berdasarkan pola ${data.dayOfMonth} hari berjalan:</p>
@@ -671,7 +674,7 @@ function renderRecommendations(data) {
   return `
     <div class="insight-card insight-recommendations-card">
       <div class="insight-card-header">
-        <span class="insight-card-icon">🧠</span>
+        <span class="insight-card-icon"><i data-lucide="brain"></i></span>
         <h3 class="insight-card-title">Recommendations</h3>
       </div>
       <div class="insight-rec-list">
@@ -725,7 +728,7 @@ function renderAchievements(data) {
   return `
     <div class="insight-card">
       <div class="insight-card-header">
-        <span class="insight-card-icon">🏅</span>
+        <span class="insight-card-icon"><i data-lucide="award"></i></span>
         <h3 class="insight-card-title">Achievements</h3>
       </div>
       <div class="insight-achievements">
