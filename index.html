@@ -1146,6 +1146,7 @@ select.form-input:focus {
   width: 100%;
   max-width: 500px;
   max-height: 85vh;
+  max-height: 85dvh;
   overflow-y: auto;
   background: var(--bg-card);
   border-top-left-radius: 24px;
@@ -3600,7 +3601,11 @@ select.form-input:focus {
 
 .tx-input-sheet {
   padding: 16px 20px 32px;
+  /* dvh tracks the visual viewport, so the sheet shrinks when the phone
+     keyboard opens instead of pushing Save underneath it. vh stays as the
+     fallback for browsers without dvh. */
   max-height: 92vh;
+  max-height: 92dvh;
 }
 
 .tx-type-tabs {
@@ -4933,8 +4938,10 @@ function formatTimestampForClient_(value) {
 }
 
 // PostgREST caps a single response at 1000 rows, so getRows_ pages through
-// with .range(). Each page needs a stable sort or rows can repeat/vanish
-// between pages — this maps every table to its primary key.
+// with .range() when a table is bigger than that. Paging needs a stable sort
+// or rows can repeat/vanish between pages — this maps every table to its
+// primary key. Small tables are read unsorted, which keeps the natural row
+// order the UI has always shown (budget categories, accounts, settings).
 var PAGE_ORDER_KEY = {
   'targets': 'targetid',
   'transactions': 'id',
@@ -4952,17 +4959,25 @@ var PAGE_SIZE = 1000;
 async function getRows_(tableName) {
   if (!_sb) throw new Error("Supabase is not initialized.");
   var table = tableName.toLowerCase();
-  var orderKey = PAGE_ORDER_KEY[table];
-  var data = [];
-  for (var from = 0; ; from += PAGE_SIZE) {
-    var query = _sb.from(table).select('*');
-    if (orderKey) {
-      orderKey.split(',').forEach(function(col) { query = query.order(col, { ascending: true }); });
+  var first = await _sb.from(table).select('*').range(0, PAGE_SIZE - 1);
+  if (first.error) { console.error('Error reading ' + tableName + ':', first.error); throw first.error; }
+  var data = first.data;
+
+  if (data.length === PAGE_SIZE) {
+    // Table spills past one page — redo the read with a stable sort so the
+    // page boundaries line up, then walk the rest.
+    var orderKey = PAGE_ORDER_KEY[table];
+    data = [];
+    for (var from = 0; ; from += PAGE_SIZE) {
+      var query = _sb.from(table).select('*');
+      if (orderKey) {
+        orderKey.split(',').forEach(function(col) { query = query.order(col, { ascending: true }); });
+      }
+      var page = await query.range(from, from + PAGE_SIZE - 1);
+      if (page.error) { console.error('Error reading ' + tableName + ':', page.error); throw page.error; }
+      data = data.concat(page.data);
+      if (page.data.length < PAGE_SIZE) break;
     }
-    var page = await query.range(from, from + PAGE_SIZE - 1);
-    if (page.error) { console.error('Error reading ' + tableName + ':', page.error); throw page.error; }
-    data = data.concat(page.data);
-    if (page.data.length < PAGE_SIZE) break;
   }
   var mappedData = data.map(mapRowToFrontend);
   var dateFields = ['Timestamp', 'Date', 'StartDate'];
@@ -5160,7 +5175,18 @@ var DB_API = {
     var platform = normalize_(payload.platform), transactionType = normalize_(payload.transactionType), amountIDR = toNumber_(payload.amountIDR);
     var sector = normalize_(payload.sector), asset = normalize_(payload.asset);
     if (transactionType==='Deposit'||transactionType==='Withdraw') { sector='Cash'; asset=getCashAssetName_(platform); }
-    var { error } = await _sb.from('transactions').insert(mapRowToDb({ Date:payload.date, Platform:platform, Sector:sector, Asset:asset, TransactionType:transactionType, AmountIDR:amountIDR, Notes:payload.notes||'', Status:'Active' }));
+    var row = mapRowToDb({ Date:payload.date, Platform:platform, Sector:sector, Asset:asset, TransactionType:transactionType, AmountIDR:amountIDR, Notes:payload.notes||'', Status:'Active' });
+    // Backlink to the money-management row that spawned this one, so deleting
+    // the transfer can take this row with it.
+    if (payload.mmTxId) row.mm_tx_id = payload.mmTxId;
+    var { error } = await _sb.from('transactions').insert(row);
+    if (error && row.mm_tx_id && /mm_tx_id/.test(error.message || '')) {
+      // Column not added yet — fall back so transfers keep working.
+      console.warn('transactions.mm_tx_id missing; inserting without backlink.');
+      delete row.mm_tx_id;
+      var retry = await _sb.from('transactions').insert(row);
+      error = retry.error;
+    }
     if (error) throw error;
     return { success:true, message:'Transaction added successfully.' };
   },
@@ -5273,22 +5299,51 @@ var DB_API = {
   async mmAddTransaction(payload) {
     var type=normalize_(payload.type),account=normalize_(payload.account),accountTo=normalize_(payload.accountTo)||'',amount=toNumber_(payload.amount);
     var category=(type==='Transfer'&&accountTo.startsWith('Invest:'))?'Invest':normalize_(payload.category)||'';
-    var { error } = await _sb.from('mm_transactions').insert(mapRowToDb({Date:payload.date,Type:type,Account:account,AccountTo:accountTo,Category:category,Subcategory:normalize_(payload.subcategory)||'',Amount:amount,Notes:normalize_(payload.notes)||'',Status:'Active'}));
+    // Need the new id back so the paired investment row can point at it.
+    var { data, error } = await _sb.from('mm_transactions').insert(mapRowToDb({Date:payload.date,Type:type,Account:account,AccountTo:accountTo,Category:category,Subcategory:normalize_(payload.subcategory)||'',Amount:amount,Notes:normalize_(payload.notes)||'',Status:'Active'})).select('id');
     if (error) throw error;
-    if (type==='Transfer'&&accountTo.startsWith('Invest:')) { var p=accountTo.replace('Invest:',''); await this.addTransaction({date:payload.date,platform:p,sector:'Cash',asset:getCashAssetName_(p),amountIDR:amount,transactionType:'Deposit',notes:'Transfer from '+account}); }
-    if (type==='Transfer'&&account.startsWith('Invest:')) { var p2=account.replace('Invest:',''); await this.addTransaction({date:payload.date,platform:p2,sector:'Cash',asset:getCashAssetName_(p2),amountIDR:amount,transactionType:'Withdraw',notes:'Transfer to '+accountTo}); }
+    var mmId = data && data[0] ? data[0].id : null;
+
+    // A transfer touching the investment side writes a second row in another
+    // table. There is no shared transaction across two PostgREST calls, so on
+    // failure undo the first write rather than leaving a half-recorded transfer.
+    var invest = null;
+    if (type==='Transfer'&&accountTo.startsWith('Invest:')) {
+      var p=accountTo.replace('Invest:','');
+      invest={date:payload.date,platform:p,sector:'Cash',asset:getCashAssetName_(p),amountIDR:amount,transactionType:'Deposit',notes:'Transfer from '+account,mmTxId:mmId};
+    } else if (type==='Transfer'&&account.startsWith('Invest:')) {
+      var p2=account.replace('Invest:','');
+      invest={date:payload.date,platform:p2,sector:'Cash',asset:getCashAssetName_(p2),amountIDR:amount,transactionType:'Withdraw',notes:'Transfer to '+accountTo,mmTxId:mmId};
+    }
+    if (invest) {
+      try {
+        await this.addTransaction(invest);
+      } catch (e) {
+        if (mmId) await _sb.from('mm_transactions').delete().eq('id',mmId);
+        throw new Error('Transfer dibatalkan — sisi investasi gagal disimpan: ' + (e.message || e));
+      }
+    }
     return { success:true, message:'Transaction saved.' };
   },
 
   async mmDeleteTransaction(rowNumber) {
-    var { error } = await _sb.from('mm_transactions').delete().eq('id',rowNumber);
+    // Soft delete, matching accounts/categories — reads already skip Status='Deleted'.
+    var { error } = await _sb.from('mm_transactions').update({status:'Deleted'}).eq('id',rowNumber);
     if (error) throw error;
+    // Drop the paired investment row too, or the portfolio keeps counting it.
+    // Tolerated if mm_tx_id has not been added to `transactions` yet.
+    var pair = await _sb.from('transactions').update({status:'Deleted'}).eq('mm_tx_id',rowNumber);
+    if (pair.error) console.warn('Paired investment row not cascaded:', pair.error.message);
     return { success:true, message:'Transaction deleted.' };
   },
 
   async mmUpdateTransaction(payload) {
     var { error } = await _sb.from('mm_transactions').update(mapRowToDb({Date:payload.date,Type:normalize_(payload.type),Account:normalize_(payload.account),AccountTo:normalize_(payload.accountTo)||'',Category:normalize_(payload.category)||'',Subcategory:normalize_(payload.subcategory)||'',Amount:toNumber_(payload.amount),Notes:normalize_(payload.notes)||''})).eq('id',payload.rowNumber);
     if (error) throw error;
+    // Keep the paired investment row in step, otherwise editing a transfer
+    // silently desyncs the portfolio from the ledger.
+    var pair = await _sb.from('transactions').update({date:payload.date,amountidr:toNumber_(payload.amount)}).eq('mm_tx_id',payload.rowNumber);
+    if (pair.error) console.warn('Paired investment row not updated:', pair.error.message);
     return { success:true, message:'Transaction updated.' };
   },
 
@@ -5828,7 +5883,7 @@ function injectSupabaseSettingsCard() {
     const platforms = (APP_SETTINGS.Platform || []);
     container.innerHTML = platforms.map(p => {
       const isActive = IV_SELECTED_PLATFORM === p;
-      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent)" onclick="ivSelectPlatform('${escapeHtml(p)}')">${escapeHtml(p)}</button>`;
+      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent)" onclick="ivSelectPlatform('${jsStr(p)}')">${escapeHtml(p)}</button>`;
     }).join('');
   }
 
@@ -5845,7 +5900,7 @@ function injectSupabaseSettingsCard() {
     const colors = ['#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#06b6d4'];
     container.innerHTML = sectors.map((s, i) => {
       const isActive = IV_SELECTED_SECTOR === s;
-      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:${colors[i % colors.length]}" onclick="ivSelectSector('${escapeHtml(s)}')">${escapeHtml(s)}</button>`;
+      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:${colors[i % colors.length]}" onclick="ivSelectSector('${jsStr(s)}')">${escapeHtml(s)}</button>`;
     }).join('');
   }
 
@@ -5868,7 +5923,7 @@ function injectSupabaseSettingsCard() {
 
       container.innerHTML = filtered.slice(0, 8).map(a => {
         const isActive = IV_SELECTED_ASSET === a.asset;
-        return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${escapeHtml(a.asset)}')">${escapeHtml(a.asset)}</button>`;
+        return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${jsStr(a.asset)}')">${escapeHtml(a.asset)}</button>`;
       }).join('');
       if (customInput) customInput.style.display = 'none';
     } else if (IV_TYPE === 'buy') {
@@ -5876,7 +5931,7 @@ function injectSupabaseSettingsCard() {
       const recent = ASSET_OPTIONS.slice(0, 6);
       container.innerHTML = recent.map(a => {
         const isActive = IV_SELECTED_ASSET === a.asset;
-        return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${escapeHtml(a.asset)}')">${escapeHtml(a.asset)}</button>`;
+        return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${jsStr(a.asset)}')">${escapeHtml(a.asset)}</button>`;
       }).join('');
       if (customInput) customInput.style.display = 'block';
     } else {
@@ -6889,6 +6944,15 @@ function injectSupabaseSettingsCard() {
     return String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
   }
 
+  // For values passed as JS string arguments inside an inline onclick="...".
+  // The browser decodes HTML entities BEFORE the JS parser runs, so escapeHtml
+  // alone is not enough: an apostrophe comes back as ' and terminates the
+  // argument early. Escape for JS first, then for HTML, so the JS parser
+  // receives a backslash-escaped quote.
+  function jsStr(value) {
+    return escapeHtml(String(value ?? '').replaceAll('\\','\\\\').replaceAll("'","\\'"));
+  }
+
   function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     if (!toast) return;
@@ -7251,54 +7315,6 @@ function mmToggleFab() {
 /* Old mmShowActionSheet, mmCloseActionSheet, mmCloseActionSheetBackdrop
    are now in Script_TxInput.html */
 
-/* === DROPDOWNS === */
-function mmPopulateDropdowns() {
-  const accountOpts = MM_ACCOUNTS.map(a => `<option value="${escapeHtml(a.name)}">${a.icon} ${escapeHtml(a.name)}</option>`).join('');
-  const selectHtml = '<option value="">Select...</option>' + accountOpts;
-
-  ['mmIncomeAccount', 'mmExpenseAccount', 'mmTransferFrom', 'mmTransferTo'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = selectHtml;
-  });
-
-  // Income categories — de-duplicate by category name
-  const incomeCats = [...new Set(
-    MM_CATEGORIES.filter(c => c.type === 'Income').map(c => c.category)
-  )];
-  const incomeEl = document.getElementById('mmIncomeCategory');
-  if (incomeEl) {
-    incomeEl.innerHTML = '<option value="">None</option>' +
-      incomeCats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-  }
-
-  // Expense main categories (allocation categories)
-  const expEl = document.getElementById('mmExpenseCategory');
-  if (expEl) {
-    const allocCats = MM_ALLOCATION.map(a => a.category);
-    expEl.innerHTML = '<option value="">Select...</option>' +
-      allocCats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-  }
-}
-
-function mmUpdateSubcategories(category) {
-  const subEl = document.getElementById('mmExpenseSubcategory');
-  if (!subEl) return;
-  const subs = MM_CATEGORIES
-    .filter(c => c.type === 'Expense' && c.category === category && c.subcategory)
-    .map(c => c.subcategory);
-  subEl.innerHTML = '<option value="">None</option>' +
-    subs.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
-}
-
-function mmUpdateIncomeSubcategories(category) {
-  const subEl = document.getElementById('mmIncomeSubcategory');
-  if (!subEl) return;
-  const subs = MM_CATEGORIES
-    .filter(c => c.type === 'Income' && c.category === category && c.subcategory)
-    .map(c => c.subcategory);
-  subEl.innerHTML = '<option value="">None</option>' +
-    subs.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
-}
 
 /* === DASHBOARD === */
 function mmLoadDashboard(skipIfCached) {
@@ -7487,7 +7503,7 @@ function mmRenderAccountCards(accounts) {
     const color = typeColors[a.type] || typeColors['Other'];
     const initials = (a.name || '').substring(0, 2).toUpperCase();
     return `
-      <div class="mm-account-card" onclick="mmShowAccountTransactions('${escapeHtml(a.name)}')">
+      <div class="mm-account-card" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
         <div class="mm-account-top">
           <div class="mm-account-logo" style="background:${color}22;color:${color}">
             ${a.icon ? escapeHtml(a.icon) : initials}
@@ -7776,7 +7792,7 @@ function mmRenderCategoryList(entries, total) {
     const pct = ((entry.amount / total) * 100).toFixed(0);
     const icon = mmCategoryEmoji(entry.name);
     return `
-      <div class="mm-category-item" onclick="mmSelectCategoryFromList(${i});mmShowCategoryDetail('${escapeHtml(entry.name)}')">
+      <div class="mm-category-item" onclick="mmSelectCategoryFromList(${i});mmShowCategoryDetail('${jsStr(entry.name)}')">
         <div class="mm-cat-icon" style="background:${entry.color}22;color:${entry.color}">${icon}</div>
         <span class="mm-cat-name">${escapeHtml(entry.name)}</span>
         <span class="mm-cat-amount">${mmFormatIDR(entry.amount)}</span>
@@ -7810,7 +7826,7 @@ function mmRenderDashboardTransactions() {
     const dateStr = mmFormatDate(tx.date);
 
     return `
-      <div class="mm-transaction-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${escapeHtml(tx.type)}', '${escapeHtml(tx.account)}', '${escapeHtml(tx.accountTo || '')}', '${escapeHtml(tx.category || '')}', '${escapeHtml(tx.subcategory || '')}', ${tx.amount}, '${escapeHtml(tx.notes || '')}', '${escapeHtml(tx.date || '')}')">
+      <div class="mm-transaction-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
         <div class="mm-tx-icon-dash" style="background:${catColor}18;color:${catColor}">${catIcon}</div>
         <div class="mm-tx-info-dash">
           <div class="mm-tx-name-dash">${escapeHtml(label)}</div>
@@ -7843,7 +7859,7 @@ function mmShowTxDetail(rowNumber, type, account, accountTo, category, subcatego
     <p style="font-size:22px;font-weight:800;color:${color};margin:8px 0;font-variant-numeric:tabular-nums;">${prefix}${mmFormatIDR(amount)}</p>
     ${details}
     ${notes ? `<p style="font-size:13px;color:var(--text);margin:8px 0;">${escapeHtml(notes)}</p>` : ''}
-    <button class="btn-primary btn-full" style="margin-top:16px;" onclick="mmShowEditTx(${rowNumber}, '${escapeHtml(type)}', '${escapeHtml(account)}', '${escapeHtml(accountTo || '')}', '${escapeHtml(category || '')}', '${escapeHtml(subcategory || '')}', ${amount}, '${escapeHtml(notes || '')}', '${escapeHtml(date || '')}')">Edit Transaction</button>
+    <button class="btn-primary btn-full" style="margin-top:16px;" onclick="mmShowEditTx(${rowNumber}, '${jsStr(type)}', '${jsStr(account)}', '${jsStr(accountTo || '')}', '${jsStr(category || '')}', '${jsStr(subcategory || '')}', ${amount}, '${jsStr(notes || '')}', '${jsStr(date || '')}')">Edit Transaction</button>
     <button class="btn-primary btn-full" style="background:var(--error);box-shadow:0 4px 16px rgba(239,68,68,0.25);margin-top:8px;" onclick="mmDeleteTxFromDetail(${rowNumber})">Delete Transaction</button>
     <button class="btn-ghost btn-full" style="margin-top:8px;" onclick="mmCloseTxDetailDirect()">Cancel</button>
   `;
@@ -7956,126 +7972,6 @@ function mmDeleteTxFromDetail(rowNumber) {
     .mmDeleteTransaction(rowNumber);
 }
 
-/* === FORM SUBMISSIONS === */
-function mmSubmitIncome(event) {
-  event.preventDefault();
-  const form = event.target;
-  const payload = {
-    date: form.date.value,
-    type: 'Income',
-    account: form.accountId.value,
-    category: form.category.value,
-    subcategory: form.subcategory.value || '',
-    amount: parseMoneyInput(form.amount.value),
-    notes: form.notes.value
-  };
-  mmSaveTransaction(form, payload, 'Save Income');
-}
-
-function mmSubmitExpense(event) {
-  event.preventDefault();
-  const form = event.target;
-  const payload = {
-    date: form.date.value,
-    type: 'Expense',
-    account: form.accountId.value,
-    category: form.category.value,
-    subcategory: form.subcategory.value,
-    amount: parseMoneyInput(form.amount.value),
-    notes: form.notes.value
-  };
-  mmSaveTransaction(form, payload, 'Save Expense');
-}
-
-function mmSubmitTransfer(event) {
-  event.preventDefault();
-  const form = event.target;
-  const direction = document.getElementById('mmTransferDirection').value;
-  const amount = parseMoneyInput(form.amount.value);
-  
-  let payload = {
-    date: form.date.value,
-    type: 'Transfer',
-    account: '',
-    accountTo: '',
-    category: '',
-    subcategory: '',
-    amount: amount,
-    notes: form.notes.value
-  };
-
-  if (direction === 'mm-to-mm') {
-    payload.account = form.accountId.value;
-    payload.accountTo = form.accountToId.value;
-    if (payload.account === payload.accountTo) {
-      showToast('From and To must be different.', 'error');
-      return;
-    }
-  } else if (direction === 'mm-to-invest') {
-    payload.account = form.accountId.value;
-    payload.accountTo = 'Invest:' + form.accountToId.value;
-  } else if (direction === 'invest-to-mm') {
-    payload.account = 'Invest:' + form.accountId.value;
-    payload.accountTo = form.accountToId.value;
-  }
-
-  if (!payload.account || !payload.accountTo) {
-    showToast('Please fill all fields.', 'error');
-    return;
-  }
-
-  mmSaveTransaction(form, payload, 'Save Transfer');
-}
-
-function mmUpdateTransferDirection() {
-  const direction = document.getElementById('mmTransferDirection').value;
-  const fromLabel = document.getElementById('mmTransferFromLabel');
-  const toLabel = document.getElementById('mmTransferToLabel');
-  const fromSelect = document.getElementById('mmTransferFrom');
-  const toSelect = document.getElementById('mmTransferTo');
-
-  const accountOpts = MM_ACCOUNTS.map(a => `<option value="${escapeHtml(a.name)}">${a.icon} ${escapeHtml(a.name)}</option>`).join('');
-  const platformOpts = (APP_SETTINGS.Platform || []).map(p => `<option value="${escapeHtml(p)}">📈 ${escapeHtml(p)}</option>`).join('');
-
-  if (direction === 'mm-to-mm') {
-    fromLabel.querySelector('span, .form-label-text')
-    fromLabel.innerHTML = 'From Account <select name="accountId" id="mmTransferFrom" class="form-input" required><option value="">Select...</option>' + accountOpts + '</select>';
-    toLabel.innerHTML = 'To Account <select name="accountToId" id="mmTransferTo" class="form-input" required><option value="">Select...</option>' + accountOpts + '</select>';
-    toLabel.style.display = 'grid';
-  } else if (direction === 'mm-to-invest') {
-    fromLabel.innerHTML = 'From Account <select name="accountId" id="mmTransferFrom" class="form-input" required><option value="">Select...</option>' + accountOpts + '</select>';
-    toLabel.innerHTML = 'To Platform <select name="accountToId" id="mmTransferTo" class="form-input" required><option value="">Select...</option>' + platformOpts + '</select>';
-    toLabel.style.display = 'grid';
-  } else if (direction === 'invest-to-mm') {
-    fromLabel.innerHTML = 'From Platform <select name="accountId" id="mmTransferFrom" class="form-input" required><option value="">Select...</option>' + platformOpts + '</select>';
-    toLabel.innerHTML = 'To Account <select name="accountToId" id="mmTransferTo" class="form-input" required><option value="">Select...</option>' + accountOpts + '</select>';
-    toLabel.style.display = 'grid';
-  }
-}
-
-function mmSaveTransaction(form, payload, btnText) {
-  const btn = form.querySelector('button[type="submit"]');
-  setButtonLoading(btn, true, 'Saving...');
-  google.script.run
-    .withSuccessHandler(result => {
-      setButtonLoading(btn, false, btnText);
-      if (result && result.success) {
-        showToast('Transaction saved.', 'success');
-        form.reset();
-        mmCloseActionSheet();
-        // Invalidate cache so next visit reloads
-        MM_DASHBOARD = null;
-        mmLoadDashboard();
-      } else {
-        showToast('Failed to save.', 'error');
-      }
-    })
-    .withFailureHandler(err => {
-      setButtonLoading(btn, false, btnText);
-      showToast(err.message || 'Failed.', 'error');
-    })
-    .mmAddTransaction(payload);
-}
 
 /* === HISTORY === */
 let MM_ALLTIME_CACHE = null;
@@ -8360,7 +8256,7 @@ function mmRenderTransactionList(transactions) {
     const dateStr = mmFormatDate(tx.date);
 
     return `
-      <div class="mm-tx-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${escapeHtml(tx.type)}', '${escapeHtml(tx.account)}', '${escapeHtml(tx.accountTo || '')}', '${escapeHtml(tx.category || '')}', '${escapeHtml(tx.subcategory || '')}', ${tx.amount}, '${escapeHtml(tx.notes || '')}', '${escapeHtml(tx.date || '')}')">
+      <div class="mm-tx-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
         <div class="mm-tx-icon" style="color:${catColor}">${catIcon}</div>
         <div class="mm-tx-info">
           <div class="tx-title">${escapeHtml(tx.notes || tx.type)}</div>
@@ -8426,8 +8322,8 @@ function mmRenderSettingsAccounts() {
         <div class="meta">Balance: ${mmFormatIDR(a.balance || a.initialBalance)} · ${a.showOnDashboard ? 'Shown' : 'Hidden'}</div>
       </div>
       <div class="actions">
-        <button onclick="mmShowEditAccount('${a.id}', '${escapeHtml(a.name)}', '${escapeHtml(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">✏️</button>
-        <button onclick="mmDeleteAccountConfirm('${a.id}')">×</button>
+        <button onclick="mmShowEditAccount('${jsStr(a.id)}', '${jsStr(a.name)}', '${jsStr(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">✏️</button>
+        <button onclick="mmDeleteAccountConfirm('${jsStr(a.id)}')">×</button>
       </div>
     </div>
   `).join('');
@@ -8730,7 +8626,7 @@ function mmRenderCategories() {
 
   container.innerHTML = Object.entries(groups).map(([key, subs]) => {
     const chips = subs.length
-      ? subs.map(s => `<span class="mm-cat-chip">${escapeHtml(s)} <button class="delete-cat" onclick="mmDeleteCat('${escapeHtml(key)}','${escapeHtml(s)}')">×</button></span>`).join('')
+      ? subs.map(s => `<span class="mm-cat-chip">${escapeHtml(s)} <button class="delete-cat" onclick="mmDeleteCat('${jsStr(key)}','${jsStr(s)}')">×</button></span>`).join('')
       : '<span style="font-size:11px;color:var(--text-muted);">No subcategories</span>';
     return `<div class="mm-cat-group"><div class="mm-cat-group-title">${escapeHtml(key)}</div>${chips}</div>`;
   }).join('');
@@ -9950,8 +9846,9 @@ function mmShowActionSheet(type) {
   // Show sheet
   document.getElementById('mmActionSheet').classList.remove('hidden');
 
-  // Focus amount
-  setTimeout(() => document.getElementById('txAmountInput').focus(), 300);
+  // Deliberately not auto-focusing the amount field: on a phone that forces
+  // the keyboard open over the sheet before the user has picked anything.
+  // They tap the amount when they are ready.
 
   // Render chips
   txRenderCategories();
@@ -10072,18 +9969,52 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* === CATEGORY CHIPS === */
+/* Categories come from the database, not a literal list — otherwise a category
+   added in Settings would never show up here. Expense chips follow the budget
+   allocation order the user set; anything only present in mm_categories is
+   appended after it. */
+const TX_FALLBACK_COLORS = ['#10b981','#f59e0b','#ec4899','#3b82f6','#8b5cf6','#14b8a6','#f43f5e','#64748b'];
+
+function txAvailableCategories() {
+  const wantType = TX_TYPE === 'income' ? 'Income' : 'Expense';
+  const names = [];
+
+  if (wantType === 'Expense' && typeof MM_ALLOCATION !== 'undefined') {
+    MM_ALLOCATION.forEach(a => { if (a.category && names.indexOf(a.category) === -1) names.push(a.category); });
+  }
+  if (typeof MM_CATEGORIES !== 'undefined') {
+    MM_CATEGORIES
+      .filter(c => c.type === wantType && c.category)
+      .forEach(c => { if (names.indexOf(c.category) === -1) names.push(c.category); });
+  }
+  // Nothing loaded yet (sheet opened before the dashboard finished) — keep the
+  // known defaults so the user is never faced with an empty picker.
+  if (!names.length) {
+    (wantType === 'Income' ? ['Bisyaroh','Other'] : ['Living','Playing','Alms','Invest'])
+      .forEach(n => names.push(n));
+  }
+
+  return names.map((name, i) => {
+    const alloc = (typeof MM_ALLOCATION !== 'undefined')
+      ? MM_ALLOCATION.find(a => a.category === name) : null;
+    const cfg = MM_CATEGORY_CONFIG[name];
+    return {
+      name: name,
+      color: (alloc && alloc.color) || (cfg && cfg.color) || TX_FALLBACK_COLORS[i % TX_FALLBACK_COLORS.length]
+    };
+  });
+}
+
 function txRenderCategories() {
   const container = document.getElementById('txCategoryChips');
   if (!container) return;
 
-  const categories = TX_TYPE === 'income'
-    ? [{ name: 'Bisyaroh', color: '#8b5cf6' }, { name: 'Other', color: '#64748b' }]
-    : [{ name: 'Living', color: '#10b981' }, { name: 'Playing', color: '#f59e0b' }, { name: 'Alms', color: '#ec4899' }, { name: 'Invest', color: '#3b82f6' }];
+  const categories = txAvailableCategories();
 
   container.innerHTML = categories.map(cat => {
     const isActive = TX_SELECTED_CATEGORY === cat.name;
     const icon = lucideIconSvg(MM_CATEGORY_CONFIG[cat.name] ? MM_CATEGORY_CONFIG[cat.name].icon : 'tag', 16);
-    return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:${cat.color}" onclick="txSelectCategory('${cat.name}')">
+    return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:${cat.color}" onclick="txSelectCategory('${jsStr(cat.name)}')">
       <span class="tx-chip-icon">${icon}</span>
       <span>${cat.name}</span>
     </button>`;
@@ -10121,7 +10052,7 @@ function txRenderSubcategories() {
   const color = mmCategoryColor(TX_SELECTED_CATEGORY);
   container.innerHTML = subs.map(sub => {
     const isActive = TX_SELECTED_SUBCATEGORY === sub;
-    return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:${color}" onclick="txSelectSubcategory('${escapeHtml(sub)}')">
+    return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:${color}" onclick="txSelectSubcategory('${jsStr(sub)}')">
       <span>${escapeHtml(sub)}</span>
     </button>`;
   }).join('');
@@ -10155,7 +10086,7 @@ function txRenderAccounts() {
     // From: investment platforms
     container.innerHTML = platforms.map(p => {
       const isActive = TX_SELECTED_ACCOUNT === p;
-      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:#8b5cf6" onclick="txSelectAccount('${escapeHtml(p)}')">
+      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:#8b5cf6" onclick="txSelectAccount('${jsStr(p)}')">
         <span>📈 ${escapeHtml(p)}</span>
       </button>`;
     }).join('');
@@ -10163,7 +10094,7 @@ function txRenderAccounts() {
     // From: regular accounts
     container.innerHTML = sorted.map(acc => {
       const isActive = TX_SELECTED_ACCOUNT === acc.name;
-      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent)" onclick="txSelectAccount('${escapeHtml(acc.name)}')">
+      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent)" onclick="txSelectAccount('${jsStr(acc.name)}')">
         <span>${escapeHtml(acc.name)}</span>
       </button>`;
     }).join('');
@@ -10175,7 +10106,7 @@ function txRenderAccounts() {
       // To: investment platforms
       containerTo.innerHTML = platforms.map(p => {
         const isActive = TX_SELECTED_ACCOUNT_TO === p;
-        return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:#3b82f6" onclick="txSelectAccountTo('${escapeHtml(p)}')">
+        return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:#3b82f6" onclick="txSelectAccountTo('${jsStr(p)}')">
           <span>📈 ${escapeHtml(p)}</span>
         </button>`;
       }).join('');
@@ -10183,7 +10114,7 @@ function txRenderAccounts() {
       // To: regular accounts
       containerTo.innerHTML = sorted.map(acc => {
         const isActive = TX_SELECTED_ACCOUNT_TO === acc.name;
-        return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="txSelectAccountTo('${escapeHtml(acc.name)}')">
+        return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="txSelectAccountTo('${jsStr(acc.name)}')">
           <span>${escapeHtml(acc.name)}</span>
         </button>`;
       }).join('');
@@ -10217,7 +10148,7 @@ function txRenderRecent() {
   section.style.display = 'block';
   container.innerHTML = relevant.map(r => {
     const label = [r.category, r.account].filter(Boolean).join(' · ');
-    return `<button class="tx-recent-chip" onclick="txApplyRecent('${escapeHtml(r.category)}','${escapeHtml(r.subcategory || '')}','${escapeHtml(r.account)}')">
+    return `<button class="tx-recent-chip" onclick="txApplyRecent('${jsStr(r.category)}','${jsStr(r.subcategory || '')}','${jsStr(r.account)}')">
       <span class="tx-recent-label">${escapeHtml(label)}</span>
     </button>`;
   }).join('');
