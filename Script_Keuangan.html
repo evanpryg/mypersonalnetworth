@@ -423,7 +423,11 @@ function mmRenderChart(type) {
   const listEl = document.getElementById('mmChartCategoryList');
   if (!donutEl || !listEl) return;
 
+  const contentEl = donutEl.closest('.mm-expense-content');
+  const setEmpty = (on) => { if (contentEl) contentEl.classList.toggle('is-empty', on); };
+
   if (!MM_DASHBOARD) {
+    setEmpty(true);
     donutEl.innerHTML = mmEmpty('circle-dollar', 'Belum ada data', 'Grafik muncul setelah ada transaksi tercatat.');
     listEl.innerHTML = '';
     return;
@@ -452,11 +456,13 @@ function mmRenderChart(type) {
   }
 
   if (total <= 0) {
+    setEmpty(true);
     donutEl.innerHTML = mmEmpty('circle-dollar', 'Bulan ini masih kosong', 'Catat transaksi pertama bulan ini, grafiknya langsung terisi.', `<button class="mm-empty-action" onclick="mmShowActionSheet('expense')">Catat pengeluaran</button>`);
     listEl.innerHTML = '';
     return;
   }
 
+  setEmpty(false);
   mmRenderDonut(entries, total, type);
   mmRenderCategoryList(entries, total);
 }

@@ -1938,6 +1938,11 @@ select.form-input:focus {
   flex-shrink: 0;
   width: 140px;
 }
+
+/* With no data there is no donut and no list, so the empty state should have
+   the whole card rather than being squeezed into the 140px donut column. */
+.mm-expense-content.is-empty .mm-donut-wrapper { width: 100%; }
+.mm-expense-content.is-empty .mm-category-list { display: none; }
 .mm-donut-wrapper .chart-donut-wrap { min-height: 140px; }
 .mm-category-list {
   flex: 1;
