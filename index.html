@@ -107,7 +107,10 @@ body {
 
 /* === MAIN CONTENT === */
 .main-content {
-  padding: 16px 16px 24px;
+  /* Bottom padding has to clear the tab bar AND the floating action button
+     that sits above it, otherwise the FAB covers the last row of whatever
+     card ends the page. */
+  padding: 16px 16px calc(var(--tab-height) + var(--safe-bottom) + 88px);
   max-width: 960px;
   margin: 0 auto;
   width: 100%;
@@ -1650,18 +1653,21 @@ select.form-input:focus {
   align-items: flex-start;
   padding: 16px 16px 8px;
 }
-.mm-header-left { flex: 1; }
-.mm-greeting {
+.mm-header-left { flex: 1; min-width: 0; }
+.mm-greeting-line {
   color: var(--text-muted);
-  font-size: 14px;
-  margin: 0;
+  font-size: 15px;
   font-weight: 400;
+  margin: 0 0 3px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 .mm-user-name {
   color: var(--text);
-  font-size: 26px;
+  font-size: 19px;
   font-weight: 700;
-  margin: 2px 0 4px;
 }
 .mm-date-display {
   color: var(--text-muted);
@@ -1671,35 +1677,6 @@ select.form-input:focus {
   gap: 4px;
   margin: 0;
   opacity: 0.7;
-}
-.mm-header-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-top: 8px;
-}
-.mm-header-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  position: relative;
-  transition: background 0.2s;
-}
-.mm-header-btn:active { background: rgba(255,255,255,0.08); }
-.mm-notif-badge {
-  position: absolute;
-  top: 8px; right: 8px;
-  width: 8px; height: 8px;
-  background: var(--accent);
-  border-radius: 50%;
-  border: 2px solid var(--bg-card);
 }
 
 /* --- Networth Card --- */
@@ -1839,6 +1816,16 @@ select.form-input:focus {
   color: var(--text-muted);
   margin-top: 2px;
   opacity: 0.6;
+}
+
+/* Period label shared by a row of tiles, instead of repeating it in each. */
+.mm-section-caption {
+  margin: 4px 16px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
 }
 
 /* --- Expense/Income Section --- */
@@ -4410,23 +4397,22 @@ select.form-input:focus {
           <section class="dashboard-wrap">
 
             <!-- Dashboard Header -->
+            <!-- Greeting and name share one line: the hero here is the net
+                 worth below, and on a phone this block used to eat a quarter
+                 of the screen before showing a single number. The search and
+                 notification buttons that sat on the right had no handlers
+                 at all — the bell even rendered an unread dot — so they are
+                 gone until they do something. -->
             <div class="mm-dashboard-header">
               <div class="mm-header-left">
-                <p class="mm-greeting" id="mmGreeting">Good morning,</p>
-                <h2 class="mm-user-name" id="mmUserName">Mr Evan 🌿</h2>
+                <p class="mm-greeting-line">
+                  <span id="mmGreeting">Good morning,</span>
+                  <strong class="mm-user-name" id="mmUserName">Mr Evan 🌿</strong>
+                </p>
                 <p class="mm-date-display" id="mmDateDisplay">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                   <span id="mmDateText"></span> ▾
                 </p>
-              </div>
-              <div class="mm-header-actions">
-                <button class="mm-header-btn" id="mmBtnSearch">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                </button>
-                <button class="mm-header-btn" id="mmBtnNotifications">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                  <span class="mm-notif-badge"></span>
-                </button>
               </div>
             </div>
 
@@ -4449,31 +4435,30 @@ select.form-input:focus {
               <canvas id="mmNetworthSparkline" width="200" height="80"></canvas>
             </div>
 
-            <!-- Summary Row -->
+            <!-- Summary Row. "This month" was repeated in all three tiles,
+                 eating a line each on a phone; it says it once now. -->
+            <p class="mm-section-caption">Bulan ini</p>
             <div class="mm-summary-row">
               <div class="mm-summary-card">
                 <div class="mm-summary-icon income">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg>
                 </div>
                 <div class="mm-summary-value" id="mmTotalIncome">Rp 0</div>
-                <div class="mm-summary-label">Total Income</div>
-                <div class="mm-summary-sub">This month</div>
+                <div class="mm-summary-label">Income</div>
               </div>
               <div class="mm-summary-card">
                 <div class="mm-summary-icon expense">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
                 </div>
                 <div class="mm-summary-value" id="mmTotalExpense">Rp 0</div>
-                <div class="mm-summary-label">Total Expense</div>
-                <div class="mm-summary-sub">This month</div>
+                <div class="mm-summary-label">Expense</div>
               </div>
               <div class="mm-summary-card">
                 <div class="mm-summary-icon saving">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
                 </div>
                 <div class="mm-summary-value" id="mmTotalSaving">Rp 0</div>
-                <div class="mm-summary-label">Total Saving</div>
-                <div class="mm-summary-sub">This month</div>
+                <div class="mm-summary-label">Saving</div>
               </div>
             </div>
 
@@ -5665,6 +5650,37 @@ var DB_API = {
     });
     var prevNetWorth=0; accounts.forEach(function(acc){if(acc.showOnDashboard) prevNetWorth+=prevBalances[acc.name]||0;});
 
+    // Real net worth at the close of each of the last 6 months, for the
+    // sparkline. It used to plot day-by-day within the current month, which
+    // on the 1st leaves a single point — and the fallback then invented a
+    // rising line out of nothing. One pass over date-sorted transactions,
+    // snapshotting at each month end.
+    var monthEnds=[];
+    for(var mi=5;mi>=0;mi--){
+      var me=new Date(now.getFullYear(), now.getMonth()-mi+1, 0);
+      monthEnds.push(me.getFullYear()+'-'+String(me.getMonth()+1).padStart(2,'0')+'-'+String(me.getDate()).padStart(2,'0'));
+    }
+    var running={}; accounts.forEach(function(acc){running[acc.name]=acc.initialBalance;});
+    // mmGetTransactions orders by insertion, not by date — a backdated entry
+    // would land out of order, so sort explicitly before walking.
+    var ascending=allTransactions.slice().sort(function(a,b){return a.date<b.date?-1:(a.date>b.date?1:0);});
+    var cursor=0, netWorthTrend=[];
+    monthEnds.forEach(function(cutoff){
+      while(cursor<ascending.length && ascending[cursor].date<=cutoff){
+        var tx=ascending[cursor];
+        var an=findExactAccountName(tx.account), atn=findExactAccountName(tx.accountTo);
+        if(tx.type==='Income'){ if(an) running[an]=(running[an]||0)+tx.amount; }
+        else if(tx.type==='Expense'){ if(an) running[an]=(running[an]||0)-tx.amount; }
+        else if(tx.type==='Transfer'){
+          if(an) running[an]=(running[an]||0)-tx.amount;
+          if(atn) running[atn]=(running[atn]||0)+tx.amount;
+        }
+        cursor++;
+      }
+      var snapshot=0; accounts.forEach(function(acc){if(acc.showOnDashboard) snapshot+=running[acc.name]||0;});
+      netWorthTrend.push({month:cutoff.slice(0,7), netWorth:snapshot});
+    });
+
     var monthTransactions=allTransactions.filter(function(tx){return tx.date>=monthStartStr;});
     var totalIncome=0,totalExpense=0,categoryExpenses={};
     allocation.forEach(function(a){categoryExpenses[a.category]=0;});
@@ -5675,7 +5691,7 @@ var DB_API = {
     });
     var saving=totalIncome-totalExpense;
     var allocationCards=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.min(spent/target,1):0;return{category:a.category,percent:a.percent,icon:a.icon,color:a.color,spent:spent,target:target,progress:progress};});
-    return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,prevNetWorth:prevNetWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
+    return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,prevNetWorth:prevNetWorth,netWorthTrend:netWorthTrend,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
   },
 
   // Years whose detail has been archived live in mm_summary instead of
@@ -7966,30 +7982,15 @@ function mmRenderSparkline(data) {
   const h = canvas.height = canvas.offsetHeight * 2;
   ctx.clearRect(0, 0, w, h);
 
-  // Generate sparkline data from daily transaction sums
-  const txs = (data && data.monthTransactions) || [];
-  const dayMap = {};
-  txs.forEach(tx => {
-    if (!tx.date) return;
-    const d = new Date(tx.date).getDate();
-    if (!dayMap[d]) dayMap[d] = 0;
-    if (tx.type === 'Income') dayMap[d] += tx.amount;
-    if (tx.type === 'Expense') dayMap[d] -= tx.amount;
-  });
-
-  const today = new Date().getDate();
-  let cumulative = data.netWorth - Object.values(dayMap).reduce((s, v) => s + v, 0);
-  const points = [];
-  for (let d = 1; d <= today; d++) {
-    cumulative += (dayMap[d] || 0);
-    points.push(cumulative);
-  }
-
+  // Month-end net worth for the last 6 months, computed in mmGetDashboard.
+  // Never fabricate a shape: if there is not enough history to draw a real
+  // line, draw nothing rather than an invented upward slope.
+  const points = ((data && data.netWorthTrend) || []).map(p => p.netWorth);
   if (points.length < 2) {
-    // Draw a simple upward line
-    points.length = 0;
-    for (let i = 0; i < 10; i++) points.push(data.netWorth * (0.85 + 0.15 * (i / 9)));
+    canvas.style.display = 'none';
+    return;
   }
+  canvas.style.display = '';
 
   const min = Math.min(...points);
   const max = Math.max(...points);
@@ -8264,7 +8265,9 @@ function mmRenderDonut(entries, total, type) {
               formatter: function(w) {
                 const t = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
                 if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••';
-                return 'Rp' + t.toLocaleString('id-ID');
+                // Full precision does not fit inside a donut this small on a
+                // phone — it crowds the ring. Compact form, with a space.
+                return 'Rp ' + mmFormatShort(t);
               }
             }
           }
@@ -8814,9 +8817,12 @@ function mmRenderTransactionList(transactions) {
 /* === CALENDAR HELPERS === */
 function mmFormatShort(value) {
   const abs = Math.abs(value);
-  if (abs >= 1000000000) return (value / 1000000000).toFixed(1) + ' M';
-  if (abs >= 1000000) return (value / 1000000).toFixed(1) + ' jt';
-  if (abs >= 1000) return (value / 1000).toFixed(1) + ' rb';
+  // toFixed gives "2.7", but everything else on screen uses id-ID where a dot
+  // is the thousands separator — "2.7 jt" reads as 27 million. Use a comma.
+  const dec = (v) => v.toFixed(1).replace('.', ',');
+  if (abs >= 1000000000) return dec(value / 1000000000) + ' M';
+  if (abs >= 1000000) return dec(value / 1000000) + ' jt';
+  if (abs >= 1000) return dec(value / 1000) + ' rb';
   return String(value);
 }
 
