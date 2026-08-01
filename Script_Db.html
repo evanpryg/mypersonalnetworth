@@ -19,6 +19,9 @@ var safeStorage = {
 // The active Supabase client instance
 var _sb = null;
 
+// Archived-year summaries never change during a session, so read them once.
+var _summaryCache = null;
+
 function getSupabaseCredentials() {
   var url = HARDCODED_SUPABASE_URL || safeStorage.getItem('supabase_url') || '';
   var key = HARDCODED_SUPABASE_KEY || safeStorage.getItem('supabase_key') || '';
@@ -560,21 +563,120 @@ var DB_API = {
     return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
   },
 
+  // Years whose detail has been archived live in mm_summary instead of
+  // mm_transactions: one row per month/type/category/subcategory. Anything
+  // reading history has to look in both places or archived years vanish.
+  async mmGetSummaryRows() {
+    if (_summaryCache) return _summaryCache;
+    var res = await _sb.from('mm_summary').select('*');
+    if (res.error) {
+      // Table not created yet (migration 001 not run) — behave exactly as
+      // before instead of breaking History and Insight. PGRST205 is
+      // PostgREST's "table not in schema cache".
+      if (res.error.code === 'PGRST205' || /mm_summary/.test(res.error.message || '')) {
+        _summaryCache = [];
+        return _summaryCache;
+      }
+      throw res.error;
+    }
+    _summaryCache = (res.data || []).map(function(r){
+      return { year:Number(r.period_year), month:Number(r.period_month), type:normalize_(r.type),
+               category:normalize_(r.category), subcategory:normalize_(r.subcategory),
+               amount:toNumber_(r.amount), txCount:Number(r.tx_count)||0 };
+    });
+    return _summaryCache;
+  },
+
+  // Which months exist only as a summary — used to tell the UI that a month
+  // has no drill-down available.
+  async mmGetArchivedMonths() {
+    var rows = await this.mmGetSummaryRows(), keys = {};
+    rows.forEach(function(r){ keys[r.year+'-'+String(r.month).padStart(2,'0')] = true; });
+    return Object.keys(keys).sort();
+  },
+
   async mmGetMonthlySummary(year,month) {
     var startDate=year+'-'+String(month).padStart(2,'0')+'-01',endDay=new Date(year,month,0).getDate(),endDate=year+'-'+String(month).padStart(2,'0')+'-'+String(endDay).padStart(2,'0');
     var transactions=await this.mmGetTransactions({startDate:startDate,endDate:endDate});
     var totalIncome=0,totalExpense=0,categoryBreakdown={};
+    function addExpense(cat,sub,amount){
+      cat=cat||'Other'; sub=sub||'General';
+      if(!categoryBreakdown[cat]) categoryBreakdown[cat]={total:0,subs:{}};
+      categoryBreakdown[cat].total+=amount;
+      if(!categoryBreakdown[cat].subs[sub]) categoryBreakdown[cat].subs[sub]=0;
+      categoryBreakdown[cat].subs[sub]+=amount;
+    }
     transactions.forEach(function(tx){
       if(tx.type==='Income') totalIncome+=tx.amount;
-      if(tx.type==='Expense'){totalExpense+=tx.amount;var cat=tx.category||'Other',sub=tx.subcategory||'General';if(!categoryBreakdown[cat]) categoryBreakdown[cat]={total:0,subs:{}};categoryBreakdown[cat].total+=tx.amount;if(!categoryBreakdown[cat].subs[sub]) categoryBreakdown[cat].subs[sub]=0;categoryBreakdown[cat].subs[sub]+=tx.amount;}
+      if(tx.type==='Expense'){totalExpense+=tx.amount;addExpense(tx.category,tx.subcategory,tx.amount);}
     });
-    return {totalIncome:totalIncome,totalExpense:totalExpense,saving:totalIncome-totalExpense,categoryBreakdown:categoryBreakdown,transactions:transactions};
+    // Archived month: no rows above, so fold the summary in instead.
+    var summary=(await this.mmGetSummaryRows()).filter(function(r){return r.year===Number(year)&&r.month===Number(month);});
+    summary.forEach(function(r){
+      if(r.type==='Income') totalIncome+=r.amount;
+      if(r.type==='Expense'){totalExpense+=r.amount;addExpense(r.category,r.subcategory,r.amount);}
+    });
+    return {totalIncome:totalIncome,totalExpense:totalExpense,saving:totalIncome-totalExpense,
+            categoryBreakdown:categoryBreakdown,transactions:transactions,
+            archived:summary.length>0&&transactions.length===0};
   },
 
   async mmGetAllTimeSummary() {
     var transactions=await this.mmGetTransactions({}),monthly={};
-    transactions.forEach(function(tx){var d=new Date(tx.date);if(isNaN(d.getTime()))return;var k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');if(!monthly[k])monthly[k]={income:0,expense:0};if(tx.type==='Income')monthly[k].income+=tx.amount;if(tx.type==='Expense')monthly[k].expense+=tx.amount;});
-    return Object.entries(monthly).sort(function(a,b){return a[0].localeCompare(b[0]);}).map(function(e){return{month:e[0],income:e[1].income,expense:e[1].expense,saving:e[1].income-e[1].expense};});
+    function bucket(k){ if(!monthly[k]) monthly[k]={income:0,expense:0,archived:false}; return monthly[k]; }
+    transactions.forEach(function(tx){var d=new Date(tx.date);if(isNaN(d.getTime()))return;var b=bucket(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));if(tx.type==='Income')b.income+=tx.amount;if(tx.type==='Expense')b.expense+=tx.amount;});
+    (await this.mmGetSummaryRows()).forEach(function(r){
+      var b=bucket(r.year+'-'+String(r.month).padStart(2,'0'));
+      b.archived=true;
+      if(r.type==='Income') b.income+=r.amount;
+      if(r.type==='Expense') b.expense+=r.amount;
+    });
+    return Object.entries(monthly).sort(function(a,b){return a[0].localeCompare(b[0]);}).map(function(e){return{month:e[0],income:e[1].income,expense:e[1].expense,saving:e[1].income-e[1].expense,archived:e[1].archived};});
+  },
+
+  // Year-over-year view: how the finances moved from one year to the next,
+  // spanning archived and live years alike.
+  async mmGetYearlySummary() {
+    var years={};
+    function bucket(y){ if(!years[y]) years[y]={year:Number(y),income:0,expense:0,categories:{},months:{},hasLive:false,hasSummary:false}; return years[y]; }
+    function addCat(b,cat,amount){ cat=cat||'Other'; b.categories[cat]=(b.categories[cat]||0)+amount; }
+
+    (await this.mmGetTransactions({})).forEach(function(tx){
+      if(!tx.date) return;
+      var b=bucket(tx.date.slice(0,4));
+      b.hasLive=true;
+      b.months[tx.date.slice(0,7)]=true;
+      if(tx.type==='Income') b.income+=tx.amount;
+      if(tx.type==='Expense'){ b.expense+=tx.amount; addCat(b,tx.category,tx.amount); }
+    });
+    (await this.mmGetSummaryRows()).forEach(function(r){
+      var b=bucket(r.year);
+      b.hasSummary=true;
+      b.months[r.year+'-'+String(r.month).padStart(2,'0')]=true;
+      if(r.type==='Income') b.income+=r.amount;
+      if(r.type==='Expense'){ b.expense+=r.amount; addCat(b,r.category,r.amount); }
+    });
+
+    var list=Object.values(years).sort(function(a,b){return a.year-b.year;});
+    return list.map(function(y,i){
+      var prev=list[i-1];
+      var saving=y.income-y.expense;
+      var monthCount=Object.keys(y.months).length;
+      return {
+        year:y.year, income:y.income, expense:y.expense, saving:saving,
+        savingRate: y.income>0 ? (saving/y.income)*100 : 0,
+        monthCount: monthCount,
+        avgMonthlyIncome: monthCount ? y.income/monthCount : 0,
+        avgMonthlyExpense: monthCount ? y.expense/monthCount : 0,
+        categories: Object.entries(y.categories).sort(function(a,b){return b[1]-a[1];}).map(function(e){return{category:e[0],amount:e[1],percent:y.expense>0?(e[1]/y.expense)*100:0};}),
+        // Summary-only year: totals are trustworthy, but there is no detail to open.
+        archived: y.hasSummary && !y.hasLive,
+        // Growth against the previous year, normalised per month so a partial
+        // year (2025 starts in July) is not compared unfairly against a full one.
+        incomeGrowth: prev && prev.income>0 ? ((y.income/Math.max(monthCount,1)) / (prev.income/Math.max(Object.keys(prev.months).length,1)) - 1) * 100 : null,
+        expenseGrowth: prev && prev.expense>0 ? ((y.expense/Math.max(monthCount,1)) / (prev.expense/Math.max(Object.keys(prev.months).length,1)) - 1) * 100 : null
+      };
+    });
   },
 
   async mmGetCalendarData(year,month) {
@@ -669,7 +771,8 @@ var DB_API = {
     });
     var nwValues=Object.values(monthlyNW),isNetWorthHighest=nwValues.length>0&&netWorth>=Math.max.apply(null,nwValues);
     var budgetMetMonths=0;for(var i=1;i<=6;i++){var m=new Date(currentYear,currentMonth-1-i,1);var h=monthlyHistory.find(function(mh){return mh.month===m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0');});if(h&&h.saving>=0)budgetMetMonths++;}
-    return{currentMonth:currentMonth,currentYear:currentYear,dayOfMonth:dayOfMonth,daysInMonth:daysInMonth,netWorth:netWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,savingRate:savingRate,prevIncome:prevIncome,prevExpense:prevExpense,prevSaving:prevSaving,prevSavingRate:prevSavingRate,budgetAnalysis:budgetAnalysis,spendingByCategory:spendingByCategory,monthlyHistory:monthlyHistory,investmentData:investmentData,prediction:{income:predictedIncome,expense:predictedExpense,saving:predictedSaving,netWorth:predictedNetWorth},streak:streak,isNetWorthHighest:isNetWorthHighest,budgetMetMonths:budgetMetMonths};
+    var yearlySummary=await this.mmGetYearlySummary();
+    return{yearlySummary:yearlySummary,currentMonth:currentMonth,currentYear:currentYear,dayOfMonth:dayOfMonth,daysInMonth:daysInMonth,netWorth:netWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,savingRate:savingRate,prevIncome:prevIncome,prevExpense:prevExpense,prevSaving:prevSaving,prevSavingRate:prevSavingRate,budgetAnalysis:budgetAnalysis,spendingByCategory:spendingByCategory,monthlyHistory:monthlyHistory,investmentData:investmentData,prediction:{income:predictedIncome,expense:predictedExpense,saving:predictedSaving,netWorth:predictedNetWorth},streak:streak,isNetWorthHighest:isNetWorthHighest,budgetMetMonths:budgetMetMonths};
   },
 
   // EXPORT / IMPORT / DELETE
