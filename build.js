@@ -49,6 +49,25 @@ function compile() {
   }
 
   fs.writeFileSync(path.join(distDir, 'index.html'), indexHtml, 'utf8');
+
+  // Static assets (PWA manifest, app icons) live in public/ and are copied
+  // verbatim — gh-pages only ever receives the contents of dist/.
+  const publicDir = path.join(rootDir, 'public');
+  if (fs.existsSync(publicDir)) {
+    let copied = 0;
+    const copyDir = (from, to) => {
+      fs.mkdirSync(to, { recursive: true });
+      for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+        const src = path.join(from, entry.name);
+        const dest = path.join(to, entry.name);
+        if (entry.isDirectory()) copyDir(src, dest);
+        else { fs.copyFileSync(src, dest); copied++; }
+      }
+    };
+    copyDir(publicDir, distDir);
+    console.log(`   copied ${copied} static file(s) from public/`);
+  }
+
   console.log('✅ App compiled successfully to dist/index.html');
 }
 
