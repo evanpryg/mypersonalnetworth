@@ -316,6 +316,110 @@ body {
   animation: fadeIn 0.2s ease;
 }
 
+/* === TRANSACTION SEARCH === */
+.mm-search {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: var(--bg, #09090b);
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.15s ease;
+}
+
+.mm-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mm-search-back {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mm-search-back:active { background: rgba(255,255,255,0.06); }
+
+.mm-search-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-muted);
+}
+
+.mm-search-field input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  outline: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+}
+
+/* Safari draws its own clear button on type=search; we have our own. */
+.mm-search-field input::-webkit-search-cancel-button { display: none; }
+
+.mm-search-clear {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  padding: 4px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.mm-search-meta {
+  padding: 10px 16px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.mm-search-section {
+  padding: 12px 16px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.mm-search-results {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+.mm-search-results mark {
+  background: rgba(16,185,129,0.22);
+  color: var(--text);
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
 /* === LOGIN GATE === */
 .auth-gate {
   position: fixed;
@@ -1757,6 +1861,29 @@ select.form-input:focus {
   gap: 4px;
   margin: 0;
   opacity: 0.7;
+}
+
+/* Single header action — search. It earns its place now that it opens
+   something; the notification bell that used to sit beside it did not. */
+.mm-header-btn {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  align-self: center;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mm-header-btn:active {
+  background: rgba(255,255,255,0.08);
+  transform: scale(0.92);
 }
 
 /* --- Networth Card --- */
@@ -4641,6 +4768,9 @@ select.form-input:focus {
                   <span id="mmDateText"></span> ▾
                 </p>
               </div>
+              <button class="mm-header-btn" id="mmBtnSearch" aria-label="Cari transaksi" onclick="mmOpenSearch()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </button>
             </div>
 
             <!-- Networth Card -->
@@ -5250,6 +5380,29 @@ select.form-input:focus {
 
   <!-- ===== TOAST ===== -->
   <div id="toast" class="toast hidden"></div>
+
+  <!-- ===== TRANSACTION SEARCH =====
+       Full screen rather than a filter on the current tab: the point is to
+       find one transaction among every one ever recorded, not to narrow
+       whatever list happens to be open. -->
+  <div id="mmSearchSheet" class="mm-search hidden">
+    <div class="mm-search-bar">
+      <button class="mm-search-back" aria-label="Tutup pencarian" onclick="mmCloseSearch()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+      </button>
+      <div class="mm-search-field">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" id="mmSearchInput" placeholder="Cari catatan, kategori, akun, nominal..."
+               autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+               oninput="mmSearchInputChanged()">
+        <button class="mm-search-clear hidden" id="mmSearchClear" aria-label="Kosongkan" onclick="mmClearSearch()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+    </div>
+    <p class="mm-search-meta hidden" id="mmSearchMeta"></p>
+    <div class="mm-search-results" id="mmSearchResults"></div>
+  </div>
 
   <!-- ===== LOGIN GATE =====
        Only shown when the database refuses anonymous reads, i.e. once RLS is
@@ -8101,6 +8254,160 @@ function mmShowPage(pageId) {
   if (pageId === 'mmInsightPage') loadFinancialInsight();
 }
 
+/* === TRANSACTION SEARCH ===
+   Searches every transaction, not the list currently on screen. The whole set
+   is fetched once per session and reused — invalidated wherever MM_DASHBOARD
+   is, since the two go stale together. */
+let MM_SEARCH_CACHE = null;
+let MM_SEARCH_TIMER = null;
+const MM_SEARCH_LIMIT = 80;
+
+function mmOpenSearch() {
+  const sheet = document.getElementById('mmSearchSheet');
+  const input = document.getElementById('mmSearchInput');
+  if (!sheet || !input) return;
+  sheet.classList.remove('hidden');
+  input.value = '';
+  document.getElementById('mmSearchClear').classList.add('hidden');
+  document.getElementById('mmSearchMeta').classList.add('hidden');
+  mmRenderSearchIntro();
+  setTimeout(() => input.focus(), 60);
+  mmLoadSearchData();
+}
+
+function mmCloseSearch() {
+  const sheet = document.getElementById('mmSearchSheet');
+  if (sheet) sheet.classList.add('hidden');
+  const input = document.getElementById('mmSearchInput');
+  if (input) input.blur();
+}
+
+function mmClearSearch() {
+  const input = document.getElementById('mmSearchInput');
+  input.value = '';
+  document.getElementById('mmSearchClear').classList.add('hidden');
+  document.getElementById('mmSearchMeta').classList.add('hidden');
+  mmRenderSearchIntro();
+  input.focus();
+}
+
+function mmRenderSearchIntro() {
+  const box = document.getElementById('mmSearchResults');
+  if (!box) return;
+  const recent = (MM_SEARCH_CACHE || []).slice(0, 6);
+  if (!recent.length) {
+    box.innerHTML = mmEmpty('clock', 'Cari transaksi', 'Ketik catatan, kategori, akun, atau nominal. Pencarian mencakup seluruh riwayat.');
+    return;
+  }
+  box.innerHTML = '<p class="mm-search-section">Terakhir dicatat</p>' + mmRenderSearchRows(recent, []);
+}
+
+async function mmLoadSearchData() {
+  if (MM_SEARCH_CACHE) return MM_SEARCH_CACHE;
+  const box = document.getElementById('mmSearchResults');
+  if (box && !box.querySelector('.mm-tx-item')) box.innerHTML = skRows(4);
+  try {
+    MM_SEARCH_CACHE = await new Promise((resolve, reject) => {
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).mmGetTransactions({});
+    });
+  } catch (e) {
+    if (box) box.innerHTML = mmEmpty('circle-dollar', 'Gagal memuat', 'Coba tutup dan buka lagi pencarian.');
+    return null;
+  }
+  // Whatever the user typed while this was loading wins.
+  const q = (document.getElementById('mmSearchInput') || {}).value || '';
+  if (q.trim()) mmRunSearch(q); else mmRenderSearchIntro();
+  return MM_SEARCH_CACHE;
+}
+
+function mmSearchInputChanged() {
+  const input = document.getElementById('mmSearchInput');
+  document.getElementById('mmSearchClear').classList.toggle('hidden', !input.value);
+  clearTimeout(MM_SEARCH_TIMER);
+  MM_SEARCH_TIMER = setTimeout(() => mmRunSearch(input.value), 160);
+}
+
+// Every term has to match somewhere in the row, so "bni earphone" narrows
+// rather than widens. Digits also match the amount with separators stripped,
+// which is how people actually remember a figure.
+function mmMatchesTx(tx, terms, haystack) {
+  return terms.every(t => haystack.indexOf(t) !== -1);
+}
+
+function mmTxHaystack(tx) {
+  return [
+    tx.notes, tx.category, tx.subcategory, tx.account, tx.accountTo, tx.type,
+    tx.date, String(tx.amount), mmFormatDate(tx.date)
+  ].join(' ').toLowerCase();
+}
+
+function mmRunSearch(rawQuery) {
+  const box = document.getElementById('mmSearchResults');
+  const meta = document.getElementById('mmSearchMeta');
+  const query = (rawQuery || '').trim().toLowerCase();
+
+  if (!query) {
+    meta.classList.add('hidden');
+    mmRenderSearchIntro();
+    return;
+  }
+  if (!MM_SEARCH_CACHE) { mmLoadSearchData(); return; }
+
+  const terms = query.split(/\s+/).filter(Boolean);
+  const hits = MM_SEARCH_CACHE.filter(tx => mmMatchesTx(tx, terms, mmTxHaystack(tx)));
+
+  meta.classList.remove('hidden');
+  if (!hits.length) {
+    meta.textContent = 'Tidak ada yang cocok';
+    box.innerHTML = mmEmpty('circle-dollar', 'Tidak ditemukan', 'Coba kata lain, atau sebagian nominalnya saja.');
+    return;
+  }
+
+  const total = hits.reduce((s, t) => s + (t.type === 'Expense' ? -t.amount : t.type === 'Income' ? t.amount : 0), 0);
+  const shown = hits.slice(0, MM_SEARCH_LIMIT);
+  meta.textContent = hits.length + ' transaksi'
+    + (hits.length > MM_SEARCH_LIMIT ? ' (menampilkan ' + MM_SEARCH_LIMIT + ')' : '')
+    + ' · net ' + (total >= 0 ? '+' : '−') + mmFormatIDR(Math.abs(total));
+  box.innerHTML = mmRenderSearchRows(shown, terms);
+}
+
+function mmHighlight(text, terms) {
+  let out = escapeHtml(text == null ? '' : String(text));
+  if (!terms || !terms.length) return out;
+  // Escape first, then wrap — so a term containing < or & cannot inject markup.
+  terms.forEach(t => {
+    if (!t) return;
+    const safe = escapeHtml(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (!safe) return;
+    out = out.replace(new RegExp('(' + safe + ')', 'ig'), '<mark>$1</mark>');
+  });
+  return out;
+}
+
+function mmRenderSearchRows(rows, terms) {
+  return rows.map(tx => {
+    let amtClass = 'income-amt', prefix = '+', subtitle = tx.account;
+    if (tx.type === 'Expense') {
+      amtClass = 'expense-amt'; prefix = '-';
+      subtitle = `${tx.account} · ${tx.category}${tx.subcategory ? ' / ' + tx.subcategory : ''}`;
+    } else if (tx.type === 'Transfer') {
+      amtClass = 'transfer-amt'; prefix = '';
+      subtitle = `${tx.account} → ${tx.accountTo}`;
+    } else {
+      subtitle = `${tx.account}${tx.category ? ' · ' + tx.category : ''}`;
+    }
+    return `
+      <div class="mm-tx-item" onclick="mmCloseSearch();mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
+        <div class="mm-tx-icon" style="color:${mmCategoryColor(tx.category, tx.type)}">${mmCategoryEmoji(tx.category, tx.type)}</div>
+        <div class="mm-tx-info">
+          <div class="tx-title">${mmHighlight(tx.notes || tx.type, terms)}</div>
+          <div class="tx-sub">${mmFormatDate(tx.date)} · ${mmHighlight(subtitle, terms)}</div>
+        </div>
+        <div class="mm-tx-amount ${amtClass}">${prefix}${mmFormatIDR(tx.amount)}</div>
+      </div>`;
+  }).join('');
+}
+
 /* === COUNT UP ===
    The headline figure counts up on arrival instead of snapping into place.
    Only when the value actually changed — re-rendering from cache should not
@@ -8829,6 +9136,7 @@ function mmSubmitEditTx(event, rowNumber, type) {
         showToast('Transaction updated.', 'success');
         mmCloseTxDetailDirect();
         MM_DASHBOARD = null;
+        MM_SEARCH_CACHE = null;
         mmLoadDashboard();
       } else { showToast('Failed.', 'error'); }
     })
@@ -8857,6 +9165,7 @@ function mmDeleteTxFromDetail(rowNumber) {
         showToast('Transaction deleted.', 'success');
         document.getElementById('mmTxDetailSheet').classList.add('hidden');
         MM_DASHBOARD = null;
+        MM_SEARCH_CACHE = null;
         mmLoadDashboard();
       } else {
         showToast('Failed to delete.', 'error');
@@ -9412,6 +9721,7 @@ function mmSubmitModal(event) {
           closeModal('mmModal');
           mmLoadSettings();
           MM_DASHBOARD = null;
+        MM_SEARCH_CACHE = null;
           mmLoadDashboard();
         }
       })
@@ -9978,6 +10288,7 @@ function mmImportData(event) {
             statusEl.className = 'import-status success';
             statusEl.textContent = result.message;
             MM_DASHBOARD = null;
+        MM_SEARCH_CACHE = null;
             if (typeof mmLoadDashboard === 'function') mmLoadDashboard();
           } else {
             statusEl.className = 'import-status error';
@@ -10032,6 +10343,7 @@ function mmDeleteDataPrompt(target) {
         showToast(result.message, 'success');
         // Reset caches and reload
         MM_DASHBOARD = null;
+        MM_SEARCH_CACHE = null;
         MM_ACCOUNTS = [];
         MM_CATEGORIES = [];
         MM_ALLOCATION = [];
@@ -11242,6 +11554,7 @@ function txSubmit() {
 
         // Invalidate cache
         MM_DASHBOARD = null;
+        MM_SEARCH_CACHE = null;
         mmLoadDashboard();
       } else {
         showToast('Gagal menyimpan.', 'error');
