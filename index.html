@@ -293,6 +293,93 @@ body {
   animation: fadeIn 0.2s ease;
 }
 
+/* === LOGIN GATE === */
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: var(--bg, #09090b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 28px 24px;
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.auth-logo { font-size: 30px; line-height: 1; }
+.auth-title { font-size: 18px; font-weight: 700; }
+
+.auth-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.auth-lead {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+}
+
+.auth-lead strong { color: var(--text); }
+
+.auth-hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.auth-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.auth-error {
+  margin-top: 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--error);
+}
+
 /* === PROGRESS HERO === */
 .progress-hero {
   background: var(--bg-card);
@@ -4913,6 +5000,38 @@ select.form-input:focus {
   <!-- ===== TOAST ===== -->
   <div id="toast" class="toast hidden"></div>
 
+  <!-- ===== LOGIN GATE =====
+       Only shown when the database refuses anonymous reads, i.e. once RLS is
+       switched on. Before that the app runs exactly as before. -->
+  <div id="authGate" class="auth-gate hidden">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="auth-logo">💰</span>
+        <div>
+          <h1 class="auth-title">Money Management</h1>
+          <p class="auth-subtitle">Personal Finance</p>
+        </div>
+      </div>
+
+      <div id="authStepEmail">
+        <p class="auth-lead">Masuk untuk membuka datamu. Link login dikirim ke email — tidak ada password yang perlu diingat.</p>
+        <form onsubmit="authSendMagicLink(event)">
+          <label class="auth-label" for="authEmail">Email</label>
+          <input type="email" id="authEmail" class="auth-input" placeholder="nama@email.com" required autocomplete="email">
+          <button type="submit" class="btn-primary btn-full" id="authSendBtn" style="margin-top:14px;">Kirim link login</button>
+        </form>
+      </div>
+
+      <div id="authStepSent" class="hidden">
+        <p class="auth-lead">Link login sudah dikirim ke <strong id="authSentTo"></strong>.</p>
+        <p class="auth-hint">Buka email itu di perangkat ini, klik link-nya, dan kamu akan langsung masuk. Link berlaku 1 jam.</p>
+        <button type="button" class="btn-ghost btn-full" onclick="authResetStep()" style="margin-top:14px;">Pakai email lain</button>
+      </div>
+
+      <p class="auth-error hidden" id="authError"></p>
+    </div>
+  </div>
+
   <script>
     (function() {
       var meta = document.querySelector('meta[name="viewport"]');
@@ -5814,7 +5933,11 @@ function initSupabaseClient() {
   if (creds.url && creds.key) {
     _sb = window.supabase.createClient(creds.url, creds.key, {
       auth: {
-        persistSession: false
+        // Keep the session so the magic link only has to be used once, and
+        // let the client pick the token out of the redirect URL.
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
       }
     });
     window.supabaseConnected = true;
@@ -5852,11 +5975,127 @@ function injectSupabaseSettingsCard() {
   if (headerCard) headerCard.insertAdjacentHTML('afterend', cardHtml);
 }
 
+// ============================================================
+// AUTH — magic link
+// ============================================================
+// The anon key ships inside this page, so it is not a secret. What keeps the
+// data private is row level security: once migration 002 is applied, the
+// database only answers requests carrying a logged-in user's token.
+//
+// The gate is driven by what the database actually allows, never by a flag in
+// the client. If anonymous reads still work, RLS is not on yet and the app
+// behaves exactly as it always has — so deploying this can never lock anyone
+// out before the migration is run.
+
+var AUTH_USER = null;
+
+async function authCurrentUser() {
+  if (!_sb) return null;
+  try {
+    var { data } = await _sb.auth.getSession();
+    return data && data.session ? data.session.user : null;
+  } catch (e) { return null; }
+}
+
+// Can we read anything without a session? Distinguishes "RLS off" from
+// "RLS on and we are not logged in".
+async function authAnonymousReadWorks() {
+  try {
+    var res = await _sb.from('mm_accounts').select('accountid').limit(1);
+    return !res.error;
+  } catch (e) { return false; }
+}
+
+function authShowGate(show) {
+  var gate = document.getElementById('authGate');
+  if (gate) gate.classList.toggle('hidden', !show);
+}
+
+function authResetStep() {
+  document.getElementById('authStepEmail').classList.remove('hidden');
+  document.getElementById('authStepSent').classList.add('hidden');
+  document.getElementById('authError').classList.add('hidden');
+}
+
+function authShowError(message) {
+  var el = document.getElementById('authError');
+  if (!el) return;
+  el.textContent = message;
+  el.classList.remove('hidden');
+}
+
+async function authSendMagicLink(event) {
+  event.preventDefault();
+  var email = document.getElementById('authEmail').value.trim();
+  var btn = document.getElementById('authSendBtn');
+  if (!email) return;
+  btn.disabled = true;
+  btn.textContent = 'Mengirim...';
+  document.getElementById('authError').classList.add('hidden');
+  try {
+    // Come back to this exact page; Supabase must have this URL in its
+    // allow-list (Authentication -> URL Configuration -> Redirect URLs).
+    var redirectTo = window.location.origin + window.location.pathname;
+    var { error } = await _sb.auth.signInWithOtp({
+      email: email,
+      options: { emailRedirectTo: redirectTo }
+    });
+    if (error) throw error;
+    document.getElementById('authSentTo').textContent = email;
+    document.getElementById('authStepEmail').classList.add('hidden');
+    document.getElementById('authStepSent').classList.remove('hidden');
+  } catch (e) {
+    authShowError(e.message || 'Gagal mengirim link. Coba lagi.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Kirim link login';
+  }
+}
+
+async function authSignOut() {
+  if (!_sb) return;
+  await _sb.auth.signOut();
+  window.location.reload();
+}
+
+function injectAuthSettingsCard() {
+  var settingsPage = document.getElementById('mmSettingsPage') || document.getElementById('settingsPage');
+  if (!settingsPage || document.getElementById('authAccountCard')) return;
+  var who = AUTH_USER ? AUTH_USER.email : 'Belum login';
+  var action = AUTH_USER
+    ? '<button class="btn-ghost" type="button" onclick="authSignOut()" style="color:var(--error);border-color:var(--error);">Logout</button>'
+    : '<button class="btn-primary" type="button" onclick="authShowGate(true)">Login</button>';
+  var card = '<section class="panel-card" id="authAccountCard"><div class="panel-body" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">'
+    + '<div><p class="panel-eyebrow">Akun</p><h3 class="panel-title" style="font-size:14px;">' + escapeHtml(who) + '</h3></div>'
+    + action + '</div></section>';
+  var headerCard = settingsPage.querySelector('.page-header-card');
+  if (headerCard) headerCard.insertAdjacentHTML('afterend', card);
+  else settingsPage.insertAdjacentHTML('afterbegin', card);
+}
+
 // BOOTSTRAPPER — runs immediately
 (function() {
-  function boot() {
+  async function boot() {
     initSupabaseClient();
+
+    if (_sb) {
+      AUTH_USER = await authCurrentUser();
+      if (!AUTH_USER && !(await authAnonymousReadWorks())) {
+        // Database is locked down and we have no session: nothing will load,
+        // so ask for a login instead of showing a broken dashboard.
+        authShowGate(true);
+        setTimeout(injectAuthSettingsCard, 300);
+        return;
+      }
+      authShowGate(false);
+      // Signing in or out mid-session should re-read everything.
+      _sb.auth.onAuthStateChange(function(event) {
+        if (event === 'SIGNED_IN' && !AUTH_USER) window.location.reload();
+      });
+    }
+
     setTimeout(injectSupabaseSettingsCard, 300);
+    setTimeout(injectAuthSettingsCard, 300);
     if (typeof initApp === 'function') {
       initApp();
     }
