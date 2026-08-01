@@ -998,19 +998,26 @@
         </div>
       </div>
 
-      <div id="authStepEmail">
-        <p class="auth-lead">Masuk untuk membuka datamu. Link login dikirim ke email — tidak ada password yang perlu diingat.</p>
-        <form onsubmit="authSendMagicLink(event)">
+      <div id="authStepPassword">
+        <p class="auth-lead">Masuk sekali di HP ini, setelah itu langsung terbuka terus.</p>
+        <!-- A real form with proper autocomplete hints so the phone's password
+             manager offers to fill both fields in one tap. -->
+        <form onsubmit="authSignIn(event)">
           <label class="auth-label" for="authEmail">Email</label>
-          <input type="email" id="authEmail" class="auth-input" placeholder="nama@email.com" required autocomplete="email">
-          <button type="submit" class="btn-primary btn-full" id="authSendBtn" style="margin-top:14px;">Kirim link login</button>
+          <input type="email" id="authEmail" class="auth-input" placeholder="nama@email.com" required
+                 autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false">
+          <label class="auth-label" for="authPassword" style="margin-top:12px;">Password</label>
+          <input type="password" id="authPassword" class="auth-input" placeholder="••••••••" required
+                 autocomplete="current-password">
+          <button type="submit" class="btn-primary btn-full" id="authSignInBtn" style="margin-top:16px;">Masuk</button>
         </form>
+        <button type="button" class="auth-alt" onclick="authShowMagicLink()">Tidak ingat password? Kirim link ke email</button>
       </div>
 
       <div id="authStepSent" class="hidden">
         <p class="auth-lead">Link login sudah dikirim ke <strong id="authSentTo"></strong>.</p>
-        <p class="auth-hint">Buka email itu di perangkat ini, klik link-nya, dan kamu akan langsung masuk. Link berlaku 1 jam.</p>
-        <button type="button" class="btn-ghost btn-full" onclick="authResetStep()" style="margin-top:14px;">Pakai email lain</button>
+        <p class="auth-hint">Buka email itu di perangkat ini lalu klik link-nya. Berlaku 1 jam.</p>
+        <button type="button" class="btn-ghost btn-full" onclick="authResetStep()" style="margin-top:14px;">Kembali</button>
       </div>
 
       <p class="auth-error hidden" id="authError"></p>

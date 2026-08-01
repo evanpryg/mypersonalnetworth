@@ -898,8 +898,8 @@ function initSupabaseClient() {
   if (creds.url && creds.key) {
     _sb = window.supabase.createClient(creds.url, creds.key, {
       auth: {
-        // Keep the session so the magic link only has to be used once, and
-        // let the client pick the token out of the redirect URL.
+        // Keep the session so signing in is a one-time thing per device, and
+        // let the client pick the token out of a magic-link redirect.
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true
@@ -977,9 +977,48 @@ function authShowGate(show) {
 }
 
 function authResetStep() {
-  document.getElementById('authStepEmail').classList.remove('hidden');
+  document.getElementById('authStepPassword').classList.remove('hidden');
   document.getElementById('authStepSent').classList.add('hidden');
   document.getElementById('authError').classList.add('hidden');
+}
+
+// Password sign-in is the default route: it sends no email at all, so it is
+// immune to both the redirect-URL trap and Supabase's 2-emails-per-hour cap
+// on the built-in mailer. The phone's password manager fills it in one tap.
+async function authSignIn(event) {
+  event.preventDefault();
+  var email = document.getElementById('authEmail').value.trim();
+  var password = document.getElementById('authPassword').value;
+  var btn = document.getElementById('authSignInBtn');
+  if (!email || !password) return;
+  btn.disabled = true;
+  btn.textContent = 'Masuk...';
+  document.getElementById('authError').classList.add('hidden');
+  try {
+    var { error } = await _sb.auth.signInWithPassword({ email: email, password: password });
+    if (error) throw error;
+    window.location.reload();
+  } catch (e) {
+    var msg = e.message || 'Gagal masuk.';
+    if (/invalid login credentials/i.test(msg)) {
+      msg = 'Email atau password salah.';
+    } else if (/email not confirmed/i.test(msg)) {
+      msg = 'Akun belum dikonfirmasi. Di Supabase → Authentication → Users, centang "Auto Confirm User".';
+    }
+    authShowError(msg);
+    btn.disabled = false;
+    btn.textContent = 'Masuk';
+  }
+}
+
+function authShowMagicLink() {
+  var email = document.getElementById('authEmail').value.trim();
+  if (!email) {
+    authShowError('Isi email dulu, lalu tekan lagi.');
+    document.getElementById('authEmail').focus();
+    return;
+  }
+  authSendMagicLink({ preventDefault: function(){} });
 }
 
 function authShowError(message) {
@@ -992,14 +1031,12 @@ function authShowError(message) {
 async function authSendMagicLink(event) {
   event.preventDefault();
   var email = document.getElementById('authEmail').value.trim();
-  var btn = document.getElementById('authSendBtn');
   if (!email) return;
-  btn.disabled = true;
-  btn.textContent = 'Mengirim...';
   document.getElementById('authError').classList.add('hidden');
   try {
     // Come back to this exact page; Supabase must have this URL in its
-    // allow-list (Authentication -> URL Configuration -> Redirect URLs).
+    // allow-list (Authentication -> URL Configuration -> Redirect URLs),
+    // otherwise it silently falls back to Site URL — localhost by default.
     var redirectTo = window.location.origin + window.location.pathname;
     var { error } = await _sb.auth.signInWithOtp({
       email: email,
@@ -1007,13 +1044,15 @@ async function authSendMagicLink(event) {
     });
     if (error) throw error;
     document.getElementById('authSentTo').textContent = email;
-    document.getElementById('authStepEmail').classList.add('hidden');
+    document.getElementById('authStepPassword').classList.add('hidden');
     document.getElementById('authStepSent').classList.remove('hidden');
   } catch (e) {
-    authShowError(e.message || 'Gagal mengirim link. Coba lagi.');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Kirim link login';
+    var msg = e.message || 'Gagal mengirim link.';
+    // The built-in mailer allows only a couple of messages per hour.
+    if (/rate limit|too many/i.test(msg)) {
+      msg = 'Batas kirim email Supabase tercapai (2 per jam). Pakai password saja — tidak perlu email sama sekali.';
+    }
+    authShowError(msg);
   }
 }
 
