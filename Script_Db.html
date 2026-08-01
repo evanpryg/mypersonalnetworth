@@ -567,6 +567,37 @@ var DB_API = {
     });
     var prevNetWorth=0; accounts.forEach(function(acc){if(acc.showOnDashboard) prevNetWorth+=prevBalances[acc.name]||0;});
 
+    // Real net worth at the close of each of the last 6 months, for the
+    // sparkline. It used to plot day-by-day within the current month, which
+    // on the 1st leaves a single point — and the fallback then invented a
+    // rising line out of nothing. One pass over date-sorted transactions,
+    // snapshotting at each month end.
+    var monthEnds=[];
+    for(var mi=5;mi>=0;mi--){
+      var me=new Date(now.getFullYear(), now.getMonth()-mi+1, 0);
+      monthEnds.push(me.getFullYear()+'-'+String(me.getMonth()+1).padStart(2,'0')+'-'+String(me.getDate()).padStart(2,'0'));
+    }
+    var running={}; accounts.forEach(function(acc){running[acc.name]=acc.initialBalance;});
+    // mmGetTransactions orders by insertion, not by date — a backdated entry
+    // would land out of order, so sort explicitly before walking.
+    var ascending=allTransactions.slice().sort(function(a,b){return a.date<b.date?-1:(a.date>b.date?1:0);});
+    var cursor=0, netWorthTrend=[];
+    monthEnds.forEach(function(cutoff){
+      while(cursor<ascending.length && ascending[cursor].date<=cutoff){
+        var tx=ascending[cursor];
+        var an=findExactAccountName(tx.account), atn=findExactAccountName(tx.accountTo);
+        if(tx.type==='Income'){ if(an) running[an]=(running[an]||0)+tx.amount; }
+        else if(tx.type==='Expense'){ if(an) running[an]=(running[an]||0)-tx.amount; }
+        else if(tx.type==='Transfer'){
+          if(an) running[an]=(running[an]||0)-tx.amount;
+          if(atn) running[atn]=(running[atn]||0)+tx.amount;
+        }
+        cursor++;
+      }
+      var snapshot=0; accounts.forEach(function(acc){if(acc.showOnDashboard) snapshot+=running[acc.name]||0;});
+      netWorthTrend.push({month:cutoff.slice(0,7), netWorth:snapshot});
+    });
+
     var monthTransactions=allTransactions.filter(function(tx){return tx.date>=monthStartStr;});
     var totalIncome=0,totalExpense=0,categoryExpenses={};
     allocation.forEach(function(a){categoryExpenses[a.category]=0;});
@@ -577,7 +608,7 @@ var DB_API = {
     });
     var saving=totalIncome-totalExpense;
     var allocationCards=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.min(spent/target,1):0;return{category:a.category,percent:a.percent,icon:a.icon,color:a.color,spent:spent,target:target,progress:progress};});
-    return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,prevNetWorth:prevNetWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
+    return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,prevNetWorth:prevNetWorth,netWorthTrend:netWorthTrend,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
   },
 
   // Years whose detail has been archived live in mm_summary instead of

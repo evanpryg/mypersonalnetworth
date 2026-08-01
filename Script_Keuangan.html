@@ -151,30 +151,15 @@ function mmRenderSparkline(data) {
   const h = canvas.height = canvas.offsetHeight * 2;
   ctx.clearRect(0, 0, w, h);
 
-  // Generate sparkline data from daily transaction sums
-  const txs = (data && data.monthTransactions) || [];
-  const dayMap = {};
-  txs.forEach(tx => {
-    if (!tx.date) return;
-    const d = new Date(tx.date).getDate();
-    if (!dayMap[d]) dayMap[d] = 0;
-    if (tx.type === 'Income') dayMap[d] += tx.amount;
-    if (tx.type === 'Expense') dayMap[d] -= tx.amount;
-  });
-
-  const today = new Date().getDate();
-  let cumulative = data.netWorth - Object.values(dayMap).reduce((s, v) => s + v, 0);
-  const points = [];
-  for (let d = 1; d <= today; d++) {
-    cumulative += (dayMap[d] || 0);
-    points.push(cumulative);
-  }
-
+  // Month-end net worth for the last 6 months, computed in mmGetDashboard.
+  // Never fabricate a shape: if there is not enough history to draw a real
+  // line, draw nothing rather than an invented upward slope.
+  const points = ((data && data.netWorthTrend) || []).map(p => p.netWorth);
   if (points.length < 2) {
-    // Draw a simple upward line
-    points.length = 0;
-    for (let i = 0; i < 10; i++) points.push(data.netWorth * (0.85 + 0.15 * (i / 9)));
+    canvas.style.display = 'none';
+    return;
   }
+  canvas.style.display = '';
 
   const min = Math.min(...points);
   const max = Math.max(...points);
@@ -449,7 +434,9 @@ function mmRenderDonut(entries, total, type) {
               formatter: function(w) {
                 const t = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
                 if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••';
-                return 'Rp' + t.toLocaleString('id-ID');
+                // Full precision does not fit inside a donut this small on a
+                // phone — it crowds the ring. Compact form, with a space.
+                return 'Rp ' + mmFormatShort(t);
               }
             }
           }
@@ -999,9 +986,12 @@ function mmRenderTransactionList(transactions) {
 /* === CALENDAR HELPERS === */
 function mmFormatShort(value) {
   const abs = Math.abs(value);
-  if (abs >= 1000000000) return (value / 1000000000).toFixed(1) + ' M';
-  if (abs >= 1000000) return (value / 1000000).toFixed(1) + ' jt';
-  if (abs >= 1000) return (value / 1000).toFixed(1) + ' rb';
+  // toFixed gives "2.7", but everything else on screen uses id-ID where a dot
+  // is the thousands separator — "2.7 jt" reads as 27 million. Use a comma.
+  const dec = (v) => v.toFixed(1).replace('.', ',');
+  if (abs >= 1000000000) return dec(value / 1000000000) + ' M';
+  if (abs >= 1000000) return dec(value / 1000000) + ' jt';
+  if (abs >= 1000) return dec(value / 1000) + ' rb';
   return String(value);
 }
 
