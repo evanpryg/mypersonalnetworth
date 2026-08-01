@@ -4932,11 +4932,38 @@ function formatTimestampForClient_(value) {
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
 }
 
+// PostgREST caps a single response at 1000 rows, so getRows_ pages through
+// with .range(). Each page needs a stable sort or rows can repeat/vanish
+// between pages — this maps every table to its primary key.
+var PAGE_ORDER_KEY = {
+  'targets': 'targetid',
+  'transactions': 'id',
+  'portfolio': 'platform,sector,asset',
+  'settings': 'id',
+  'allocation_targets': 'sector',
+  'mm_accounts': 'accountid',
+  'mm_transactions': 'id',
+  'mm_categories': 'id',
+  'mm_allocation': 'category'
+};
+var PAGE_SIZE = 1000;
+
 // Get raw rows from Supabase (auto-mapped to frontend keys)
 async function getRows_(tableName) {
   if (!_sb) throw new Error("Supabase is not initialized.");
-  var { data, error } = await _sb.from(tableName.toLowerCase()).select('*');
-  if (error) { console.error('Error reading ' + tableName + ':', error); throw error; }
+  var table = tableName.toLowerCase();
+  var orderKey = PAGE_ORDER_KEY[table];
+  var data = [];
+  for (var from = 0; ; from += PAGE_SIZE) {
+    var query = _sb.from(table).select('*');
+    if (orderKey) {
+      orderKey.split(',').forEach(function(col) { query = query.order(col, { ascending: true }); });
+    }
+    var page = await query.range(from, from + PAGE_SIZE - 1);
+    if (page.error) { console.error('Error reading ' + tableName + ':', page.error); throw page.error; }
+    data = data.concat(page.data);
+    if (page.data.length < PAGE_SIZE) break;
+  }
   var mappedData = data.map(mapRowToFrontend);
   var dateFields = ['Timestamp', 'Date', 'StartDate'];
   mappedData.forEach(function(row) {
