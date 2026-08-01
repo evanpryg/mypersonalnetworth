@@ -4374,7 +4374,7 @@ select.form-input:focus {
             <div class="mm-dashboard-header">
               <div class="mm-header-left">
                 <p class="mm-greeting" id="mmGreeting">Good morning,</p>
-                <h2 class="mm-user-name" id="mmUserName">User 🌿</h2>
+                <h2 class="mm-user-name" id="mmUserName">Mr Evan 🌿</h2>
                 <p class="mm-date-display" id="mmDateDisplay">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                   <span id="mmDateText"></span> ▾
@@ -7804,8 +7804,8 @@ function mmRenderDashboard(data) {
   else if (hour < 17) greeting = 'Good afternoon,';
   setText('mmGreeting', greeting);
 
-  // User name
-  const savedName = localStorage.getItem('mm_user_name') || 'User 🌿';
+  // User name — safeStorage so a browser that blocks storage still renders.
+  const savedName = safeStorage.getItem('mm_user_name') || 'Mr Evan 🌿';
   setText('mmUserName', savedName);
 
   // Date display
