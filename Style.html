@@ -196,6 +196,19 @@ body {
   right: 16px;
   bottom: calc(var(--tab-height) + var(--safe-bottom) + 16px);
   z-index: 110;
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
+}
+
+/* Scrolling down: get out of the way of the content being read. */
+.fab-container.fab-tucked {
+  transform: translateY(calc(100% + var(--tab-height) + 24px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab-container { transition: opacity 0.2s; }
+  .fab-container.fab-tucked { transform: none; }
 }
 
 .fab-btn {
