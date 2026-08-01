@@ -91,8 +91,8 @@ function mmRenderDashboard(data) {
   else if (hour < 17) greeting = 'Good afternoon,';
   setText('mmGreeting', greeting);
 
-  // User name
-  const savedName = localStorage.getItem('mm_user_name') || 'User 🌿';
+  // User name — safeStorage so a browser that blocks storage still renders.
+  const savedName = safeStorage.getItem('mm_user_name') || 'Mr Evan 🌿';
   setText('mmUserName', savedName);
 
   // Date display
