@@ -1460,7 +1460,9 @@ select.form-input:focus {
    ============================================================ */
 @media (min-width: 769px) {
   .main-content {
-    padding: 32px 32px 40px;
+    /* Bottom value must keep clearing the tab bar and the FAB, same as the
+       base rule — only the horizontal padding changes at this width. */
+    padding: 32px 32px calc(var(--tab-height) + var(--safe-bottom) + 88px);
   }
 
   .sector-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
