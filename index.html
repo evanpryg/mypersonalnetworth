@@ -985,6 +985,38 @@
   <!-- ===== TOAST ===== -->
   <div id="toast" class="toast hidden"></div>
 
+  <!-- ===== LOGIN GATE =====
+       Only shown when the database refuses anonymous reads, i.e. once RLS is
+       switched on. Before that the app runs exactly as before. -->
+  <div id="authGate" class="auth-gate hidden">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="auth-logo">💰</span>
+        <div>
+          <h1 class="auth-title">Money Management</h1>
+          <p class="auth-subtitle">Personal Finance</p>
+        </div>
+      </div>
+
+      <div id="authStepEmail">
+        <p class="auth-lead">Masuk untuk membuka datamu. Link login dikirim ke email — tidak ada password yang perlu diingat.</p>
+        <form onsubmit="authSendMagicLink(event)">
+          <label class="auth-label" for="authEmail">Email</label>
+          <input type="email" id="authEmail" class="auth-input" placeholder="nama@email.com" required autocomplete="email">
+          <button type="submit" class="btn-primary btn-full" id="authSendBtn" style="margin-top:14px;">Kirim link login</button>
+        </form>
+      </div>
+
+      <div id="authStepSent" class="hidden">
+        <p class="auth-lead">Link login sudah dikirim ke <strong id="authSentTo"></strong>.</p>
+        <p class="auth-hint">Buka email itu di perangkat ini, klik link-nya, dan kamu akan langsung masuk. Link berlaku 1 jam.</p>
+        <button type="button" class="btn-ghost btn-full" onclick="authResetStep()" style="margin-top:14px;">Pakai email lain</button>
+      </div>
+
+      <p class="auth-error hidden" id="authError"></p>
+    </div>
+  </div>
+
   <script>
     (function() {
       var meta = document.querySelector('meta[name="viewport"]');

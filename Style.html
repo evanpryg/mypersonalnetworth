@@ -278,6 +278,93 @@ body {
   animation: fadeIn 0.2s ease;
 }
 
+/* === LOGIN GATE === */
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: var(--bg, #09090b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 28px 24px;
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.auth-logo { font-size: 30px; line-height: 1; }
+.auth-title { font-size: 18px; font-weight: 700; }
+
+.auth-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.auth-lead {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+}
+
+.auth-lead strong { color: var(--text); }
+
+.auth-hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.auth-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.auth-error {
+  margin-top: 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--error);
+}
+
 /* === PROGRESS HERO === */
 .progress-hero {
   background: var(--bg-card);

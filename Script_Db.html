@@ -881,7 +881,11 @@ function initSupabaseClient() {
   if (creds.url && creds.key) {
     _sb = window.supabase.createClient(creds.url, creds.key, {
       auth: {
-        persistSession: false
+        // Keep the session so the magic link only has to be used once, and
+        // let the client pick the token out of the redirect URL.
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
       }
     });
     window.supabaseConnected = true;
@@ -919,11 +923,127 @@ function injectSupabaseSettingsCard() {
   if (headerCard) headerCard.insertAdjacentHTML('afterend', cardHtml);
 }
 
+// ============================================================
+// AUTH — magic link
+// ============================================================
+// The anon key ships inside this page, so it is not a secret. What keeps the
+// data private is row level security: once migration 002 is applied, the
+// database only answers requests carrying a logged-in user's token.
+//
+// The gate is driven by what the database actually allows, never by a flag in
+// the client. If anonymous reads still work, RLS is not on yet and the app
+// behaves exactly as it always has — so deploying this can never lock anyone
+// out before the migration is run.
+
+var AUTH_USER = null;
+
+async function authCurrentUser() {
+  if (!_sb) return null;
+  try {
+    var { data } = await _sb.auth.getSession();
+    return data && data.session ? data.session.user : null;
+  } catch (e) { return null; }
+}
+
+// Can we read anything without a session? Distinguishes "RLS off" from
+// "RLS on and we are not logged in".
+async function authAnonymousReadWorks() {
+  try {
+    var res = await _sb.from('mm_accounts').select('accountid').limit(1);
+    return !res.error;
+  } catch (e) { return false; }
+}
+
+function authShowGate(show) {
+  var gate = document.getElementById('authGate');
+  if (gate) gate.classList.toggle('hidden', !show);
+}
+
+function authResetStep() {
+  document.getElementById('authStepEmail').classList.remove('hidden');
+  document.getElementById('authStepSent').classList.add('hidden');
+  document.getElementById('authError').classList.add('hidden');
+}
+
+function authShowError(message) {
+  var el = document.getElementById('authError');
+  if (!el) return;
+  el.textContent = message;
+  el.classList.remove('hidden');
+}
+
+async function authSendMagicLink(event) {
+  event.preventDefault();
+  var email = document.getElementById('authEmail').value.trim();
+  var btn = document.getElementById('authSendBtn');
+  if (!email) return;
+  btn.disabled = true;
+  btn.textContent = 'Mengirim...';
+  document.getElementById('authError').classList.add('hidden');
+  try {
+    // Come back to this exact page; Supabase must have this URL in its
+    // allow-list (Authentication -> URL Configuration -> Redirect URLs).
+    var redirectTo = window.location.origin + window.location.pathname;
+    var { error } = await _sb.auth.signInWithOtp({
+      email: email,
+      options: { emailRedirectTo: redirectTo }
+    });
+    if (error) throw error;
+    document.getElementById('authSentTo').textContent = email;
+    document.getElementById('authStepEmail').classList.add('hidden');
+    document.getElementById('authStepSent').classList.remove('hidden');
+  } catch (e) {
+    authShowError(e.message || 'Gagal mengirim link. Coba lagi.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Kirim link login';
+  }
+}
+
+async function authSignOut() {
+  if (!_sb) return;
+  await _sb.auth.signOut();
+  window.location.reload();
+}
+
+function injectAuthSettingsCard() {
+  var settingsPage = document.getElementById('mmSettingsPage') || document.getElementById('settingsPage');
+  if (!settingsPage || document.getElementById('authAccountCard')) return;
+  var who = AUTH_USER ? AUTH_USER.email : 'Belum login';
+  var action = AUTH_USER
+    ? '<button class="btn-ghost" type="button" onclick="authSignOut()" style="color:var(--error);border-color:var(--error);">Logout</button>'
+    : '<button class="btn-primary" type="button" onclick="authShowGate(true)">Login</button>';
+  var card = '<section class="panel-card" id="authAccountCard"><div class="panel-body" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">'
+    + '<div><p class="panel-eyebrow">Akun</p><h3 class="panel-title" style="font-size:14px;">' + escapeHtml(who) + '</h3></div>'
+    + action + '</div></section>';
+  var headerCard = settingsPage.querySelector('.page-header-card');
+  if (headerCard) headerCard.insertAdjacentHTML('afterend', card);
+  else settingsPage.insertAdjacentHTML('afterbegin', card);
+}
+
 // BOOTSTRAPPER — runs immediately
 (function() {
-  function boot() {
+  async function boot() {
     initSupabaseClient();
+
+    if (_sb) {
+      AUTH_USER = await authCurrentUser();
+      if (!AUTH_USER && !(await authAnonymousReadWorks())) {
+        // Database is locked down and we have no session: nothing will load,
+        // so ask for a login instead of showing a broken dashboard.
+        authShowGate(true);
+        setTimeout(injectAuthSettingsCard, 300);
+        return;
+      }
+      authShowGate(false);
+      // Signing in or out mid-session should re-read everything.
+      _sb.auth.onAuthStateChange(function(event) {
+        if (event === 'SIGNED_IN' && !AUTH_USER) window.location.reload();
+      });
+    }
+
     setTimeout(injectSupabaseSettingsCard, 300);
+    setTimeout(injectAuthSettingsCard, 300);
     if (typeof initApp === 'function') {
       initApp();
     }
