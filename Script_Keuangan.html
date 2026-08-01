@@ -28,6 +28,55 @@ function mmShowPage(pageId) {
   if (pageId === 'mmInsightPage') loadFinancialInsight();
 }
 
+/* === COUNT UP ===
+   The headline figure counts up on arrival instead of snapping into place.
+   Only when the value actually changed — re-rendering from cache should not
+   replay it — and never while amounts are hidden or motion is reduced. */
+const MM_COUNTED = {};
+
+function mmCountUp(elId, value) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+
+  const hidden = typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN;
+  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const from = MM_COUNTED[elId];
+  MM_COUNTED[elId] = value;
+
+  if (hidden || reduced || from === value) {
+    el.textContent = mmFormatIDR(value);
+    return;
+  }
+
+  // First paint counts from zero; later updates ease from the old figure so
+  // the change itself is what you see.
+  const start = (from === undefined) ? 0 : from;
+  const t0 = performance.now();
+  const duration = 550;
+
+  function frame(now) {
+    // Another render may have superseded this one.
+    if (MM_COUNTED[elId] !== value) return;
+    const p = Math.min((now - t0) / duration, 1);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = mmFormatIDR(Math.round(start + (value - start) * eased));
+    if (p < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* === EMPTY STATES ===
+   The start of a month legitimately has no data. A bare "No data" line reads
+   like something broke; give it a shape and point at the next action. */
+function mmEmpty(icon, title, hint, action) {
+  return '<div class="mm-empty">'
+    + '<span class="mm-empty-icon">' + lucideIconSvg(icon, 22) + '</span>'
+    + '<span class="mm-empty-title">' + escapeHtml(title) + '</span>'
+    + (hint ? '<span class="mm-empty-hint">' + escapeHtml(hint) + '</span>' : '')
+    + (action || '')
+    + '</div>';
+}
+
 /* === FAB AUTO-HIDE ===
    Bottom padding keeps the FAB clear of the last card, but mid-scroll it still
    floats over whatever is beneath it — often a transaction amount. Tuck it
@@ -151,7 +200,7 @@ function mmRenderDashboard(data) {
   setText('mmDateText', now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear());
 
   // Net worth
-  setText('mmNetWorthValue', mmFormatIDR(data.netWorth));
+  mmCountUp('mmNetWorthValue', data.netWorth);
 
   // Change badge
   const badge = document.getElementById('mmChangeBadge');
@@ -252,7 +301,7 @@ function mmRenderAccountCards(accounts) {
 
   const visible = accounts.filter(a => a.showOnDashboard);
   if (!visible.length) {
-    container.innerHTML = '<div class="empty-state">No accounts yet. Add one in Settings.</div>';
+    container.innerHTML = mmEmpty('wallet', 'Belum ada akun', 'Tambahkan rekening atau dompet di Settings supaya saldonya ikut terhitung.');
     return;
   }
 
@@ -375,7 +424,7 @@ function mmRenderChart(type) {
   if (!donutEl || !listEl) return;
 
   if (!MM_DASHBOARD) {
-    donutEl.innerHTML = '<div class="empty-state">No data yet.</div>';
+    donutEl.innerHTML = mmEmpty('circle-dollar', 'Belum ada data', 'Grafik muncul setelah ada transaksi tercatat.');
     listEl.innerHTML = '';
     return;
   }
@@ -403,7 +452,7 @@ function mmRenderChart(type) {
   }
 
   if (total <= 0) {
-    donutEl.innerHTML = '<div class="empty-state">No data this month.</div>';
+    donutEl.innerHTML = mmEmpty('circle-dollar', 'Bulan ini masih kosong', 'Catat transaksi pertama bulan ini, grafiknya langsung terisi.', '<button class="mm-empty-action" onclick="mmShowActionSheet('expense')">Catat pengeluaran</button>');
     listEl.innerHTML = '';
     return;
   }
@@ -574,7 +623,7 @@ function mmRenderDashboardTransactions() {
 
   const txs = (MM_DASHBOARD && MM_DASHBOARD.monthTransactions) || [];
   if (!txs.length) {
-    container.innerHTML = '<div class="empty-state">No transactions this month.</div>';
+    container.innerHTML = mmEmpty('arrow-right-left', 'Belum ada transaksi bulan ini', 'Mulai dari yang barusan kamu belanjakan.', '<button class="mm-empty-action" onclick="mmShowActionSheet('expense')">Catat pengeluaran</button>');
     return;
   }
 
@@ -789,7 +838,7 @@ function mmLoadAllTime() {
 
 function mmRenderAllTime(data, container) {
   if (!data || !data.length) {
-    container.innerHTML = '<div class="empty-state">No transaction history yet.</div>';
+    container.innerHTML = mmEmpty('clock', 'Riwayat masih kosong', 'Semua transaksi yang kamu catat akan tampil di sini.');
     return;
   }
 
@@ -1635,7 +1684,8 @@ function lucideIconSvg(name, size) {
     'life-buoy': '<circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/>',
     'pencil': '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
     'trash': '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
-    'circle-dollar': '<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>'
+    'circle-dollar': '<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>',
+    'clock': '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'
   };
 
   const inner = paths[name] || '<circle cx="12" cy="12" r="4"/>';
