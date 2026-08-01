@@ -218,6 +218,19 @@ body {
   right: 16px;
   bottom: calc(var(--tab-height) + var(--safe-bottom) + 16px);
   z-index: 110;
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
+}
+
+/* Scrolling down: get out of the way of the content being read. */
+.fab-container.fab-tucked {
+  transform: translateY(calc(100% + var(--tab-height) + 24px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab-container { transition: opacity 0.2s; }
+  .fab-container.fab-tucked { transform: none; }
 }
 
 .fab-btn {
@@ -8015,6 +8028,36 @@ function mmShowPage(pageId) {
   if (pageId === 'mmSettingsPage' && !document.getElementById('mmSettingsAccountsList').innerHTML.includes('mm-settings-acc-row')) mmLoadSettings();
   if (pageId === 'mmInsightPage') loadFinancialInsight();
 }
+
+/* === FAB AUTO-HIDE ===
+   Bottom padding keeps the FAB clear of the last card, but mid-scroll it still
+   floats over whatever is beneath it — often a transaction amount. Tuck it
+   away while scrolling down and bring it back on the way up, which is also
+   when the user is more likely to want it. */
+(function () {
+  let lastY = 0;
+  let ticking = false;
+
+  function update() {
+    ticking = false;
+    const y = window.scrollY;
+    const containers = document.querySelectorAll('.fab-container');
+    // Ignore small jitters, and never hide near the top of the page.
+    if (Math.abs(y - lastY) < 8) return;
+    const hide = y > lastY && y > 120;
+    containers.forEach(c => {
+      // Leave it alone while its menu is open.
+      const menu = c.querySelector('.fab-menu');
+      if (menu && menu.classList.contains('open')) return;
+      c.classList.toggle('fab-tucked', hide);
+    });
+    lastY = y;
+  }
+
+  window.addEventListener('scroll', () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(update); }
+  }, { passive: true });
+})();
 
 /* === SKELETONS ===
    Placeholders shaped like the content they stand in for, so the layout does
