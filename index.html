@@ -3085,6 +3085,104 @@ select.form-input:focus {
   font-weight: 600;
 }
 
+/* Year over year */
+.insight-yoy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.insight-yoy-row {
+  background: rgba(255,255,255,0.03);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.insight-yoy-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.insight-yoy-year { font-size: 18px; font-weight: 700; }
+
+.insight-yoy-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.insight-yoy-bars { display: flex; flex-direction: column; gap: 6px; }
+
+.insight-yoy-bar-line {
+  display: grid;
+  grid-template-columns: 44px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.insight-yoy-bar-label { font-size: 11px; color: var(--text-muted); }
+
+.insight-yoy-track {
+  height: 8px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+
+.insight-yoy-fill { height: 100%; border-radius: 99px; }
+.insight-yoy-fill.income  { background: var(--success); }
+.insight-yoy-fill.expense { background: var(--error); }
+
+.insight-yoy-amt {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.insight-yoy-growth { font-size: 11px; font-weight: 600; min-width: 42px; text-align: right; }
+.insight-yoy-growth.muted { color: var(--text-muted); }
+
+.insight-yoy-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.insight-yoy-avg { margin-left: auto; }
+
+.insight-yoy-cats { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.insight-yoy-cat {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-muted);
+}
+
+.insight-yoy-note {
+  margin-top: 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+@media (max-width: 480px) {
+  .insight-yoy-bar-line { grid-template-columns: 40px 1fr auto; }
+  .insight-yoy-growth { grid-column: 3; text-align: right; }
+  .insight-yoy-avg { margin-left: 0; }
+}
+
 /* Key Insights */
 .insight-list {
   display: flex;
@@ -4854,6 +4952,9 @@ var safeStorage = {
 // The active Supabase client instance
 var _sb = null;
 
+// Archived-year summaries never change during a session, so read them once.
+var _summaryCache = null;
+
 function getSupabaseCredentials() {
   var url = HARDCODED_SUPABASE_URL || safeStorage.getItem('supabase_url') || '';
   var key = HARDCODED_SUPABASE_KEY || safeStorage.getItem('supabase_key') || '';
@@ -5395,21 +5496,120 @@ var DB_API = {
     return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
   },
 
+  // Years whose detail has been archived live in mm_summary instead of
+  // mm_transactions: one row per month/type/category/subcategory. Anything
+  // reading history has to look in both places or archived years vanish.
+  async mmGetSummaryRows() {
+    if (_summaryCache) return _summaryCache;
+    var res = await _sb.from('mm_summary').select('*');
+    if (res.error) {
+      // Table not created yet (migration 001 not run) — behave exactly as
+      // before instead of breaking History and Insight. PGRST205 is
+      // PostgREST's "table not in schema cache".
+      if (res.error.code === 'PGRST205' || /mm_summary/.test(res.error.message || '')) {
+        _summaryCache = [];
+        return _summaryCache;
+      }
+      throw res.error;
+    }
+    _summaryCache = (res.data || []).map(function(r){
+      return { year:Number(r.period_year), month:Number(r.period_month), type:normalize_(r.type),
+               category:normalize_(r.category), subcategory:normalize_(r.subcategory),
+               amount:toNumber_(r.amount), txCount:Number(r.tx_count)||0 };
+    });
+    return _summaryCache;
+  },
+
+  // Which months exist only as a summary — used to tell the UI that a month
+  // has no drill-down available.
+  async mmGetArchivedMonths() {
+    var rows = await this.mmGetSummaryRows(), keys = {};
+    rows.forEach(function(r){ keys[r.year+'-'+String(r.month).padStart(2,'0')] = true; });
+    return Object.keys(keys).sort();
+  },
+
   async mmGetMonthlySummary(year,month) {
     var startDate=year+'-'+String(month).padStart(2,'0')+'-01',endDay=new Date(year,month,0).getDate(),endDate=year+'-'+String(month).padStart(2,'0')+'-'+String(endDay).padStart(2,'0');
     var transactions=await this.mmGetTransactions({startDate:startDate,endDate:endDate});
     var totalIncome=0,totalExpense=0,categoryBreakdown={};
+    function addExpense(cat,sub,amount){
+      cat=cat||'Other'; sub=sub||'General';
+      if(!categoryBreakdown[cat]) categoryBreakdown[cat]={total:0,subs:{}};
+      categoryBreakdown[cat].total+=amount;
+      if(!categoryBreakdown[cat].subs[sub]) categoryBreakdown[cat].subs[sub]=0;
+      categoryBreakdown[cat].subs[sub]+=amount;
+    }
     transactions.forEach(function(tx){
       if(tx.type==='Income') totalIncome+=tx.amount;
-      if(tx.type==='Expense'){totalExpense+=tx.amount;var cat=tx.category||'Other',sub=tx.subcategory||'General';if(!categoryBreakdown[cat]) categoryBreakdown[cat]={total:0,subs:{}};categoryBreakdown[cat].total+=tx.amount;if(!categoryBreakdown[cat].subs[sub]) categoryBreakdown[cat].subs[sub]=0;categoryBreakdown[cat].subs[sub]+=tx.amount;}
+      if(tx.type==='Expense'){totalExpense+=tx.amount;addExpense(tx.category,tx.subcategory,tx.amount);}
     });
-    return {totalIncome:totalIncome,totalExpense:totalExpense,saving:totalIncome-totalExpense,categoryBreakdown:categoryBreakdown,transactions:transactions};
+    // Archived month: no rows above, so fold the summary in instead.
+    var summary=(await this.mmGetSummaryRows()).filter(function(r){return r.year===Number(year)&&r.month===Number(month);});
+    summary.forEach(function(r){
+      if(r.type==='Income') totalIncome+=r.amount;
+      if(r.type==='Expense'){totalExpense+=r.amount;addExpense(r.category,r.subcategory,r.amount);}
+    });
+    return {totalIncome:totalIncome,totalExpense:totalExpense,saving:totalIncome-totalExpense,
+            categoryBreakdown:categoryBreakdown,transactions:transactions,
+            archived:summary.length>0&&transactions.length===0};
   },
 
   async mmGetAllTimeSummary() {
     var transactions=await this.mmGetTransactions({}),monthly={};
-    transactions.forEach(function(tx){var d=new Date(tx.date);if(isNaN(d.getTime()))return;var k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');if(!monthly[k])monthly[k]={income:0,expense:0};if(tx.type==='Income')monthly[k].income+=tx.amount;if(tx.type==='Expense')monthly[k].expense+=tx.amount;});
-    return Object.entries(monthly).sort(function(a,b){return a[0].localeCompare(b[0]);}).map(function(e){return{month:e[0],income:e[1].income,expense:e[1].expense,saving:e[1].income-e[1].expense};});
+    function bucket(k){ if(!monthly[k]) monthly[k]={income:0,expense:0,archived:false}; return monthly[k]; }
+    transactions.forEach(function(tx){var d=new Date(tx.date);if(isNaN(d.getTime()))return;var b=bucket(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));if(tx.type==='Income')b.income+=tx.amount;if(tx.type==='Expense')b.expense+=tx.amount;});
+    (await this.mmGetSummaryRows()).forEach(function(r){
+      var b=bucket(r.year+'-'+String(r.month).padStart(2,'0'));
+      b.archived=true;
+      if(r.type==='Income') b.income+=r.amount;
+      if(r.type==='Expense') b.expense+=r.amount;
+    });
+    return Object.entries(monthly).sort(function(a,b){return a[0].localeCompare(b[0]);}).map(function(e){return{month:e[0],income:e[1].income,expense:e[1].expense,saving:e[1].income-e[1].expense,archived:e[1].archived};});
+  },
+
+  // Year-over-year view: how the finances moved from one year to the next,
+  // spanning archived and live years alike.
+  async mmGetYearlySummary() {
+    var years={};
+    function bucket(y){ if(!years[y]) years[y]={year:Number(y),income:0,expense:0,categories:{},months:{},hasLive:false,hasSummary:false}; return years[y]; }
+    function addCat(b,cat,amount){ cat=cat||'Other'; b.categories[cat]=(b.categories[cat]||0)+amount; }
+
+    (await this.mmGetTransactions({})).forEach(function(tx){
+      if(!tx.date) return;
+      var b=bucket(tx.date.slice(0,4));
+      b.hasLive=true;
+      b.months[tx.date.slice(0,7)]=true;
+      if(tx.type==='Income') b.income+=tx.amount;
+      if(tx.type==='Expense'){ b.expense+=tx.amount; addCat(b,tx.category,tx.amount); }
+    });
+    (await this.mmGetSummaryRows()).forEach(function(r){
+      var b=bucket(r.year);
+      b.hasSummary=true;
+      b.months[r.year+'-'+String(r.month).padStart(2,'0')]=true;
+      if(r.type==='Income') b.income+=r.amount;
+      if(r.type==='Expense'){ b.expense+=r.amount; addCat(b,r.category,r.amount); }
+    });
+
+    var list=Object.values(years).sort(function(a,b){return a.year-b.year;});
+    return list.map(function(y,i){
+      var prev=list[i-1];
+      var saving=y.income-y.expense;
+      var monthCount=Object.keys(y.months).length;
+      return {
+        year:y.year, income:y.income, expense:y.expense, saving:saving,
+        savingRate: y.income>0 ? (saving/y.income)*100 : 0,
+        monthCount: monthCount,
+        avgMonthlyIncome: monthCount ? y.income/monthCount : 0,
+        avgMonthlyExpense: monthCount ? y.expense/monthCount : 0,
+        categories: Object.entries(y.categories).sort(function(a,b){return b[1]-a[1];}).map(function(e){return{category:e[0],amount:e[1],percent:y.expense>0?(e[1]/y.expense)*100:0};}),
+        // Summary-only year: totals are trustworthy, but there is no detail to open.
+        archived: y.hasSummary && !y.hasLive,
+        // Growth against the previous year, normalised per month so a partial
+        // year (2025 starts in July) is not compared unfairly against a full one.
+        incomeGrowth: prev && prev.income>0 ? ((y.income/Math.max(monthCount,1)) / (prev.income/Math.max(Object.keys(prev.months).length,1)) - 1) * 100 : null,
+        expenseGrowth: prev && prev.expense>0 ? ((y.expense/Math.max(monthCount,1)) / (prev.expense/Math.max(Object.keys(prev.months).length,1)) - 1) * 100 : null
+      };
+    });
   },
 
   async mmGetCalendarData(year,month) {
@@ -5504,7 +5704,8 @@ var DB_API = {
     });
     var nwValues=Object.values(monthlyNW),isNetWorthHighest=nwValues.length>0&&netWorth>=Math.max.apply(null,nwValues);
     var budgetMetMonths=0;for(var i=1;i<=6;i++){var m=new Date(currentYear,currentMonth-1-i,1);var h=monthlyHistory.find(function(mh){return mh.month===m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0');});if(h&&h.saving>=0)budgetMetMonths++;}
-    return{currentMonth:currentMonth,currentYear:currentYear,dayOfMonth:dayOfMonth,daysInMonth:daysInMonth,netWorth:netWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,savingRate:savingRate,prevIncome:prevIncome,prevExpense:prevExpense,prevSaving:prevSaving,prevSavingRate:prevSavingRate,budgetAnalysis:budgetAnalysis,spendingByCategory:spendingByCategory,monthlyHistory:monthlyHistory,investmentData:investmentData,prediction:{income:predictedIncome,expense:predictedExpense,saving:predictedSaving,netWorth:predictedNetWorth},streak:streak,isNetWorthHighest:isNetWorthHighest,budgetMetMonths:budgetMetMonths};
+    var yearlySummary=await this.mmGetYearlySummary();
+    return{yearlySummary:yearlySummary,currentMonth:currentMonth,currentYear:currentYear,dayOfMonth:dayOfMonth,daysInMonth:daysInMonth,netWorth:netWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,savingRate:savingRate,prevIncome:prevIncome,prevExpense:prevExpense,prevSaving:prevSaving,prevSavingRate:prevSavingRate,budgetAnalysis:budgetAnalysis,spendingByCategory:spendingByCategory,monthlyHistory:monthlyHistory,investmentData:investmentData,prediction:{income:predictedIncome,expense:predictedExpense,saving:predictedSaving,netWorth:predictedNetWorth},streak:streak,isNetWorthHighest:isNetWorthHighest,budgetMetMonths:budgetMetMonths};
   },
 
   // EXPORT / IMPORT / DELETE
@@ -9179,6 +9380,9 @@ function renderFinancialInsight(data) {
   // 2. Monthly Summary
   html += renderMonthlySummary(data);
 
+  // 2b. Year over year — spans archived years, whose detail no longer exists
+  html += renderYearlyProgress(data);
+
   // 3. Key Financial Insights
   html += renderKeyInsights(data);
 
@@ -9332,6 +9536,71 @@ function renderMonthlySummary(data) {
           ${changeIndicator(data.savingRate, data.prevSavingRate)}
         </div>
       </div>
+    </div>`;
+}
+
+/* === 2b. YEAR OVER YEAR ===
+   Reads mmGetYearlySummary, which merges live transactions with archived
+   years held in mm_summary. Years differ in length (2025 only starts in
+   July), so growth is compared per month, not on raw totals. */
+function renderYearlyProgress(data) {
+  const years = data.yearlySummary || [];
+  if (years.length < 1) return '';
+
+  const maxFlow = Math.max(...years.map(y => Math.max(y.income, y.expense)), 1);
+
+  const rows = years.slice().reverse().map(y => {
+    const savingColor = y.saving >= 0 ? 'var(--success)' : 'var(--error)';
+    const growth = (value, invert) => {
+      if (value === null || !isFinite(value)) return '<span class="insight-yoy-growth muted">—</span>';
+      const good = invert ? value < 0 : value > 0;
+      const arrow = value >= 0 ? '↑' : '↓';
+      return `<span class="insight-yoy-growth" style="color:${good ? 'var(--success)' : 'var(--error)'}">${arrow} ${Math.abs(value).toFixed(0)}%</span>`;
+    };
+    const topCats = (y.categories || []).slice(0, 3)
+      .map(c => `<span class="insight-yoy-cat">${escapeHtml(c.category)} ${c.percent.toFixed(0)}%</span>`).join('');
+
+    return `
+      <div class="insight-yoy-row">
+        <div class="insight-yoy-head">
+          <strong class="insight-yoy-year">${y.year}</strong>
+          <span class="insight-yoy-meta">${y.monthCount} bulan${y.archived ? ' · ringkasan' : ''}</span>
+        </div>
+        <div class="insight-yoy-bars">
+          <div class="insight-yoy-bar-line">
+            <span class="insight-yoy-bar-label">Masuk</span>
+            <div class="insight-yoy-track"><div class="insight-yoy-fill income" style="width:${(y.income / maxFlow * 100).toFixed(1)}%"></div></div>
+            <span class="insight-yoy-amt">${insightIDR(y.income)}</span>
+            ${growth(y.incomeGrowth, false)}
+          </div>
+          <div class="insight-yoy-bar-line">
+            <span class="insight-yoy-bar-label">Keluar</span>
+            <div class="insight-yoy-track"><div class="insight-yoy-fill expense" style="width:${(y.expense / maxFlow * 100).toFixed(1)}%"></div></div>
+            <span class="insight-yoy-amt">${insightIDR(y.expense)}</span>
+            ${growth(y.expenseGrowth, true)}
+          </div>
+        </div>
+        <div class="insight-yoy-foot">
+          <span>Sisa <strong style="color:${savingColor}">${insightIDR(y.saving)}</strong></span>
+          <span>Rasio nabung <strong style="color:${y.savingRate >= 20 ? 'var(--success)' : 'var(--warning)'}">${y.savingRate.toFixed(0)}%</strong></span>
+          <span class="insight-yoy-avg">Rata-rata/bln ${insightIDR(y.avgMonthlyExpense)}</span>
+        </div>
+        ${topCats ? `<div class="insight-yoy-cats">${topCats}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  const archivedNote = years.some(y => y.archived)
+    ? '<p class="insight-yoy-note">Tahun bertanda “ringkasan” hanya menyimpan total per kategori — detail transaksinya sudah diarsipkan.</p>'
+    : '';
+
+  return `
+    <div class="insight-card">
+      <div class="insight-card-header">
+        <span class="insight-card-icon">📅</span>
+        <h3 class="insight-card-title">Perkembangan per Tahun</h3>
+      </div>
+      <div class="insight-yoy">${rows}</div>
+      ${archivedNote}
     </div>`;
 }
 
