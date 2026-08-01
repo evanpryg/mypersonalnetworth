@@ -8520,7 +8520,7 @@ function mmRenderChart(type) {
   }
 
   if (total <= 0) {
-    donutEl.innerHTML = mmEmpty('circle-dollar', 'Bulan ini masih kosong', 'Catat transaksi pertama bulan ini, grafiknya langsung terisi.', '<button class="mm-empty-action" onclick="mmShowActionSheet('expense')">Catat pengeluaran</button>');
+    donutEl.innerHTML = mmEmpty('circle-dollar', 'Bulan ini masih kosong', 'Catat transaksi pertama bulan ini, grafiknya langsung terisi.', `<button class="mm-empty-action" onclick="mmShowActionSheet('expense')">Catat pengeluaran</button>`);
     listEl.innerHTML = '';
     return;
   }
@@ -8691,7 +8691,7 @@ function mmRenderDashboardTransactions() {
 
   const txs = (MM_DASHBOARD && MM_DASHBOARD.monthTransactions) || [];
   if (!txs.length) {
-    container.innerHTML = mmEmpty('arrow-right-left', 'Belum ada transaksi bulan ini', 'Mulai dari yang barusan kamu belanjakan.', '<button class="mm-empty-action" onclick="mmShowActionSheet('expense')">Catat pengeluaran</button>');
+    container.innerHTML = mmEmpty('arrow-right-left', 'Belum ada transaksi bulan ini', 'Mulai dari yang barusan kamu belanjakan.', `<button class="mm-empty-action" onclick="mmShowActionSheet('expense')">Catat pengeluaran</button>`);
     return;
   }
 
