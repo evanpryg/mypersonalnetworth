@@ -1131,6 +1131,7 @@ select.form-input:focus {
   width: 100%;
   max-width: 500px;
   max-height: 85vh;
+  max-height: 85dvh;
   overflow-y: auto;
   background: var(--bg-card);
   border-top-left-radius: 24px;
@@ -3585,7 +3586,11 @@ select.form-input:focus {
 
 .tx-input-sheet {
   padding: 16px 20px 32px;
+  /* dvh tracks the visual viewport, so the sheet shrinks when the phone
+     keyboard opens instead of pushing Save underneath it. vh stays as the
+     fallback for browsers without dvh. */
   max-height: 92vh;
+  max-height: 92dvh;
 }
 
 .tx-type-tabs {

@@ -213,7 +213,7 @@
     const platforms = (APP_SETTINGS.Platform || []);
     container.innerHTML = platforms.map(p => {
       const isActive = IV_SELECTED_PLATFORM === p;
-      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent)" onclick="ivSelectPlatform('${escapeHtml(p)}')">${escapeHtml(p)}</button>`;
+      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent)" onclick="ivSelectPlatform('${jsStr(p)}')">${escapeHtml(p)}</button>`;
     }).join('');
   }
 
@@ -230,7 +230,7 @@
     const colors = ['#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#06b6d4'];
     container.innerHTML = sectors.map((s, i) => {
       const isActive = IV_SELECTED_SECTOR === s;
-      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:${colors[i % colors.length]}" onclick="ivSelectSector('${escapeHtml(s)}')">${escapeHtml(s)}</button>`;
+      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:${colors[i % colors.length]}" onclick="ivSelectSector('${jsStr(s)}')">${escapeHtml(s)}</button>`;
     }).join('');
   }
 
@@ -253,7 +253,7 @@
 
       container.innerHTML = filtered.slice(0, 8).map(a => {
         const isActive = IV_SELECTED_ASSET === a.asset;
-        return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${escapeHtml(a.asset)}')">${escapeHtml(a.asset)}</button>`;
+        return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${jsStr(a.asset)}')">${escapeHtml(a.asset)}</button>`;
       }).join('');
       if (customInput) customInput.style.display = 'none';
     } else if (IV_TYPE === 'buy') {
@@ -261,7 +261,7 @@
       const recent = ASSET_OPTIONS.slice(0, 6);
       container.innerHTML = recent.map(a => {
         const isActive = IV_SELECTED_ASSET === a.asset;
-        return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${escapeHtml(a.asset)}')">${escapeHtml(a.asset)}</button>`;
+        return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${jsStr(a.asset)}')">${escapeHtml(a.asset)}</button>`;
       }).join('');
       if (customInput) customInput.style.display = 'block';
     } else {
@@ -1272,6 +1272,15 @@
 
   function escapeHtml(value) {
     return String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+  }
+
+  // For values passed as JS string arguments inside an inline onclick="...".
+  // The browser decodes HTML entities BEFORE the JS parser runs, so escapeHtml
+  // alone is not enough: an apostrophe comes back as ' and terminates the
+  // argument early. Escape for JS first, then for HTML, so the JS parser
+  // receives a backslash-escaped quote.
+  function jsStr(value) {
+    return escapeHtml(String(value ?? '').replaceAll('\\','\\\\').replaceAll("'","\\'"));
   }
 
   function showToast(message, type = 'success') {

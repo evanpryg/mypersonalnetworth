@@ -42,54 +42,6 @@ function mmToggleFab() {
 /* Old mmShowActionSheet, mmCloseActionSheet, mmCloseActionSheetBackdrop
    are now in Script_TxInput.html */
 
-/* === DROPDOWNS === */
-function mmPopulateDropdowns() {
-  const accountOpts = MM_ACCOUNTS.map(a => `<option value="${escapeHtml(a.name)}">${a.icon} ${escapeHtml(a.name)}</option>`).join('');
-  const selectHtml = '<option value="">Select...</option>' + accountOpts;
-
-  ['mmIncomeAccount', 'mmExpenseAccount', 'mmTransferFrom', 'mmTransferTo'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = selectHtml;
-  });
-
-  // Income categories — de-duplicate by category name
-  const incomeCats = [...new Set(
-    MM_CATEGORIES.filter(c => c.type === 'Income').map(c => c.category)
-  )];
-  const incomeEl = document.getElementById('mmIncomeCategory');
-  if (incomeEl) {
-    incomeEl.innerHTML = '<option value="">None</option>' +
-      incomeCats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-  }
-
-  // Expense main categories (allocation categories)
-  const expEl = document.getElementById('mmExpenseCategory');
-  if (expEl) {
-    const allocCats = MM_ALLOCATION.map(a => a.category);
-    expEl.innerHTML = '<option value="">Select...</option>' +
-      allocCats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-  }
-}
-
-function mmUpdateSubcategories(category) {
-  const subEl = document.getElementById('mmExpenseSubcategory');
-  if (!subEl) return;
-  const subs = MM_CATEGORIES
-    .filter(c => c.type === 'Expense' && c.category === category && c.subcategory)
-    .map(c => c.subcategory);
-  subEl.innerHTML = '<option value="">None</option>' +
-    subs.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
-}
-
-function mmUpdateIncomeSubcategories(category) {
-  const subEl = document.getElementById('mmIncomeSubcategory');
-  if (!subEl) return;
-  const subs = MM_CATEGORIES
-    .filter(c => c.type === 'Income' && c.category === category && c.subcategory)
-    .map(c => c.subcategory);
-  subEl.innerHTML = '<option value="">None</option>' +
-    subs.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
-}
 
 /* === DASHBOARD === */
 function mmLoadDashboard(skipIfCached) {
@@ -278,7 +230,7 @@ function mmRenderAccountCards(accounts) {
     const color = typeColors[a.type] || typeColors['Other'];
     const initials = (a.name || '').substring(0, 2).toUpperCase();
     return `
-      <div class="mm-account-card" onclick="mmShowAccountTransactions('${escapeHtml(a.name)}')">
+      <div class="mm-account-card" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
         <div class="mm-account-top">
           <div class="mm-account-logo" style="background:${color}22;color:${color}">
             ${a.icon ? escapeHtml(a.icon) : initials}
@@ -567,7 +519,7 @@ function mmRenderCategoryList(entries, total) {
     const pct = ((entry.amount / total) * 100).toFixed(0);
     const icon = mmCategoryEmoji(entry.name);
     return `
-      <div class="mm-category-item" onclick="mmSelectCategoryFromList(${i});mmShowCategoryDetail('${escapeHtml(entry.name)}')">
+      <div class="mm-category-item" onclick="mmSelectCategoryFromList(${i});mmShowCategoryDetail('${jsStr(entry.name)}')">
         <div class="mm-cat-icon" style="background:${entry.color}22;color:${entry.color}">${icon}</div>
         <span class="mm-cat-name">${escapeHtml(entry.name)}</span>
         <span class="mm-cat-amount">${mmFormatIDR(entry.amount)}</span>
@@ -601,7 +553,7 @@ function mmRenderDashboardTransactions() {
     const dateStr = mmFormatDate(tx.date);
 
     return `
-      <div class="mm-transaction-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${escapeHtml(tx.type)}', '${escapeHtml(tx.account)}', '${escapeHtml(tx.accountTo || '')}', '${escapeHtml(tx.category || '')}', '${escapeHtml(tx.subcategory || '')}', ${tx.amount}, '${escapeHtml(tx.notes || '')}', '${escapeHtml(tx.date || '')}')">
+      <div class="mm-transaction-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
         <div class="mm-tx-icon-dash" style="background:${catColor}18;color:${catColor}">${catIcon}</div>
         <div class="mm-tx-info-dash">
           <div class="mm-tx-name-dash">${escapeHtml(label)}</div>
@@ -634,7 +586,7 @@ function mmShowTxDetail(rowNumber, type, account, accountTo, category, subcatego
     <p style="font-size:22px;font-weight:800;color:${color};margin:8px 0;font-variant-numeric:tabular-nums;">${prefix}${mmFormatIDR(amount)}</p>
     ${details}
     ${notes ? `<p style="font-size:13px;color:var(--text);margin:8px 0;">${escapeHtml(notes)}</p>` : ''}
-    <button class="btn-primary btn-full" style="margin-top:16px;" onclick="mmShowEditTx(${rowNumber}, '${escapeHtml(type)}', '${escapeHtml(account)}', '${escapeHtml(accountTo || '')}', '${escapeHtml(category || '')}', '${escapeHtml(subcategory || '')}', ${amount}, '${escapeHtml(notes || '')}', '${escapeHtml(date || '')}')">Edit Transaction</button>
+    <button class="btn-primary btn-full" style="margin-top:16px;" onclick="mmShowEditTx(${rowNumber}, '${jsStr(type)}', '${jsStr(account)}', '${jsStr(accountTo || '')}', '${jsStr(category || '')}', '${jsStr(subcategory || '')}', ${amount}, '${jsStr(notes || '')}', '${jsStr(date || '')}')">Edit Transaction</button>
     <button class="btn-primary btn-full" style="background:var(--error);box-shadow:0 4px 16px rgba(239,68,68,0.25);margin-top:8px;" onclick="mmDeleteTxFromDetail(${rowNumber})">Delete Transaction</button>
     <button class="btn-ghost btn-full" style="margin-top:8px;" onclick="mmCloseTxDetailDirect()">Cancel</button>
   `;
@@ -747,126 +699,6 @@ function mmDeleteTxFromDetail(rowNumber) {
     .mmDeleteTransaction(rowNumber);
 }
 
-/* === FORM SUBMISSIONS === */
-function mmSubmitIncome(event) {
-  event.preventDefault();
-  const form = event.target;
-  const payload = {
-    date: form.date.value,
-    type: 'Income',
-    account: form.accountId.value,
-    category: form.category.value,
-    subcategory: form.subcategory.value || '',
-    amount: parseMoneyInput(form.amount.value),
-    notes: form.notes.value
-  };
-  mmSaveTransaction(form, payload, 'Save Income');
-}
-
-function mmSubmitExpense(event) {
-  event.preventDefault();
-  const form = event.target;
-  const payload = {
-    date: form.date.value,
-    type: 'Expense',
-    account: form.accountId.value,
-    category: form.category.value,
-    subcategory: form.subcategory.value,
-    amount: parseMoneyInput(form.amount.value),
-    notes: form.notes.value
-  };
-  mmSaveTransaction(form, payload, 'Save Expense');
-}
-
-function mmSubmitTransfer(event) {
-  event.preventDefault();
-  const form = event.target;
-  const direction = document.getElementById('mmTransferDirection').value;
-  const amount = parseMoneyInput(form.amount.value);
-  
-  let payload = {
-    date: form.date.value,
-    type: 'Transfer',
-    account: '',
-    accountTo: '',
-    category: '',
-    subcategory: '',
-    amount: amount,
-    notes: form.notes.value
-  };
-
-  if (direction === 'mm-to-mm') {
-    payload.account = form.accountId.value;
-    payload.accountTo = form.accountToId.value;
-    if (payload.account === payload.accountTo) {
-      showToast('From and To must be different.', 'error');
-      return;
-    }
-  } else if (direction === 'mm-to-invest') {
-    payload.account = form.accountId.value;
-    payload.accountTo = 'Invest:' + form.accountToId.value;
-  } else if (direction === 'invest-to-mm') {
-    payload.account = 'Invest:' + form.accountId.value;
-    payload.accountTo = form.accountToId.value;
-  }
-
-  if (!payload.account || !payload.accountTo) {
-    showToast('Please fill all fields.', 'error');
-    return;
-  }
-
-  mmSaveTransaction(form, payload, 'Save Transfer');
-}
-
-function mmUpdateTransferDirection() {
-  const direction = document.getElementById('mmTransferDirection').value;
-  const fromLabel = document.getElementById('mmTransferFromLabel');
-  const toLabel = document.getElementById('mmTransferToLabel');
-  const fromSelect = document.getElementById('mmTransferFrom');
-  const toSelect = document.getElementById('mmTransferTo');
-
-  const accountOpts = MM_ACCOUNTS.map(a => `<option value="${escapeHtml(a.name)}">${a.icon} ${escapeHtml(a.name)}</option>`).join('');
-  const platformOpts = (APP_SETTINGS.Platform || []).map(p => `<option value="${escapeHtml(p)}">📈 ${escapeHtml(p)}</option>`).join('');
-
-  if (direction === 'mm-to-mm') {
-    fromLabel.querySelector('span, .form-label-text')
-    fromLabel.innerHTML = 'From Account <select name="accountId" id="mmTransferFrom" class="form-input" required><option value="">Select...</option>' + accountOpts + '</select>';
-    toLabel.innerHTML = 'To Account <select name="accountToId" id="mmTransferTo" class="form-input" required><option value="">Select...</option>' + accountOpts + '</select>';
-    toLabel.style.display = 'grid';
-  } else if (direction === 'mm-to-invest') {
-    fromLabel.innerHTML = 'From Account <select name="accountId" id="mmTransferFrom" class="form-input" required><option value="">Select...</option>' + accountOpts + '</select>';
-    toLabel.innerHTML = 'To Platform <select name="accountToId" id="mmTransferTo" class="form-input" required><option value="">Select...</option>' + platformOpts + '</select>';
-    toLabel.style.display = 'grid';
-  } else if (direction === 'invest-to-mm') {
-    fromLabel.innerHTML = 'From Platform <select name="accountId" id="mmTransferFrom" class="form-input" required><option value="">Select...</option>' + platformOpts + '</select>';
-    toLabel.innerHTML = 'To Account <select name="accountToId" id="mmTransferTo" class="form-input" required><option value="">Select...</option>' + accountOpts + '</select>';
-    toLabel.style.display = 'grid';
-  }
-}
-
-function mmSaveTransaction(form, payload, btnText) {
-  const btn = form.querySelector('button[type="submit"]');
-  setButtonLoading(btn, true, 'Saving...');
-  google.script.run
-    .withSuccessHandler(result => {
-      setButtonLoading(btn, false, btnText);
-      if (result && result.success) {
-        showToast('Transaction saved.', 'success');
-        form.reset();
-        mmCloseActionSheet();
-        // Invalidate cache so next visit reloads
-        MM_DASHBOARD = null;
-        mmLoadDashboard();
-      } else {
-        showToast('Failed to save.', 'error');
-      }
-    })
-    .withFailureHandler(err => {
-      setButtonLoading(btn, false, btnText);
-      showToast(err.message || 'Failed.', 'error');
-    })
-    .mmAddTransaction(payload);
-}
 
 /* === HISTORY === */
 let MM_ALLTIME_CACHE = null;
@@ -1151,7 +983,7 @@ function mmRenderTransactionList(transactions) {
     const dateStr = mmFormatDate(tx.date);
 
     return `
-      <div class="mm-tx-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${escapeHtml(tx.type)}', '${escapeHtml(tx.account)}', '${escapeHtml(tx.accountTo || '')}', '${escapeHtml(tx.category || '')}', '${escapeHtml(tx.subcategory || '')}', ${tx.amount}, '${escapeHtml(tx.notes || '')}', '${escapeHtml(tx.date || '')}')">
+      <div class="mm-tx-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
         <div class="mm-tx-icon" style="color:${catColor}">${catIcon}</div>
         <div class="mm-tx-info">
           <div class="tx-title">${escapeHtml(tx.notes || tx.type)}</div>
@@ -1217,8 +1049,8 @@ function mmRenderSettingsAccounts() {
         <div class="meta">Balance: ${mmFormatIDR(a.balance || a.initialBalance)} · ${a.showOnDashboard ? 'Shown' : 'Hidden'}</div>
       </div>
       <div class="actions">
-        <button onclick="mmShowEditAccount('${a.id}', '${escapeHtml(a.name)}', '${escapeHtml(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">✏️</button>
-        <button onclick="mmDeleteAccountConfirm('${a.id}')">×</button>
+        <button onclick="mmShowEditAccount('${jsStr(a.id)}', '${jsStr(a.name)}', '${jsStr(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">✏️</button>
+        <button onclick="mmDeleteAccountConfirm('${jsStr(a.id)}')">×</button>
       </div>
     </div>
   `).join('');
@@ -1521,7 +1353,7 @@ function mmRenderCategories() {
 
   container.innerHTML = Object.entries(groups).map(([key, subs]) => {
     const chips = subs.length
-      ? subs.map(s => `<span class="mm-cat-chip">${escapeHtml(s)} <button class="delete-cat" onclick="mmDeleteCat('${escapeHtml(key)}','${escapeHtml(s)}')">×</button></span>`).join('')
+      ? subs.map(s => `<span class="mm-cat-chip">${escapeHtml(s)} <button class="delete-cat" onclick="mmDeleteCat('${jsStr(key)}','${jsStr(s)}')">×</button></span>`).join('')
       : '<span style="font-size:11px;color:var(--text-muted);">No subcategories</span>';
     return `<div class="mm-cat-group"><div class="mm-cat-group-title">${escapeHtml(key)}</div>${chips}</div>`;
   }).join('');

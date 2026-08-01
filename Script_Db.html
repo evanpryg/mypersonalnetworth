@@ -103,8 +103,10 @@ function formatTimestampForClient_(value) {
 }
 
 // PostgREST caps a single response at 1000 rows, so getRows_ pages through
-// with .range(). Each page needs a stable sort or rows can repeat/vanish
-// between pages — this maps every table to its primary key.
+// with .range() when a table is bigger than that. Paging needs a stable sort
+// or rows can repeat/vanish between pages — this maps every table to its
+// primary key. Small tables are read unsorted, which keeps the natural row
+// order the UI has always shown (budget categories, accounts, settings).
 var PAGE_ORDER_KEY = {
   'targets': 'targetid',
   'transactions': 'id',
@@ -122,17 +124,25 @@ var PAGE_SIZE = 1000;
 async function getRows_(tableName) {
   if (!_sb) throw new Error("Supabase is not initialized.");
   var table = tableName.toLowerCase();
-  var orderKey = PAGE_ORDER_KEY[table];
-  var data = [];
-  for (var from = 0; ; from += PAGE_SIZE) {
-    var query = _sb.from(table).select('*');
-    if (orderKey) {
-      orderKey.split(',').forEach(function(col) { query = query.order(col, { ascending: true }); });
+  var first = await _sb.from(table).select('*').range(0, PAGE_SIZE - 1);
+  if (first.error) { console.error('Error reading ' + tableName + ':', first.error); throw first.error; }
+  var data = first.data;
+
+  if (data.length === PAGE_SIZE) {
+    // Table spills past one page — redo the read with a stable sort so the
+    // page boundaries line up, then walk the rest.
+    var orderKey = PAGE_ORDER_KEY[table];
+    data = [];
+    for (var from = 0; ; from += PAGE_SIZE) {
+      var query = _sb.from(table).select('*');
+      if (orderKey) {
+        orderKey.split(',').forEach(function(col) { query = query.order(col, { ascending: true }); });
+      }
+      var page = await query.range(from, from + PAGE_SIZE - 1);
+      if (page.error) { console.error('Error reading ' + tableName + ':', page.error); throw page.error; }
+      data = data.concat(page.data);
+      if (page.data.length < PAGE_SIZE) break;
     }
-    var page = await query.range(from, from + PAGE_SIZE - 1);
-    if (page.error) { console.error('Error reading ' + tableName + ':', page.error); throw page.error; }
-    data = data.concat(page.data);
-    if (page.data.length < PAGE_SIZE) break;
   }
   var mappedData = data.map(mapRowToFrontend);
   var dateFields = ['Timestamp', 'Date', 'StartDate'];
@@ -330,7 +340,18 @@ var DB_API = {
     var platform = normalize_(payload.platform), transactionType = normalize_(payload.transactionType), amountIDR = toNumber_(payload.amountIDR);
     var sector = normalize_(payload.sector), asset = normalize_(payload.asset);
     if (transactionType==='Deposit'||transactionType==='Withdraw') { sector='Cash'; asset=getCashAssetName_(platform); }
-    var { error } = await _sb.from('transactions').insert(mapRowToDb({ Date:payload.date, Platform:platform, Sector:sector, Asset:asset, TransactionType:transactionType, AmountIDR:amountIDR, Notes:payload.notes||'', Status:'Active' }));
+    var row = mapRowToDb({ Date:payload.date, Platform:platform, Sector:sector, Asset:asset, TransactionType:transactionType, AmountIDR:amountIDR, Notes:payload.notes||'', Status:'Active' });
+    // Backlink to the money-management row that spawned this one, so deleting
+    // the transfer can take this row with it.
+    if (payload.mmTxId) row.mm_tx_id = payload.mmTxId;
+    var { error } = await _sb.from('transactions').insert(row);
+    if (error && row.mm_tx_id && /mm_tx_id/.test(error.message || '')) {
+      // Column not added yet — fall back so transfers keep working.
+      console.warn('transactions.mm_tx_id missing; inserting without backlink.');
+      delete row.mm_tx_id;
+      var retry = await _sb.from('transactions').insert(row);
+      error = retry.error;
+    }
     if (error) throw error;
     return { success:true, message:'Transaction added successfully.' };
   },
@@ -443,22 +464,51 @@ var DB_API = {
   async mmAddTransaction(payload) {
     var type=normalize_(payload.type),account=normalize_(payload.account),accountTo=normalize_(payload.accountTo)||'',amount=toNumber_(payload.amount);
     var category=(type==='Transfer'&&accountTo.startsWith('Invest:'))?'Invest':normalize_(payload.category)||'';
-    var { error } = await _sb.from('mm_transactions').insert(mapRowToDb({Date:payload.date,Type:type,Account:account,AccountTo:accountTo,Category:category,Subcategory:normalize_(payload.subcategory)||'',Amount:amount,Notes:normalize_(payload.notes)||'',Status:'Active'}));
+    // Need the new id back so the paired investment row can point at it.
+    var { data, error } = await _sb.from('mm_transactions').insert(mapRowToDb({Date:payload.date,Type:type,Account:account,AccountTo:accountTo,Category:category,Subcategory:normalize_(payload.subcategory)||'',Amount:amount,Notes:normalize_(payload.notes)||'',Status:'Active'})).select('id');
     if (error) throw error;
-    if (type==='Transfer'&&accountTo.startsWith('Invest:')) { var p=accountTo.replace('Invest:',''); await this.addTransaction({date:payload.date,platform:p,sector:'Cash',asset:getCashAssetName_(p),amountIDR:amount,transactionType:'Deposit',notes:'Transfer from '+account}); }
-    if (type==='Transfer'&&account.startsWith('Invest:')) { var p2=account.replace('Invest:',''); await this.addTransaction({date:payload.date,platform:p2,sector:'Cash',asset:getCashAssetName_(p2),amountIDR:amount,transactionType:'Withdraw',notes:'Transfer to '+accountTo}); }
+    var mmId = data && data[0] ? data[0].id : null;
+
+    // A transfer touching the investment side writes a second row in another
+    // table. There is no shared transaction across two PostgREST calls, so on
+    // failure undo the first write rather than leaving a half-recorded transfer.
+    var invest = null;
+    if (type==='Transfer'&&accountTo.startsWith('Invest:')) {
+      var p=accountTo.replace('Invest:','');
+      invest={date:payload.date,platform:p,sector:'Cash',asset:getCashAssetName_(p),amountIDR:amount,transactionType:'Deposit',notes:'Transfer from '+account,mmTxId:mmId};
+    } else if (type==='Transfer'&&account.startsWith('Invest:')) {
+      var p2=account.replace('Invest:','');
+      invest={date:payload.date,platform:p2,sector:'Cash',asset:getCashAssetName_(p2),amountIDR:amount,transactionType:'Withdraw',notes:'Transfer to '+accountTo,mmTxId:mmId};
+    }
+    if (invest) {
+      try {
+        await this.addTransaction(invest);
+      } catch (e) {
+        if (mmId) await _sb.from('mm_transactions').delete().eq('id',mmId);
+        throw new Error('Transfer dibatalkan — sisi investasi gagal disimpan: ' + (e.message || e));
+      }
+    }
     return { success:true, message:'Transaction saved.' };
   },
 
   async mmDeleteTransaction(rowNumber) {
-    var { error } = await _sb.from('mm_transactions').delete().eq('id',rowNumber);
+    // Soft delete, matching accounts/categories — reads already skip Status='Deleted'.
+    var { error } = await _sb.from('mm_transactions').update({status:'Deleted'}).eq('id',rowNumber);
     if (error) throw error;
+    // Drop the paired investment row too, or the portfolio keeps counting it.
+    // Tolerated if mm_tx_id has not been added to `transactions` yet.
+    var pair = await _sb.from('transactions').update({status:'Deleted'}).eq('mm_tx_id',rowNumber);
+    if (pair.error) console.warn('Paired investment row not cascaded:', pair.error.message);
     return { success:true, message:'Transaction deleted.' };
   },
 
   async mmUpdateTransaction(payload) {
     var { error } = await _sb.from('mm_transactions').update(mapRowToDb({Date:payload.date,Type:normalize_(payload.type),Account:normalize_(payload.account),AccountTo:normalize_(payload.accountTo)||'',Category:normalize_(payload.category)||'',Subcategory:normalize_(payload.subcategory)||'',Amount:toNumber_(payload.amount),Notes:normalize_(payload.notes)||''})).eq('id',payload.rowNumber);
     if (error) throw error;
+    // Keep the paired investment row in step, otherwise editing a transfer
+    // silently desyncs the portfolio from the ledger.
+    var pair = await _sb.from('transactions').update({date:payload.date,amountidr:toNumber_(payload.amount)}).eq('mm_tx_id',payload.rowNumber);
+    if (pair.error) console.warn('Paired investment row not updated:', pair.error.message);
     return { success:true, message:'Transaction updated.' };
   },
 

@@ -42,8 +42,9 @@ function mmShowActionSheet(type) {
   // Show sheet
   document.getElementById('mmActionSheet').classList.remove('hidden');
 
-  // Focus amount
-  setTimeout(() => document.getElementById('txAmountInput').focus(), 300);
+  // Deliberately not auto-focusing the amount field: on a phone that forces
+  // the keyboard open over the sheet before the user has picked anything.
+  // They tap the amount when they are ready.
 
   // Render chips
   txRenderCategories();
@@ -164,18 +165,52 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* === CATEGORY CHIPS === */
+/* Categories come from the database, not a literal list — otherwise a category
+   added in Settings would never show up here. Expense chips follow the budget
+   allocation order the user set; anything only present in mm_categories is
+   appended after it. */
+const TX_FALLBACK_COLORS = ['#10b981','#f59e0b','#ec4899','#3b82f6','#8b5cf6','#14b8a6','#f43f5e','#64748b'];
+
+function txAvailableCategories() {
+  const wantType = TX_TYPE === 'income' ? 'Income' : 'Expense';
+  const names = [];
+
+  if (wantType === 'Expense' && typeof MM_ALLOCATION !== 'undefined') {
+    MM_ALLOCATION.forEach(a => { if (a.category && names.indexOf(a.category) === -1) names.push(a.category); });
+  }
+  if (typeof MM_CATEGORIES !== 'undefined') {
+    MM_CATEGORIES
+      .filter(c => c.type === wantType && c.category)
+      .forEach(c => { if (names.indexOf(c.category) === -1) names.push(c.category); });
+  }
+  // Nothing loaded yet (sheet opened before the dashboard finished) — keep the
+  // known defaults so the user is never faced with an empty picker.
+  if (!names.length) {
+    (wantType === 'Income' ? ['Bisyaroh','Other'] : ['Living','Playing','Alms','Invest'])
+      .forEach(n => names.push(n));
+  }
+
+  return names.map((name, i) => {
+    const alloc = (typeof MM_ALLOCATION !== 'undefined')
+      ? MM_ALLOCATION.find(a => a.category === name) : null;
+    const cfg = MM_CATEGORY_CONFIG[name];
+    return {
+      name: name,
+      color: (alloc && alloc.color) || (cfg && cfg.color) || TX_FALLBACK_COLORS[i % TX_FALLBACK_COLORS.length]
+    };
+  });
+}
+
 function txRenderCategories() {
   const container = document.getElementById('txCategoryChips');
   if (!container) return;
 
-  const categories = TX_TYPE === 'income'
-    ? [{ name: 'Bisyaroh', color: '#8b5cf6' }, { name: 'Other', color: '#64748b' }]
-    : [{ name: 'Living', color: '#10b981' }, { name: 'Playing', color: '#f59e0b' }, { name: 'Alms', color: '#ec4899' }, { name: 'Invest', color: '#3b82f6' }];
+  const categories = txAvailableCategories();
 
   container.innerHTML = categories.map(cat => {
     const isActive = TX_SELECTED_CATEGORY === cat.name;
     const icon = lucideIconSvg(MM_CATEGORY_CONFIG[cat.name] ? MM_CATEGORY_CONFIG[cat.name].icon : 'tag', 16);
-    return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:${cat.color}" onclick="txSelectCategory('${cat.name}')">
+    return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:${cat.color}" onclick="txSelectCategory('${jsStr(cat.name)}')">
       <span class="tx-chip-icon">${icon}</span>
       <span>${cat.name}</span>
     </button>`;
@@ -213,7 +248,7 @@ function txRenderSubcategories() {
   const color = mmCategoryColor(TX_SELECTED_CATEGORY);
   container.innerHTML = subs.map(sub => {
     const isActive = TX_SELECTED_SUBCATEGORY === sub;
-    return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:${color}" onclick="txSelectSubcategory('${escapeHtml(sub)}')">
+    return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:${color}" onclick="txSelectSubcategory('${jsStr(sub)}')">
       <span>${escapeHtml(sub)}</span>
     </button>`;
   }).join('');
@@ -247,7 +282,7 @@ function txRenderAccounts() {
     // From: investment platforms
     container.innerHTML = platforms.map(p => {
       const isActive = TX_SELECTED_ACCOUNT === p;
-      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:#8b5cf6" onclick="txSelectAccount('${escapeHtml(p)}')">
+      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:#8b5cf6" onclick="txSelectAccount('${jsStr(p)}')">
         <span>📈 ${escapeHtml(p)}</span>
       </button>`;
     }).join('');
@@ -255,7 +290,7 @@ function txRenderAccounts() {
     // From: regular accounts
     container.innerHTML = sorted.map(acc => {
       const isActive = TX_SELECTED_ACCOUNT === acc.name;
-      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent)" onclick="txSelectAccount('${escapeHtml(acc.name)}')">
+      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent)" onclick="txSelectAccount('${jsStr(acc.name)}')">
         <span>${escapeHtml(acc.name)}</span>
       </button>`;
     }).join('');
@@ -267,7 +302,7 @@ function txRenderAccounts() {
       // To: investment platforms
       containerTo.innerHTML = platforms.map(p => {
         const isActive = TX_SELECTED_ACCOUNT_TO === p;
-        return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:#3b82f6" onclick="txSelectAccountTo('${escapeHtml(p)}')">
+        return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:#3b82f6" onclick="txSelectAccountTo('${jsStr(p)}')">
           <span>📈 ${escapeHtml(p)}</span>
         </button>`;
       }).join('');
@@ -275,7 +310,7 @@ function txRenderAccounts() {
       // To: regular accounts
       containerTo.innerHTML = sorted.map(acc => {
         const isActive = TX_SELECTED_ACCOUNT_TO === acc.name;
-        return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="txSelectAccountTo('${escapeHtml(acc.name)}')">
+        return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="txSelectAccountTo('${jsStr(acc.name)}')">
           <span>${escapeHtml(acc.name)}</span>
         </button>`;
       }).join('');
@@ -309,7 +344,7 @@ function txRenderRecent() {
   section.style.display = 'block';
   container.innerHTML = relevant.map(r => {
     const label = [r.category, r.account].filter(Boolean).join(' · ');
-    return `<button class="tx-recent-chip" onclick="txApplyRecent('${escapeHtml(r.category)}','${escapeHtml(r.subcategory || '')}','${escapeHtml(r.account)}')">
+    return `<button class="tx-recent-chip" onclick="txApplyRecent('${jsStr(r.category)}','${jsStr(r.subcategory || '')}','${jsStr(r.account)}')">
       <span class="tx-recent-label">${escapeHtml(label)}</span>
     </button>`;
   }).join('');
