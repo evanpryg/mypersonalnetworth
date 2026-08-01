@@ -442,6 +442,7 @@ function txSubmit() {
 
         // Invalidate cache
         MM_DASHBOARD = null;
+        MM_SEARCH_CACHE = null;
         mmLoadDashboard();
       } else {
         showToast('Gagal menyimpan.', 'error');

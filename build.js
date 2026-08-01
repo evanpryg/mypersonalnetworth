@@ -69,7 +69,11 @@ function compile() {
       }
     }
     
-    indexHtml = indexHtml.replace(macro, replacement);
+    // Replacer function, NOT a replacement string: with a string, sequences
+    // like $& and $1 are substitution patterns, so any source file containing
+    // "$&" (e.g. a regex-escape helper) would splice the include macro back
+    // into the output and this loop would never terminate.
+    indexHtml = indexHtml.replace(macro, () => replacement);
     // Reset regex index because we modified the string length
     includeRegex.lastIndex = 0;
   }

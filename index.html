@@ -380,6 +380,9 @@
                   <span id="mmDateText"></span> ▾
                 </p>
               </div>
+              <button class="mm-header-btn" id="mmBtnSearch" aria-label="Cari transaksi" onclick="mmOpenSearch()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </button>
             </div>
 
             <!-- Networth Card -->
@@ -989,6 +992,29 @@
 
   <!-- ===== TOAST ===== -->
   <div id="toast" class="toast hidden"></div>
+
+  <!-- ===== TRANSACTION SEARCH =====
+       Full screen rather than a filter on the current tab: the point is to
+       find one transaction among every one ever recorded, not to narrow
+       whatever list happens to be open. -->
+  <div id="mmSearchSheet" class="mm-search hidden">
+    <div class="mm-search-bar">
+      <button class="mm-search-back" aria-label="Tutup pencarian" onclick="mmCloseSearch()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+      </button>
+      <div class="mm-search-field">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" id="mmSearchInput" placeholder="Cari catatan, kategori, akun, nominal..."
+               autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+               oninput="mmSearchInputChanged()">
+        <button class="mm-search-clear hidden" id="mmSearchClear" aria-label="Kosongkan" onclick="mmClearSearch()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+    </div>
+    <p class="mm-search-meta hidden" id="mmSearchMeta"></p>
+    <div class="mm-search-results" id="mmSearchResults"></div>
+  </div>
 
   <!-- ===== LOGIN GATE =====
        Only shown when the database refuses anonymous reads, i.e. once RLS is

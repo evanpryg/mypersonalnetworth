@@ -28,6 +28,160 @@ function mmShowPage(pageId) {
   if (pageId === 'mmInsightPage') loadFinancialInsight();
 }
 
+/* === TRANSACTION SEARCH ===
+   Searches every transaction, not the list currently on screen. The whole set
+   is fetched once per session and reused — invalidated wherever MM_DASHBOARD
+   is, since the two go stale together. */
+let MM_SEARCH_CACHE = null;
+let MM_SEARCH_TIMER = null;
+const MM_SEARCH_LIMIT = 80;
+
+function mmOpenSearch() {
+  const sheet = document.getElementById('mmSearchSheet');
+  const input = document.getElementById('mmSearchInput');
+  if (!sheet || !input) return;
+  sheet.classList.remove('hidden');
+  input.value = '';
+  document.getElementById('mmSearchClear').classList.add('hidden');
+  document.getElementById('mmSearchMeta').classList.add('hidden');
+  mmRenderSearchIntro();
+  setTimeout(() => input.focus(), 60);
+  mmLoadSearchData();
+}
+
+function mmCloseSearch() {
+  const sheet = document.getElementById('mmSearchSheet');
+  if (sheet) sheet.classList.add('hidden');
+  const input = document.getElementById('mmSearchInput');
+  if (input) input.blur();
+}
+
+function mmClearSearch() {
+  const input = document.getElementById('mmSearchInput');
+  input.value = '';
+  document.getElementById('mmSearchClear').classList.add('hidden');
+  document.getElementById('mmSearchMeta').classList.add('hidden');
+  mmRenderSearchIntro();
+  input.focus();
+}
+
+function mmRenderSearchIntro() {
+  const box = document.getElementById('mmSearchResults');
+  if (!box) return;
+  const recent = (MM_SEARCH_CACHE || []).slice(0, 6);
+  if (!recent.length) {
+    box.innerHTML = mmEmpty('clock', 'Cari transaksi', 'Ketik catatan, kategori, akun, atau nominal. Pencarian mencakup seluruh riwayat.');
+    return;
+  }
+  box.innerHTML = '<p class="mm-search-section">Terakhir dicatat</p>' + mmRenderSearchRows(recent, []);
+}
+
+async function mmLoadSearchData() {
+  if (MM_SEARCH_CACHE) return MM_SEARCH_CACHE;
+  const box = document.getElementById('mmSearchResults');
+  if (box && !box.querySelector('.mm-tx-item')) box.innerHTML = skRows(4);
+  try {
+    MM_SEARCH_CACHE = await new Promise((resolve, reject) => {
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).mmGetTransactions({});
+    });
+  } catch (e) {
+    if (box) box.innerHTML = mmEmpty('circle-dollar', 'Gagal memuat', 'Coba tutup dan buka lagi pencarian.');
+    return null;
+  }
+  // Whatever the user typed while this was loading wins.
+  const q = (document.getElementById('mmSearchInput') || {}).value || '';
+  if (q.trim()) mmRunSearch(q); else mmRenderSearchIntro();
+  return MM_SEARCH_CACHE;
+}
+
+function mmSearchInputChanged() {
+  const input = document.getElementById('mmSearchInput');
+  document.getElementById('mmSearchClear').classList.toggle('hidden', !input.value);
+  clearTimeout(MM_SEARCH_TIMER);
+  MM_SEARCH_TIMER = setTimeout(() => mmRunSearch(input.value), 160);
+}
+
+// Every term has to match somewhere in the row, so "bni earphone" narrows
+// rather than widens. Digits also match the amount with separators stripped,
+// which is how people actually remember a figure.
+function mmMatchesTx(tx, terms, haystack) {
+  return terms.every(t => haystack.indexOf(t) !== -1);
+}
+
+function mmTxHaystack(tx) {
+  return [
+    tx.notes, tx.category, tx.subcategory, tx.account, tx.accountTo, tx.type,
+    tx.date, String(tx.amount), mmFormatDate(tx.date)
+  ].join(' ').toLowerCase();
+}
+
+function mmRunSearch(rawQuery) {
+  const box = document.getElementById('mmSearchResults');
+  const meta = document.getElementById('mmSearchMeta');
+  const query = (rawQuery || '').trim().toLowerCase();
+
+  if (!query) {
+    meta.classList.add('hidden');
+    mmRenderSearchIntro();
+    return;
+  }
+  if (!MM_SEARCH_CACHE) { mmLoadSearchData(); return; }
+
+  const terms = query.split(/\s+/).filter(Boolean);
+  const hits = MM_SEARCH_CACHE.filter(tx => mmMatchesTx(tx, terms, mmTxHaystack(tx)));
+
+  meta.classList.remove('hidden');
+  if (!hits.length) {
+    meta.textContent = 'Tidak ada yang cocok';
+    box.innerHTML = mmEmpty('circle-dollar', 'Tidak ditemukan', 'Coba kata lain, atau sebagian nominalnya saja.');
+    return;
+  }
+
+  const total = hits.reduce((s, t) => s + (t.type === 'Expense' ? -t.amount : t.type === 'Income' ? t.amount : 0), 0);
+  const shown = hits.slice(0, MM_SEARCH_LIMIT);
+  meta.textContent = hits.length + ' transaksi'
+    + (hits.length > MM_SEARCH_LIMIT ? ' (menampilkan ' + MM_SEARCH_LIMIT + ')' : '')
+    + ' · net ' + (total >= 0 ? '+' : '−') + mmFormatIDR(Math.abs(total));
+  box.innerHTML = mmRenderSearchRows(shown, terms);
+}
+
+function mmHighlight(text, terms) {
+  let out = escapeHtml(text == null ? '' : String(text));
+  if (!terms || !terms.length) return out;
+  // Escape first, then wrap — so a term containing < or & cannot inject markup.
+  terms.forEach(t => {
+    if (!t) return;
+    const safe = escapeHtml(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (!safe) return;
+    out = out.replace(new RegExp('(' + safe + ')', 'ig'), '<mark>$1</mark>');
+  });
+  return out;
+}
+
+function mmRenderSearchRows(rows, terms) {
+  return rows.map(tx => {
+    let amtClass = 'income-amt', prefix = '+', subtitle = tx.account;
+    if (tx.type === 'Expense') {
+      amtClass = 'expense-amt'; prefix = '-';
+      subtitle = `${tx.account} · ${tx.category}${tx.subcategory ? ' / ' + tx.subcategory : ''}`;
+    } else if (tx.type === 'Transfer') {
+      amtClass = 'transfer-amt'; prefix = '';
+      subtitle = `${tx.account} → ${tx.accountTo}`;
+    } else {
+      subtitle = `${tx.account}${tx.category ? ' · ' + tx.category : ''}`;
+    }
+    return `
+      <div class="mm-tx-item" onclick="mmCloseSearch();mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
+        <div class="mm-tx-icon" style="color:${mmCategoryColor(tx.category, tx.type)}">${mmCategoryEmoji(tx.category, tx.type)}</div>
+        <div class="mm-tx-info">
+          <div class="tx-title">${mmHighlight(tx.notes || tx.type, terms)}</div>
+          <div class="tx-sub">${mmFormatDate(tx.date)} · ${mmHighlight(subtitle, terms)}</div>
+        </div>
+        <div class="mm-tx-amount ${amtClass}">${prefix}${mmFormatIDR(tx.amount)}</div>
+      </div>`;
+  }).join('');
+}
+
 /* === COUNT UP ===
    The headline figure counts up on arrival instead of snapping into place.
    Only when the value actually changed — re-rendering from cache should not
@@ -756,6 +910,7 @@ function mmSubmitEditTx(event, rowNumber, type) {
         showToast('Transaction updated.', 'success');
         mmCloseTxDetailDirect();
         MM_DASHBOARD = null;
+        MM_SEARCH_CACHE = null;
         mmLoadDashboard();
       } else { showToast('Failed.', 'error'); }
     })
@@ -784,6 +939,7 @@ function mmDeleteTxFromDetail(rowNumber) {
         showToast('Transaction deleted.', 'success');
         document.getElementById('mmTxDetailSheet').classList.add('hidden');
         MM_DASHBOARD = null;
+        MM_SEARCH_CACHE = null;
         mmLoadDashboard();
       } else {
         showToast('Failed to delete.', 'error');
@@ -1339,6 +1495,7 @@ function mmSubmitModal(event) {
           closeModal('mmModal');
           mmLoadSettings();
           MM_DASHBOARD = null;
+        MM_SEARCH_CACHE = null;
           mmLoadDashboard();
         }
       })
@@ -1905,6 +2062,7 @@ function mmImportData(event) {
             statusEl.className = 'import-status success';
             statusEl.textContent = result.message;
             MM_DASHBOARD = null;
+        MM_SEARCH_CACHE = null;
             if (typeof mmLoadDashboard === 'function') mmLoadDashboard();
           } else {
             statusEl.className = 'import-status error';
@@ -1959,6 +2117,7 @@ function mmDeleteDataPrompt(target) {
         showToast(result.message, 'success');
         // Reset caches and reload
         MM_DASHBOARD = null;
+        MM_SEARCH_CACHE = null;
         MM_ACCOUNTS = [];
         MM_CATEGORIES = [];
         MM_ALLOCATION = [];
