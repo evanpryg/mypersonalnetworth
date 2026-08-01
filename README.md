@@ -8,7 +8,7 @@ A personal finance tracker and portfolio management tool migrated from Google Sh
 
 - **Double Workspace**: Investment Portfolio Tracker + Money Management (Daily Transaction Budgeting).
 - **Supabase Backend**: Fully serverless, querying your personal database directly from the browser.
-- **Client-Side Security**: Your database connection keys (URL & Anon Key) are saved locally in your browser's `localStorage` and never committed to GitHub or sent to any third party.
+- **Security**: The Supabase anon key is bundled into the published page. That is how Supabase is designed to work — the anon key is *not* a secret, and privacy comes from Row Level Security instead. See [Security](#-security) below; if you have not applied `migrations/002_enable_rls.sql` yet, your database is readable by anyone who views the page source.
 - **Automatic GitHub Pages Deployment**: Push code to the `main` branch, and a GitHub Action automatically compiles and deploys the app to the live URL.
 
 ---
@@ -67,6 +67,34 @@ If you have old data from Google Sheets, export each sheet as a `.csv` file and 
 3. Click **Connect & Sync App**.
 4. The app will verify connection, load your imported data, and you're good to go!
 5. If you ever need to change your database connection, go to the **Settings** page inside the app and look for the **Supabase Connection** panel.
+
+---
+
+## 🔒 Security
+
+The published page contains the Supabase project URL and anon key. Anyone can read them. What decides whether that matters is Row Level Security:
+
+- **RLS off** (the original schema) — the anon key grants full read/write/delete on every table to anyone who opens the page source.
+- **RLS on** (`migrations/002_enable_rls.sql`) — the database only answers requests carrying a logged-in session token, restricted to one email address. The anon key on its own gets nothing.
+
+Apply `002` and you are safe to keep the repo public. Alongside it, in the Supabase dashboard:
+
+1. **Authentication → URL Configuration** — set *Site URL* and add a *Redirect URL* for your GitHub Pages address, so the magic link can return to the app.
+2. **Authentication → Providers → Email** — turn *Enable Sign Ups* off so nobody else can register.
+3. **Project Settings → API** — rotate the anon key if it has ever been committed while RLS was off.
+
+---
+
+## 🗃️ Migrations
+
+Run these in Supabase → SQL Editor, in order. Each one is a single transaction: if a step fails, nothing is written.
+
+| File | What it does |
+|---|---|
+| `migrations/001_archive_2025.sql` | Folds 2025 detail into per-category monthly summaries in `mm_summary`, rolls each account's 2025 net into `initialbalance`, then deletes the detail rows. Refuses to run twice. |
+| `migrations/002_enable_rls.sql` | Enables RLS on every table and restricts access to one authenticated email. **Log in through the app first** — see Security above. |
+
+The balance roll-up in `001` is not optional: account balances are computed as `initialbalance` plus every transaction, so deleting history without it moves your net worth.
 
 ---
 

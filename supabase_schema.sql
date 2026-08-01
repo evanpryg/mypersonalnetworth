@@ -25,6 +25,11 @@ CREATE TABLE IF NOT EXISTS transactions (
   status VARCHAR DEFAULT 'Active'
 );
 
+-- 2b. Backlink from an investment row to the money-management transfer that
+--     created it, so deleting or editing the transfer can follow it.
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS mm_tx_id INTEGER;
+CREATE INDEX IF NOT EXISTS idx_transactions_mm_tx_id ON transactions(mm_tx_id);
+
 -- 3. portfolio Table
 CREATE TABLE IF NOT EXISTS portfolio (
   platform VARCHAR NOT NULL,
@@ -90,6 +95,23 @@ CREATE TABLE IF NOT EXISTS mm_allocation (
   color VARCHAR
 );
 
+-- 10. mm_summary Table — archived years.
+-- Older years are collapsed to one row per month/type/category/subcategory
+-- (see migrations/001_archive_2025.sql) so the ledger stops growing while
+-- History and Insight can still chart them.
+CREATE TABLE IF NOT EXISTS mm_summary (
+  id           SERIAL PRIMARY KEY,
+  period_year  INTEGER NOT NULL,
+  period_month INTEGER NOT NULL,
+  type         VARCHAR NOT NULL,
+  category     VARCHAR NOT NULL DEFAULT '',
+  subcategory  VARCHAR NOT NULL DEFAULT '',
+  amount       NUMERIC NOT NULL,
+  tx_count     INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (period_year, period_month, type, category, subcategory)
+);
+CREATE INDEX IF NOT EXISTS idx_mm_summary_year ON mm_summary(period_year);
+
 -- Create Indexes for performance optimization
 CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
 CREATE INDEX IF NOT EXISTS idx_mm_transactions_status ON mm_transactions(status);
@@ -124,7 +146,13 @@ INSERT INTO mm_allocation (category, percent, icon, color) VALUES
   ('Invest', 20, '📈', '#3b82f6')
 ON CONFLICT DO NOTHING;
 
--- Disable Row Level Security (RLS) for simple personal client-side access
+-- Disable Row Level Security (RLS) for the initial bootstrap.
+--
+-- WARNING: leaving it this way makes the whole database readable and
+-- writable by anyone who opens the published page, because the anon key is
+-- part of the bundle. Once the app is up and you can log in, apply
+-- migrations/002_enable_rls.sql to turn RLS back on and lock the tables to
+-- your own account.
 ALTER TABLE targets DISABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE portfolio DISABLE ROW LEVEL SECURITY;
@@ -134,3 +162,4 @@ ALTER TABLE mm_accounts DISABLE ROW LEVEL SECURITY;
 ALTER TABLE mm_transactions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE mm_categories DISABLE ROW LEVEL SECURITY;
 ALTER TABLE mm_allocation DISABLE ROW LEVEL SECURITY;
+ALTER TABLE mm_summary DISABLE ROW LEVEL SECURITY;
