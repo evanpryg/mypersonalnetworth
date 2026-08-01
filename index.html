@@ -1960,6 +1960,11 @@ select.form-input:focus {
   flex-shrink: 0;
   width: 140px;
 }
+
+/* With no data there is no donut and no list, so the empty state should have
+   the whole card rather than being squeezed into the 140px donut column. */
+.mm-expense-content.is-empty .mm-donut-wrapper { width: 100%; }
+.mm-expense-content.is-empty .mm-category-list { display: none; }
 .mm-donut-wrapper .chart-donut-wrap { min-height: 140px; }
 .mm-category-list {
   flex: 1;
@@ -8491,7 +8496,11 @@ function mmRenderChart(type) {
   const listEl = document.getElementById('mmChartCategoryList');
   if (!donutEl || !listEl) return;
 
+  const contentEl = donutEl.closest('.mm-expense-content');
+  const setEmpty = (on) => { if (contentEl) contentEl.classList.toggle('is-empty', on); };
+
   if (!MM_DASHBOARD) {
+    setEmpty(true);
     donutEl.innerHTML = mmEmpty('circle-dollar', 'Belum ada data', 'Grafik muncul setelah ada transaksi tercatat.');
     listEl.innerHTML = '';
     return;
@@ -8520,11 +8529,13 @@ function mmRenderChart(type) {
   }
 
   if (total <= 0) {
+    setEmpty(true);
     donutEl.innerHTML = mmEmpty('circle-dollar', 'Bulan ini masih kosong', 'Catat transaksi pertama bulan ini, grafiknya langsung terisi.', `<button class="mm-empty-action" onclick="mmShowActionSheet('expense')">Catat pengeluaran</button>`);
     listEl.innerHTML = '';
     return;
   }
 
+  setEmpty(false);
   mmRenderDonut(entries, total, type);
   mmRenderCategoryList(entries, total);
 }
