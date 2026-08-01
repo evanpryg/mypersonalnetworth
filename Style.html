@@ -310,7 +310,7 @@ body {
   margin-bottom: 22px;
 }
 
-.auth-logo { font-size: 30px; line-height: 1; }
+.auth-logo { display: flex; line-height: 0; }
 .auth-title { font-size: 18px; font-weight: 700; }
 
 .auth-subtitle {
@@ -2459,7 +2459,17 @@ select.form-input:focus {
   border: 1px solid var(--border);
 }
 
-.mm-settings-acc-row .icon { font-size: 18px; }
+.mm-settings-acc-row .icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
 .mm-settings-acc-row .info { flex: 1; }
 .mm-settings-acc-row .info .name { font-size: 13px; font-weight: 600; color: var(--text); }
 .mm-settings-acc-row .info .meta { font-size: 11px; color: var(--text-muted); }
@@ -2521,6 +2531,110 @@ select.form-input:focus {
   color: var(--text-muted);
   font-size: 13px;
   gap: 8px;
+}
+
+/* Skeletons instead of a spinner: the placeholder has the shape of the thing
+   being loaded, so nothing jumps when the data lands. */
+.sk {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.09) 37%,
+    rgba(255,255,255,0.04) 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk { animation: none; }
+}
+
+.sk-line { height: 11px; }
+.sk-line.lg { height: 15px; }
+.sk-line.sm { height: 9px; }
+
+.sk-card-row {
+  display: flex;
+  gap: 12px;
+  padding: 0 16px;
+  overflow: hidden;
+}
+
+.sk-account {
+  flex: 0 0 150px;
+  height: 96px;
+  border-radius: var(--radius);
+}
+
+.sk-list { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
+
+.sk-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.sk-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.sk-row-body { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.sk-row-amount { width: 74px; height: 12px; flex-shrink: 0; }
+
+/* === TOUCH FEEDBACK ===
+   Anything tappable should acknowledge the tap. Several rows already tint on
+   :active but do not move; a small scale is what makes a press feel physical
+   rather than like a page that happened to change. */
+.mm-account-card,
+.mm-category-item,
+.mm-transaction-item,
+.mm-tx-item,
+.mm-dash-tx-row,
+.mm-alloc-card,
+.mm-settings-acc-row .actions button,
+.tab-item {
+  transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mm-account-card:active,
+.mm-alloc-card:active { transform: scale(0.975); }
+
+.mm-category-item:active,
+.mm-transaction-item:active,
+.mm-tx-item:active,
+.mm-dash-tx-row:active { transform: scale(0.985); }
+
+.mm-settings-acc-row .actions button:active { transform: scale(0.9); }
+.tab-item:active { transform: scale(0.94); }
+
+.mm-category-item:active,
+.mm-transaction-item:active { background: rgba(255,255,255,0.04); }
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-account-card,
+  .mm-category-item,
+  .mm-transaction-item,
+  .mm-tx-item,
+  .mm-dash-tx-row,
+  .mm-alloc-card,
+  .mm-settings-acc-row .actions button,
+  .tab-item { transition: background 0.2s; }
+
+  .mm-account-card:active,
+  .mm-alloc-card:active,
+  .mm-category-item:active,
+  .mm-transaction-item:active,
+  .mm-tx-item:active,
+  .mm-dash-tx-row:active,
+  .mm-settings-acc-row .actions button:active,
+  .tab-item:active { transform: none; }
 }
 
 .mm-spinner {

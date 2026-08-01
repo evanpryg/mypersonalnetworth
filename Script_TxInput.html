@@ -428,6 +428,9 @@ function txSubmit() {
         // Success animation
         btn.textContent = '✓ Saved!';
         btn.style.background = 'var(--success)';
+        // A short buzz confirms the save without the user having to read the
+        // button — logging an expense is usually a glance, not a stare.
+        if (navigator.vibrate) navigator.vibrate(12);
         setTimeout(() => {
           btn.textContent = 'Save Transaction';
           btn.style.background = '';

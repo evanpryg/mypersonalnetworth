@@ -996,7 +996,22 @@
   <div id="authGate" class="auth-gate hidden">
     <div class="auth-card">
       <div class="auth-brand">
-        <span class="auth-logo">💰</span>
+        <!-- Same mark as the home screen icon, so the app looks like itself
+             from the very first screen. -->
+        <span class="auth-logo" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="44" height="44">
+            <defs>
+              <linearGradient id="authMarkGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#10b981"/>
+                <stop offset="1" stop-color="#06b6d4"/>
+              </linearGradient>
+            </defs>
+            <rect width="48" height="48" rx="12" fill="url(#authMarkGrad)"/>
+            <polyline points="11,29 17,33 27,20 33,25 38,15" fill="none" stroke="#fff"
+                      stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="38" cy="15" r="2.6" fill="#fff"/>
+          </svg>
+        </span>
         <div>
           <h1 class="auth-title">Money Management</h1>
           <p class="auth-subtitle">Personal Finance</p>

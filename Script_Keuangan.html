@@ -28,6 +28,26 @@ function mmShowPage(pageId) {
   if (pageId === 'mmInsightPage') loadFinancialInsight();
 }
 
+/* === SKELETONS ===
+   Placeholders shaped like the content they stand in for, so the layout does
+   not shift when data arrives. Replaces the spinner that used to sit here. */
+function skAccounts(n) {
+  let out = '<div class="sk-card-row">';
+  for (let i = 0; i < (n || 3); i++) out += '<div class="sk sk-account"></div>';
+  return out + '</div>';
+}
+
+function skRows(n) {
+  let out = '<div class="sk-list">';
+  for (let i = 0; i < (n || 5); i++) {
+    out += '<div class="sk-row"><div class="sk sk-avatar"></div>'
+         + '<div class="sk-row-body"><div class="sk sk-line" style="width:' + (48 + (i * 13) % 34) + '%"></div>'
+         + '<div class="sk sk-line sm" style="width:' + (26 + (i * 9) % 22) + '%"></div></div>'
+         + '<div class="sk sk-row-amount"></div></div>';
+  }
+  return out + '</div>';
+}
+
 /* === FAB === */
 function mmToggleFab() {
   const btn = document.getElementById('mmFabBtn');
@@ -62,7 +82,7 @@ function mmLoadDashboard(skipIfCached) {
   MM_MONTH_CACHE = {};
 
   const container = document.getElementById('mmAccountsScroll');
-  if (container) container.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
+  if (container) container.innerHTML = skAccounts(3);;
 
   google.script.run
     .withSuccessHandler(data => {
@@ -218,7 +238,7 @@ function mmRenderAccountCards(accounts) {
       <div class="mm-account-card" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
         <div class="mm-account-top">
           <div class="mm-account-logo" style="background:${color}22;color:${color}">
-            ${a.icon ? escapeHtml(a.icon) : initials}
+            ${a.icon ? mmAccountIconSvg(a.icon, 18) : initials}
           </div>
           <div class="mm-account-info-col">
             <span class="mm-account-name">${escapeHtml(a.name)}</span>
@@ -289,7 +309,7 @@ function mmShowBudgetDetail() {
     return `
       <div class="mm-budget-detail-row">
         <div class="mm-budget-detail-head">
-          <span class="mm-budget-detail-name">${c.icon || ''} ${escapeHtml(c.category)} <small>${c.percent || 0}%</small></span>
+          <span class="mm-budget-detail-name">${mmCategoryEmoji(c.category)} ${escapeHtml(c.category)} <small>${c.percent || 0}%</small></span>
           <strong>${mmFormatIDR(spent)} <span>/ ${mmFormatIDR(target)}</span></strong>
         </div>
         <div class="mm-budget-bar"><div class="mm-budget-bar-fill" style="width:${Math.min(pct, 100)}%;background:${barBg}"></div></div>
@@ -588,12 +608,12 @@ function mmShowEditTx(rowNumber, type, account, accountTo, category, subcategory
   
   const accountOpts = MM_ACCOUNTS.map(a => {
     const sel = a.name === account ? 'selected' : '';
-    return `<option value="${escapeHtml(a.name)}" ${sel}>${a.icon} ${escapeHtml(a.name)}</option>`;
+    return `<option value="${escapeHtml(a.name)}" ${sel}>${escapeHtml(a.name)}</option>`;
   }).join('');
 
   const accountToOpts = MM_ACCOUNTS.map(a => {
     const sel = a.name === accountTo ? 'selected' : '';
-    return `<option value="${escapeHtml(a.name)}" ${sel}>${a.icon} ${escapeHtml(a.name)}</option>`;
+    return `<option value="${escapeHtml(a.name)}" ${sel}>${escapeHtml(a.name)}</option>`;
   }).join('');
 
   let extraFields = '';
@@ -727,7 +747,7 @@ function mmLoadAllTime() {
     return;
   }
 
-  container.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
+  container.innerHTML = skRows(5);
   google.script.run
     .withSuccessHandler(data => {
       MM_ALLTIME_CACHE = data;
@@ -807,7 +827,7 @@ function mmLoadMonthHistory() {
 
   const grid = document.getElementById('mmHistoryCalendarGrid');
   if (grid) grid.innerHTML = '';
-  if (container) container.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
+  if (container) container.innerHTML = skRows(5);
   google.script.run
     .withSuccessHandler(data => {
       MM_MONTH_CACHE[cacheKey] = data;
@@ -920,7 +940,7 @@ function mmLoadPeriod() {
     return;
   }
   const container = document.getElementById('mmHistoryPeriodContent');
-  container.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
+  container.innerHTML = skRows(5);
   google.script.run
     .withSuccessHandler(data => mmRenderPeriod(data, container))
     .withFailureHandler(err => { container.innerHTML = '<div class="empty-state">Failed to load.</div>'; })
@@ -1035,14 +1055,14 @@ function mmRenderSettingsAccounts() {
   }
   container.innerHTML = MM_ACCOUNTS.map(a => `
     <div class="mm-settings-acc-row">
-      <span class="icon">${a.icon}</span>
+      <span class="icon">${mmAccountIconSvg(a.icon, 18)}</span>
       <div class="info">
         <div class="name">${escapeHtml(a.name)}</div>
         <div class="meta">Balance: ${mmFormatIDR(a.balance || a.initialBalance)} · ${a.showOnDashboard ? 'Shown' : 'Hidden'}</div>
       </div>
       <div class="actions">
-        <button onclick="mmShowEditAccount('${jsStr(a.id)}', '${jsStr(a.name)}', '${jsStr(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">✏️</button>
-        <button onclick="mmDeleteAccountConfirm('${jsStr(a.id)}')">×</button>
+        <button aria-label="Edit akun" onclick="mmShowEditAccount('${jsStr(a.id)}', '${jsStr(a.name)}', '${jsStr(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">${lucideIconSvg('pencil', 15)}</button>
+        <button aria-label="Hapus akun" onclick="mmDeleteAccountConfirm('${jsStr(a.id)}')">${lucideIconSvg('trash', 15)}</button>
       </div>
     </div>
   `).join('');
@@ -1114,7 +1134,7 @@ function mmRenderAllocReadOnly() {
   }
   container.innerHTML = MM_ALLOCATION.map(a => `
     <div class="mm-account-row-mini">
-      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${a.color || '#10b981'};margin-right:6px;"></span>${a.icon || '📌'} ${escapeHtml(a.category)}</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${a.color || '#10b981'};margin-right:6px;"></span>${mmCategoryEmoji(a.category)} ${escapeHtml(a.category)}</span>
       <strong>${a.percent}%</strong>
     </div>
   `).join('');
@@ -1371,7 +1391,7 @@ function mmDeleteCat(groupKey, subcategory) {
 function mmShowCategoryDetail(category) {
   const sheet = document.getElementById('mmCategoryDetailSheet');
   const content = document.getElementById('mmCategoryDetailContent');
-  content.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
+  content.innerHTML = skRows(5);
   sheet.classList.remove('hidden');
 
   const now = new Date();
@@ -1435,7 +1455,7 @@ function mmCloseCategoryDetail(event) {
 function mmShowAccountTransactions(accountName) {
   const sheet = document.getElementById('mmCategoryDetailSheet');
   const content = document.getElementById('mmCategoryDetailContent');
-  content.innerHTML = '<div class="mm-loading"><div class="mm-spinner"></div>Loading...</div>';
+  content.innerHTML = skRows(5);
   sheet.classList.remove('hidden');
 
   // Get transactions from cache
@@ -1545,6 +1565,24 @@ function mmCategoryColor(category, txType) {
   return '#64748b';
 }
 
+/* Account icons are stored in the database as emoji, which render in full
+   colour and in a different style on every OS — next to the line icons used
+   everywhere else they look pasted in. Map the stored emoji onto the same
+   icon set instead of migrating the data, so an account keeps working
+   whatever emoji it was saved with. */
+const MM_ACCOUNT_ICON_MAP = {
+  '💳': 'credit-card', '💴': 'banknote', '💵': 'banknote', '💶': 'banknote',
+  '💷': 'banknote', '💸': 'banknote', '🪙': 'coins', '💰': 'wallet',
+  '👛': 'wallet', '👝': 'wallet', '🏦': 'landmark', '🏛️': 'landmark',
+  '🏛': 'landmark', '📱': 'smartphone', '🛟': 'life-buoy', '🐷': 'coins',
+  '🐖': 'coins', '📈': 'trending-up', '🎯': 'circle-dollar'
+};
+
+function mmAccountIconSvg(icon, size) {
+  const name = MM_ACCOUNT_ICON_MAP[(icon || '').trim()] || 'wallet';
+  return lucideIconSvg(name, size || 16);
+}
+
 function lucideIconSvg(name, size) {
   size = size || 16;
   // Predefined SVG paths for the icons we use
@@ -1558,7 +1596,16 @@ function lucideIconSvg(name, size) {
     'wallet': '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
     'arrow-right-left': '<polyline points="21 7 3 7"/><polyline points="15 1 21 7 15 13"/><polyline points="3 17 21 17"/><polyline points="9 11 3 17 9 23"/>',
     'tag': '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>',
-    'chevron-right': '<path d="m9 18 6-6-6-6"/>'
+    'chevron-right': '<path d="m9 18 6-6-6-6"/>',
+    'credit-card': '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',
+    'banknote': '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01"/><path d="M18 12h.01"/>',
+    'coins': '<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/>',
+    'landmark': '<line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/>',
+    'smartphone': '<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>',
+    'life-buoy': '<circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/>',
+    'pencil': '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
+    'trash': '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
+    'circle-dollar': '<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>'
   };
 
   const inner = paths[name] || '<circle cx="12" cy="12" r="4"/>';
