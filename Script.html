@@ -244,15 +244,16 @@
   function ivRenderPlatformsTo() {
     const container = document.getElementById('ivPlatformToChips');
     if (!container) return;
+    // Drop a stale target before rendering, or the chips are drawn from a
+    // selection that is about to be cleared.
     const platforms = (APP_SETTINGS.Platform || []).filter(p => p !== IV_SELECTED_PLATFORM);
+    if (IV_SELECTED_PLATFORM_TO && !platforms.includes(IV_SELECTED_PLATFORM_TO)) {
+      IV_SELECTED_PLATFORM_TO = '';
+    }
     container.innerHTML = platforms.map(p => {
       const isActive = IV_SELECTED_PLATFORM_TO === p;
       return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:#8b5cf6" onclick="ivSelectPlatformTo('${jsStr(p)}')">${escapeHtml(p)}</button>`;
     }).join('');
-    // If the previously selected target is no longer valid, clear it
-    if (IV_SELECTED_PLATFORM_TO && IV_SELECTED_PLATFORM_TO === IV_SELECTED_PLATFORM) {
-      IV_SELECTED_PLATFORM_TO = '';
-    }
   }
 
   function ivSelectPlatformTo(name) {
@@ -1063,7 +1064,7 @@
       const badge = item.sector !== 'Cash' ? item.sector : item.platform;
 
       return `
-        <div class="mm-tx-card" onclick="confirmDeleteTransaction(${item.rowNumber})">
+        <div class="mm-tx-card" onclick="confirmDeleteTransaction(${item.rowNumber}, '${jsStr(item.transactionType)}')">
           <div class="mm-tx-card-icon" style="background:${color}20;color:${color}">${icon}</div>
           <div class="mm-tx-card-body">
             <span class="mm-tx-card-title">${escapeHtml(label)}</span>
@@ -1098,8 +1099,12 @@
     return new Intl.DateTimeFormat('en-GB', { day:'2-digit', month:'short', year:'numeric' }).format(date);
   }
 
-  function confirmDeleteTransaction(rowNumber) {
-    const ok = confirm('Delete this transaction?');
+  function confirmDeleteTransaction(rowNumber, type) {
+    // Deleting one leg of a cash transfer removes the other too, so say so.
+    const isTransfer = type === 'Transfer In' || type === 'Transfer Out';
+    const ok = confirm(isTransfer
+      ? 'Delete this transfer? Both the Transfer Out and Transfer In rows will be removed.'
+      : 'Delete this transaction?');
     if (!ok) return;
     google.script.run
       .withSuccessHandler(result => {
