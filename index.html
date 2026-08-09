@@ -716,6 +716,10 @@
           <span><i data-lucide="sliders-horizontal" class="fab-icon"></i></span>
           <small>Cash Adjust</small>
         </button>
+        <button class="fab-option" onclick="showActionSheet('transfer')">
+          <span><i data-lucide="arrow-right-left" class="fab-icon"></i></span>
+          <small>Transfer Cash</small>
+        </button>
       </div>
       <button class="fab-btn" id="fabBtn" onclick="toggleFab()">
         <i data-lucide="plus" class="fab-main-icon"></i>
@@ -792,6 +796,7 @@
         <button class="tx-type-tab" data-type="buy" onclick="ivSwitchType('buy')">Buy</button>
         <button class="tx-type-tab" data-type="sell" onclick="ivSwitchType('sell')">Sell</button>
         <button class="tx-type-tab" data-type="value" onclick="ivSwitchType('value')">Value</button>
+        <button class="tx-type-tab" data-type="transfer" onclick="ivSwitchType('transfer')">Transfer</button>
       </div>
 
       <!-- Amount Input (Hero) -->
@@ -814,8 +819,14 @@
 
       <!-- Platform (Chips) -->
       <div class="tx-section">
-        <label class="tx-section-label">Platform</label>
+        <label class="tx-section-label" id="ivPlatformLabel">Platform</label>
         <div class="tx-chips" id="ivPlatformChips"></div>
+      </div>
+
+      <!-- To Platform (Chips, shown only for transfer) -->
+      <div class="tx-section" id="ivPlatformToSection" style="display:none;">
+        <label class="tx-section-label">To Platform</label>
+        <div class="tx-chips" id="ivPlatformToChips"></div>
       </div>
 
       <!-- Sector (Chips, hidden for deposit/value) -->

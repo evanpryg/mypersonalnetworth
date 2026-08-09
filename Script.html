@@ -99,6 +99,7 @@
   /* === ACTION SHEET (Redesigned) === */
   let IV_TYPE = 'deposit';
   let IV_SELECTED_PLATFORM = '';
+  let IV_SELECTED_PLATFORM_TO = '';
   let IV_SELECTED_SECTOR = '';
   let IV_SELECTED_ASSET = '';
 
@@ -112,11 +113,12 @@
 
     // Reset state
     IV_SELECTED_PLATFORM = '';
+    IV_SELECTED_PLATFORM_TO = '';
     IV_SELECTED_SECTOR = '';
     IV_SELECTED_ASSET = '';
 
     // Map old modes to new types
-    const typeMap = { cash: 'deposit', buy: 'buy', sell: 'sell', value: 'value', adjust: 'deposit' };
+    const typeMap = { cash: 'deposit', buy: 'buy', sell: 'sell', value: 'value', adjust: 'deposit', transfer: 'transfer' };
     ivSwitchType(typeMap[mode] || 'deposit');
 
     // Set date
@@ -160,21 +162,36 @@
     const assetSection = document.getElementById('ivAssetSection');
     const dateSection = document.getElementById('ivDateSection');
     const assetLabel = document.getElementById('ivAssetLabel');
+    const platformToSection = document.getElementById('ivPlatformToSection');
+    const platformLabel = document.getElementById('ivPlatformLabel');
 
     if (type === 'deposit') {
       sectorSection.style.display = 'none';
       assetSection.style.display = 'none';
       dateSection.style.display = 'block';
+      if (platformToSection) platformToSection.style.display = 'none';
+      if (platformLabel) platformLabel.textContent = 'Platform';
+    } else if (type === 'transfer') {
+      sectorSection.style.display = 'none';
+      assetSection.style.display = 'none';
+      dateSection.style.display = 'block';
+      if (platformToSection) platformToSection.style.display = 'block';
+      if (platformLabel) platformLabel.textContent = 'From Platform';
+      ivRenderPlatformsTo();
     } else if (type === 'value') {
       sectorSection.style.display = 'block';
       assetSection.style.display = 'block';
       dateSection.style.display = 'none';
       assetLabel.textContent = 'Asset';
+      if (platformToSection) platformToSection.style.display = 'none';
+      if (platformLabel) platformLabel.textContent = 'Platform';
     } else {
       sectorSection.style.display = 'block';
       assetSection.style.display = 'block';
       dateSection.style.display = 'block';
       assetLabel.textContent = 'Asset';
+      if (platformToSection) platformToSection.style.display = 'none';
+      if (platformLabel) platformLabel.textContent = 'Platform';
     }
 
     ivRenderPlatforms();
@@ -221,6 +238,26 @@
     IV_SELECTED_PLATFORM = IV_SELECTED_PLATFORM === name ? '' : name;
     ivRenderPlatforms();
     ivRenderAssets();
+    if (IV_TYPE === 'transfer') ivRenderPlatformsTo();
+  }
+
+  function ivRenderPlatformsTo() {
+    const container = document.getElementById('ivPlatformToChips');
+    if (!container) return;
+    const platforms = (APP_SETTINGS.Platform || []).filter(p => p !== IV_SELECTED_PLATFORM);
+    container.innerHTML = platforms.map(p => {
+      const isActive = IV_SELECTED_PLATFORM_TO === p;
+      return `<button class="tx-chip ${isActive ? 'active' : ''}" style="--chip-color:#8b5cf6" onclick="ivSelectPlatformTo('${jsStr(p)}')">${escapeHtml(p)}</button>`;
+    }).join('');
+    // If the previously selected target is no longer valid, clear it
+    if (IV_SELECTED_PLATFORM_TO && IV_SELECTED_PLATFORM_TO === IV_SELECTED_PLATFORM) {
+      IV_SELECTED_PLATFORM_TO = '';
+    }
+  }
+
+  function ivSelectPlatformTo(name) {
+    IV_SELECTED_PLATFORM_TO = IV_SELECTED_PLATFORM_TO === name ? '' : name;
+    ivRenderPlatformsTo();
   }
 
   function ivRenderSectors() {
@@ -303,6 +340,14 @@
         .withSuccessHandler(r => ivHandleSuccess(r, btn))
         .withFailureHandler(e => ivHandleError(e, btn))
         .addTransaction({ date, platform: IV_SELECTED_PLATFORM, sector: 'Cash', asset: IV_SELECTED_PLATFORM + ' Cash', amountIDR: amount, transactionType: 'Deposit', notes });
+    } else if (IV_TYPE === 'transfer') {
+      // Transfer cash between platforms
+      if (!IV_SELECTED_PLATFORM_TO) { showToast('Pilih platform tujuan.', 'error'); btn.disabled = false; btn.textContent = 'Save Transaction'; return; }
+      if (IV_SELECTED_PLATFORM === IV_SELECTED_PLATFORM_TO) { showToast('Platform asal dan tujuan harus berbeda.', 'error'); btn.disabled = false; btn.textContent = 'Save Transaction'; return; }
+      google.script.run
+        .withSuccessHandler(r => ivHandleSuccess(r, btn))
+        .withFailureHandler(e => ivHandleError(e, btn))
+        .addCashTransfer({ date, fromPlatform: IV_SELECTED_PLATFORM, toPlatform: IV_SELECTED_PLATFORM_TO, amountIDR: amount, notes });
     } else if (IV_TYPE === 'buy') {
       const asset = IV_SELECTED_ASSET || (customAsset ? customAsset.value : '');
       if (!IV_SELECTED_SECTOR || !asset) { showToast('Pilih sector dan asset.', 'error'); btn.disabled = false; btn.textContent = 'Save Transaction'; return; }
@@ -1000,20 +1045,20 @@
     const displayItems = showAll ? items : items.slice(0, MAX_SHOW);
 
     function investTxIcon(type) {
-      const map = { 'Buy': '🛒', 'Sell': '📤', 'Deposit': '💵', 'Withdraw': '🏧', 'Initial Holding': '📦', 'Cash Adjustment': '⚡' };
+      const map = { 'Buy': '🛒', 'Sell': '📤', 'Deposit': '💵', 'Withdraw': '🏧', 'Initial Holding': '📦', 'Cash Adjustment': '⚡', 'Transfer Out': '↗️', 'Transfer In': '↙️' };
       return map[type] || '📌';
     }
 
     function investTxColor(type) {
-      const map = { 'Buy': '#3b82f6', 'Sell': '#f59e0b', 'Deposit': '#10b981', 'Withdraw': '#ef4444', 'Initial Holding': '#8b5cf6', 'Cash Adjustment': '#64748b' };
+      const map = { 'Buy': '#3b82f6', 'Sell': '#f59e0b', 'Deposit': '#10b981', 'Withdraw': '#ef4444', 'Initial Holding': '#8b5cf6', 'Cash Adjustment': '#64748b', 'Transfer Out': '#f97316', 'Transfer In': '#06b6d4' };
       return map[type] || '#64748b';
     }
 
     let html = displayItems.map(item => {
       const color = investTxColor(item.transactionType);
       const icon = investTxIcon(item.transactionType);
-      const amtColor = ['Buy', 'Withdraw'].includes(item.transactionType) ? 'var(--error)' : 'var(--success)';
-      const prefix = ['Buy', 'Withdraw'].includes(item.transactionType) ? '-' : '+';
+      const amtColor = ['Buy', 'Withdraw', 'Transfer Out'].includes(item.transactionType) ? 'var(--error)' : 'var(--success)';
+      const prefix = ['Buy', 'Withdraw', 'Transfer Out'].includes(item.transactionType) ? '-' : '+';
       const label = item.notes || item.asset || item.transactionType;
       const badge = item.sector !== 'Cash' ? item.sector : item.platform;
 

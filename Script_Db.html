@@ -283,8 +283,8 @@ var DB_API = {
       var amountIDR = toNumber_(row.AmountIDR);
       if (type === 'Buy') { if (!sector||!asset) return; ensurePortfolioItem_(portfolioMap, platform, sector, asset).TotalCapitalIDR += amountIDR; addCashMovement_(portfolioMap, platform, -amountIDR); }
       else if (type === 'Sell') { if (!sector||!asset) return; ensurePortfolioItem_(portfolioMap, platform, sector, asset).TotalCapitalIDR -= amountIDR; addCashMovement_(portfolioMap, platform, amountIDR); }
-      else if (type === 'Deposit') { addCashMovement_(portfolioMap, platform, amountIDR); }
-      else if (type === 'Withdraw') { addCashMovement_(portfolioMap, platform, -amountIDR); }
+      else if (type === 'Deposit' || type === 'Transfer In') { addCashMovement_(portfolioMap, platform, amountIDR); }
+      else if (type === 'Withdraw' || type === 'Transfer Out') { addCashMovement_(portfolioMap, platform, -amountIDR); }
       else if (type === 'Initial Holding') { if (!sector||!asset) return; ensurePortfolioItem_(portfolioMap, platform, sector, asset).TotalCapitalIDR += amountIDR; }
       else if (type === 'Cash Adjustment') { addCashMovement_(portfolioMap, platform, amountIDR); }
     });
@@ -372,6 +372,25 @@ var DB_API = {
     return { success:true, message:'Balance synced. Adjusted '+(difference>=0?'+':'')+difference.toLocaleString('id-ID')+'.' };
   },
 
+  async addCashTransfer(payload) {
+    var fromPlatform = normalize_(payload.fromPlatform), toPlatform = normalize_(payload.toPlatform);
+    var amountIDR = toNumber_(payload.amountIDR), date = payload.date, notes = normalize_(payload.notes) || '';
+    if (!fromPlatform || !toPlatform) throw new Error('Both source and destination platforms are required.');
+    if (fromPlatform === toPlatform) throw new Error('Source and destination platforms must be different.');
+    if (!amountIDR || amountIDR <= 0) throw new Error('Amount must be greater than 0.');
+    var linkId = -Date.now();
+    var outRow = mapRowToDb({ Date:date, Platform:fromPlatform, Sector:'Cash', Asset:getCashAssetName_(fromPlatform), TransactionType:'Transfer Out', AmountIDR:amountIDR, Notes:notes || ('Transfer to ' + toPlatform), Status:'Active' });
+    outRow.mm_tx_id = linkId;
+    var inRow = mapRowToDb({ Date:date, Platform:toPlatform, Sector:'Cash', Asset:getCashAssetName_(toPlatform), TransactionType:'Transfer In', AmountIDR:amountIDR, Notes:notes || ('Transfer from ' + fromPlatform), Status:'Active' });
+    inRow.mm_tx_id = linkId;
+    var { error: e1 } = await _sb.from('transactions').insert(outRow);
+    if (e1 && /mm_tx_id/.test(e1.message || '')) { delete outRow.mm_tx_id; delete inRow.mm_tx_id; var r1 = await _sb.from('transactions').insert(outRow); e1 = r1.error; }
+    if (e1) throw e1;
+    var { error: e2 } = await _sb.from('transactions').insert(inRow);
+    if (e2) throw e2;
+    return { success:true, message:'Cash transfer recorded: ' + fromPlatform + ' → ' + toPlatform + '.' };
+  },
+
   async getAssetOptions() {
     var dd = await this.getDashboardData();
     return dd.portfolio.filter(function(i){return i.Sector!=='Cash'&&i.TotalCapitalIDR>0;}).map(function(i){return{platform:i.Platform,sector:i.Sector,asset:i.Asset,currentValueIDR:i.CurrentValueIDR};}).sort(function(a,b){return a.platform.localeCompare(b.platform)||a.sector.localeCompare(b.sector)||a.asset.localeCompare(b.asset);});
@@ -384,8 +403,15 @@ var DB_API = {
   },
 
   async deleteTransaction(rowNumber) {
+    // Look up the row to check for a linked transfer (negative mm_tx_id).
+    var { data: row } = await _sb.from('transactions').select('mm_tx_id').eq('id', rowNumber).maybeSingle();
     var { error } = await _sb.from('transactions').update({status:'Deleted'}).eq('id',rowNumber);
     if (error) throw error;
+    // If the row belongs to a linked cash transfer pair, soft-delete both sides.
+    if (row && row.mm_tx_id && row.mm_tx_id < 0) {
+      var pair = await _sb.from('transactions').update({status:'Deleted'}).eq('mm_tx_id', row.mm_tx_id).neq('id', rowNumber);
+      if (pair.error) console.warn('Paired transfer row not cascaded:', pair.error.message);
+    }
     return { success:true, message:'Transaction deleted successfully.' };
   },
 
