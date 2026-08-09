@@ -97,7 +97,7 @@
   }
 
   /* === ACTION SHEET (Redesigned) === */
-  let IV_TYPE = 'deposit';
+  let IV_TYPE = 'buy';
   let IV_SELECTED_PLATFORM = '';
   let IV_SELECTED_PLATFORM_TO = '';
   let IV_SELECTED_SECTOR = '';
@@ -117,9 +117,8 @@
     IV_SELECTED_SECTOR = '';
     IV_SELECTED_ASSET = '';
 
-    // Map old modes to new types
-    const typeMap = { cash: 'deposit', buy: 'buy', sell: 'sell', value: 'value', adjust: 'deposit', transfer: 'transfer' };
-    ivSwitchType(typeMap[mode] || 'deposit');
+    const typeMap = { buy: 'buy', sell: 'sell', value: 'value', transfer: 'transfer' };
+    ivSwitchType(typeMap[mode] || 'buy');
 
     // Set date
     const today = new Date().toISOString().slice(0, 10);
@@ -165,13 +164,7 @@
     const platformToSection = document.getElementById('ivPlatformToSection');
     const platformLabel = document.getElementById('ivPlatformLabel');
 
-    if (type === 'deposit') {
-      sectorSection.style.display = 'none';
-      assetSection.style.display = 'none';
-      dateSection.style.display = 'block';
-      if (platformToSection) platformToSection.style.display = 'none';
-      if (platformLabel) platformLabel.textContent = 'Platform';
-    } else if (type === 'transfer') {
+    if (type === 'transfer') {
       sectorSection.style.display = 'none';
       assetSection.style.display = 'none';
       dateSection.style.display = 'block';
@@ -197,6 +190,7 @@
     ivRenderPlatforms();
     ivRenderSectors();
     ivRenderAssets();
+    ivUpdateCashInfo();
   }
 
   function ivUpdateDateDisplay() {
@@ -238,7 +232,27 @@
     IV_SELECTED_PLATFORM = IV_SELECTED_PLATFORM === name ? '' : name;
     ivRenderPlatforms();
     ivRenderAssets();
+    ivUpdateCashInfo();
     if (IV_TYPE === 'transfer') ivRenderPlatformsTo();
+  }
+
+  function ivGetPlatformCash(platform) {
+    if (!platform || !LATEST_DASHBOARD_DATA) return 0;
+    var item = LATEST_DASHBOARD_DATA.cashByPlatform.find(function(c) { return c.platform === platform; });
+    return item ? item.cashBalanceIDR : 0;
+  }
+
+  function ivUpdateCashInfo() {
+    var el = document.getElementById('ivCashInfo');
+    if (!el) return;
+    if (!IV_SELECTED_PLATFORM || (IV_TYPE !== 'buy' && IV_TYPE !== 'sell' && IV_TYPE !== 'transfer')) {
+      el.style.display = 'none';
+      return;
+    }
+    var cash = ivGetPlatformCash(IV_SELECTED_PLATFORM);
+    el.style.display = 'block';
+    el.className = 'iv-cash-info';
+    el.textContent = 'Cash ' + IV_SELECTED_PLATFORM + ': ' + maskAmount('Rp ' + cash.toLocaleString('id-ID'));
   }
 
   function ivRenderPlatformsTo() {
@@ -335,16 +349,16 @@
     btn.disabled = true;
     btn.textContent = 'Saving...';
 
-    if (IV_TYPE === 'deposit') {
-      // Deposit cash
-      google.script.run
-        .withSuccessHandler(r => ivHandleSuccess(r, btn))
-        .withFailureHandler(e => ivHandleError(e, btn))
-        .addTransaction({ date, platform: IV_SELECTED_PLATFORM, sector: 'Cash', asset: IV_SELECTED_PLATFORM + ' Cash', amountIDR: amount, transactionType: 'Deposit', notes });
-    } else if (IV_TYPE === 'transfer') {
+    if (IV_TYPE === 'transfer') {
       // Transfer cash between platforms
       if (!IV_SELECTED_PLATFORM_TO) { showToast('Pilih platform tujuan.', 'error'); btn.disabled = false; btn.textContent = 'Save Transaction'; return; }
       if (IV_SELECTED_PLATFORM === IV_SELECTED_PLATFORM_TO) { showToast('Platform asal dan tujuan harus berbeda.', 'error'); btn.disabled = false; btn.textContent = 'Save Transaction'; return; }
+      const transferCash = ivGetPlatformCash(IV_SELECTED_PLATFORM);
+      if (amount > transferCash) {
+        showToast('Cash ' + IV_SELECTED_PLATFORM + ' tidak cukup (Rp ' + transferCash.toLocaleString('id-ID') + ').', 'error');
+        btn.disabled = false; btn.textContent = 'Save Transaction';
+        return;
+      }
       google.script.run
         .withSuccessHandler(r => ivHandleSuccess(r, btn))
         .withFailureHandler(e => ivHandleError(e, btn))
@@ -352,6 +366,12 @@
     } else if (IV_TYPE === 'buy') {
       const asset = IV_SELECTED_ASSET || (customAsset ? customAsset.value : '');
       if (!IV_SELECTED_SECTOR || !asset) { showToast('Pilih sector dan asset.', 'error'); btn.disabled = false; btn.textContent = 'Save Transaction'; return; }
+      const availCash = ivGetPlatformCash(IV_SELECTED_PLATFORM);
+      if (amount > availCash) {
+        showToast('Cash ' + IV_SELECTED_PLATFORM + ' tidak cukup (Rp ' + availCash.toLocaleString('id-ID') + ').', 'error');
+        btn.disabled = false; btn.textContent = 'Save Transaction';
+        return;
+      }
       google.script.run
         .withSuccessHandler(r => ivHandleSuccess(r, btn))
         .withFailureHandler(e => ivHandleError(e, btn))

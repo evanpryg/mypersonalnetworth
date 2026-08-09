@@ -698,10 +698,6 @@
     <!-- ===== INVESTMENT TRACKER FAB ===== -->
     <div class="fab-container" id="investFabContainer" style="display:none;">
       <div class="fab-menu" id="fabMenu">
-        <button class="fab-option" onclick="showActionSheet('cash')">
-          <span><i data-lucide="wallet" class="fab-icon"></i></span>
-          <small>Add Cash</small>
-        </button>
         <button class="fab-option" onclick="showActionSheet('buy')">
           <span><i data-lucide="trending-up" class="fab-icon"></i></span>
           <small>Buy Asset</small>
@@ -713,14 +709,6 @@
         <button class="fab-option" onclick="showActionSheet('value')">
           <span><i data-lucide="bar-chart-3" class="fab-icon"></i></span>
           <small>Update Value</small>
-        </button>
-        <button class="fab-option" onclick="showActionSheet('adjust')">
-          <span><i data-lucide="sliders-horizontal" class="fab-icon"></i></span>
-          <small>Cash Adjust</small>
-        </button>
-        <button class="fab-option" onclick="showActionSheet('transfer')">
-          <span><i data-lucide="arrow-right-left" class="fab-icon"></i></span>
-          <small>Transfer Cash</small>
         </button>
       </div>
       <button class="fab-btn" id="fabBtn" onclick="toggleFab()">
@@ -794,8 +782,7 @@
       
       <!-- Transaction Type Tabs -->
       <div class="tx-type-tabs" id="ivTypeTabs">
-        <button class="tx-type-tab active" data-type="deposit" onclick="ivSwitchType('deposit')">Deposit</button>
-        <button class="tx-type-tab" data-type="buy" onclick="ivSwitchType('buy')">Buy</button>
+        <button class="tx-type-tab active" data-type="buy" onclick="ivSwitchType('buy')">Buy</button>
         <button class="tx-type-tab" data-type="sell" onclick="ivSwitchType('sell')">Sell</button>
         <button class="tx-type-tab" data-type="value" onclick="ivSwitchType('value')">Value</button>
         <button class="tx-type-tab" data-type="transfer" onclick="ivSwitchType('transfer')">Transfer</button>
@@ -823,6 +810,7 @@
       <div class="tx-section">
         <label class="tx-section-label" id="ivPlatformLabel">Platform</label>
         <div class="tx-chips" id="ivPlatformChips"></div>
+        <div id="ivCashInfo" class="iv-cash-info" style="display:none;"></div>
       </div>
 
       <!-- To Platform (Chips, shown only for transfer) -->
