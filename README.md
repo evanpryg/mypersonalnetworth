@@ -72,16 +72,12 @@ If you have old data from Google Sheets, export each sheet as a `.csv` file and 
 
 ## 🔒 Security
 
-The published page contains the Supabase project URL and anon key. Anyone can read them. What decides whether that matters is Row Level Security:
+The published page contains the Supabase project URL and anon key. The app currently runs in **single-user mode** with **RLS off** and **no login required** — the anon key grants full read/write access.
 
-- **RLS off** (the original schema) — the anon key grants full read/write/delete on every table to anyone who opens the page source.
-- **RLS on** (`migrations/002_enable_rls.sql`) — the database only answers requests carrying a logged-in session token, restricted to one email address. The anon key on its own gets nothing.
+This is fine if you are the only user. If you ever need to lock it down:
 
-Apply `002` and you are safe to keep the repo public. Alongside it, in the Supabase dashboard:
-
-1. **Authentication → URL Configuration** — set *Site URL* and add a *Redirect URL* for your GitHub Pages address, so the magic link can return to the app.
-2. **Authentication → Providers → Email** — turn *Enable Sign Ups* off so nobody else can register.
-3. **Project Settings → API** — rotate the anon key if it has ever been committed while RLS was off.
+- Apply `migrations/002_enable_rls.sql` to enable Row Level Security and require login.
+- To revert back to open mode, run `migrations/003_disable_rls.sql`.
 
 ---
 
@@ -93,6 +89,7 @@ Run these in Supabase → SQL Editor, in order. Each one is a single transaction
 |---|---|
 | `migrations/001_archive_2025.sql` | Folds 2025 detail into per-category monthly summaries in `mm_summary`, rolls each account's 2025 net into `initialbalance`, then deletes the detail rows. Refuses to run twice. |
 | `migrations/002_enable_rls.sql` | Enables RLS on every table and restricts access to one authenticated email. **Log in through the app first** — see Security above. |
+| `migrations/003_disable_rls.sql` | Reverts migration 002: disables RLS, drops owner-only policies, restores anonymous access. No login needed after this. |
 
 The balance roll-up in `001` is not optional: account balances are computed as `initialbalance` plus every transaction, so deleting history without it moves your net worth.
 

@@ -1168,24 +1168,11 @@ function injectAuthSettingsCard() {
   async function boot() {
     initSupabaseClient();
 
-    if (_sb) {
-      AUTH_USER = await authCurrentUser();
-      if (!AUTH_USER && !(await authAnonymousReadWorks())) {
-        // Database is locked down and we have no session: nothing will load,
-        // so ask for a login instead of showing a broken dashboard.
-        authShowGate(true);
-        setTimeout(injectAuthSettingsCard, 300);
-        return;
-      }
-      authShowGate(false);
-      // Signing in or out mid-session should re-read everything.
-      _sb.auth.onAuthStateChange(function(event) {
-        if (event === 'SIGNED_IN' && !AUTH_USER) window.location.reload();
-      });
-    }
+    // Auth/login disabled — single-user mode, no RLS.
+    // Always hide the gate and go straight to the app.
+    authShowGate(false);
 
     setTimeout(injectSupabaseSettingsCard, 300);
-    setTimeout(injectAuthSettingsCard, 300);
     if (typeof initApp === 'function') {
       initApp();
     }
