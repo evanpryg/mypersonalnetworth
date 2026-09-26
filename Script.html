@@ -417,6 +417,42 @@
     showToast(err.message || 'Failed.', 'error');
   }
 
+  /* === SETTINGS SECTION NAV ===
+     Chips at the top of each settings page jump to a section; the chip for
+     whichever section is on screen stays highlighted while scrolling. */
+  function settingsJump(event, sectionId) {
+    if (event) event.preventDefault();
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    section.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    setSettingsNavActive(section.closest('.settings-page'), sectionId);
+  }
+
+  function setSettingsNavActive(page, sectionId) {
+    if (!page) return;
+    page.querySelectorAll('.settings-nav-chip').forEach(chip => {
+      const on = chip.getAttribute('href') === '#' + sectionId;
+      chip.classList.toggle('active', on);
+      if (on) chip.setAttribute('aria-current', 'true'); else chip.removeAttribute('aria-current');
+    });
+  }
+
+  function initSettingsNav() {
+    if (!('IntersectionObserver' in window)) return;
+    document.querySelectorAll('.settings-page').forEach(page => {
+      const observer = new IntersectionObserver(entries => {
+        const visible = entries.filter(e => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible) setSettingsNavActive(page, visible.target.id);
+      }, { rootMargin: '-140px 0px -55% 0px' });
+      page.querySelectorAll('.set-section').forEach(s => observer.observe(s));
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initSettingsNav);
+  else initSettingsNav();
+
   /* === COLLAPSIBLE PANELS === */
   function togglePanel(panelId) {
     const panel = document.getElementById(panelId);
@@ -424,7 +460,12 @@
     if (!panel) return;
     const isHidden = panel.classList.contains('hidden');
     panel.classList.toggle('hidden');
-    if (chevron) chevron.textContent = isHidden ? '↑' : '↓';
+    if (chevron) {
+      chevron.textContent = isHidden ? '↑' : '↓';
+      chevron.classList.toggle('is-open', isHidden);
+    }
+    const toggle = chevron && chevron.closest('button');
+    if (toggle) toggle.setAttribute('aria-expanded', String(isHidden));
   }
 
   /* === ALLOCATION TABS === */
@@ -1261,7 +1302,10 @@
     if (!details) return;
     const isHidden = details.classList.contains('hidden');
     details.classList.toggle('hidden');
-    if (chevron) chevron.textContent = isHidden ? '↑' : '↓';
+    if (chevron) {
+      chevron.textContent = isHidden ? '↑' : '↓';
+      chevron.classList.toggle('is-open', isHidden);
+    }
   }
 
   /* === UTILITY === */

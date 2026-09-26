@@ -1021,9 +1021,25 @@ function injectSupabaseSettingsCard() {
   if (!settingsPage) return;
   var currentUrl = safeStorage.getItem('supabase_url') || '';
   var currentKey = safeStorage.getItem('supabase_key') || '';
-  var cardHtml = '<section class="panel-card"><button class="panel-toggle" onclick="togglePanel(\'supabaseSettingsPanel\')"><div><p class="panel-eyebrow">Database</p><h3 class="panel-title">Supabase connection</h3></div><strong class="panel-chevron" id="supabaseSettingsChevron">↓</strong></button><div id="supabaseSettingsPanel" class="panel-body hidden"><form class="stack-form" onsubmit="saveSupabaseSettingsForm(event)" style="display:flex;flex-direction:column;gap:12px;"><label class="form-label" style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;">Supabase URL<input type="url" id="supabaseSettingsUrl" class="form-input" value="'+currentUrl+'" required placeholder="https://yourproject.supabase.co" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:#fff;"></label><label class="form-label" style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;">Supabase Anon Key<input type="password" id="supabaseSettingsKey" class="form-input" value="'+currentKey+'" required placeholder="Anon Key" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:#fff;"></label><div style="display:flex;gap:8px;margin-top:8px;"><button class="btn-primary" type="submit" style="flex:1;">Update Connection</button><button class="btn-ghost" type="button" onclick="resetSupabaseSettings()" style="color:var(--error);border-color:var(--error);">Disconnect</button></div></form></div></section>';
-  var headerCard = settingsPage.querySelector('.page-header-card');
-  if (headerCard) headerCard.insertAdjacentHTML('afterend', cardHtml);
+  if (document.getElementById('supabaseSettingsPanel')) return;
+  var attr = function(v) { return String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); };
+  // Set once and rarely touched, so it lives folded at the bottom of the
+  // Data section rather than as the first card on the page.
+  var cardHtml = '<div class="set-card set-danger set-db">'
+    + '<button class="set-danger-toggle" onclick="togglePanel(\'supabaseSettingsPanel\')" aria-expanded="false">'
+    + '<span class="set-danger-label set-db-label"><i data-lucide="database"></i>Koneksi Supabase</span>'
+    + '<strong class="panel-chevron" id="supabaseSettingsChevron">↓</strong></button>'
+    + '<div id="supabaseSettingsPanel" class="hidden">'
+    + '<form class="set-form-grid" onsubmit="saveSupabaseSettingsForm(event)">'
+    + '<label class="form-label set-span-2">Supabase URL<input type="url" id="supabaseSettingsUrl" class="form-input" value="' + attr(currentUrl) + '" required placeholder="https://yourproject.supabase.co"></label>'
+    + '<label class="form-label set-span-2">Anon Key<input type="password" id="supabaseSettingsKey" class="form-input" value="' + attr(currentKey) + '" required placeholder="Anon Key"></label>'
+    + '<button class="btn-primary" type="submit">Update</button>'
+    + '<button class="btn-danger" type="button" onclick="resetSupabaseSettings()">Disconnect</button>'
+    + '</form></div></div>';
+  var dataSection = document.getElementById('invSetData');
+  if (dataSection) dataSection.insertAdjacentHTML('beforeend', cardHtml);
+  else settingsPage.insertAdjacentHTML('beforeend', cardHtml);
+  if (window.lucide) lucide.createIcons();
 }
 
 // ============================================================

@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <base target="_top">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#09090b">
+  <meta name="theme-color" content="#0F172A">
   <!-- Installed to the home screen this opens standalone, with its own icon
        and no browser chrome — the difference between a bookmark and an app. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -37,7 +37,7 @@
           <svg class="eye-icon-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
           <svg class="eye-icon-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><line x1="1" y1="1" x2="23" y2="23"></line><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path></svg>
         </button>
-        <div class="ws-indicator" onclick="switchWorkspace()">
+        <div class="ws-indicator" role="button" tabindex="0" aria-label="Ganti workspace" onclick="switchWorkspace()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchWorkspace();}">
           <span class="ws-dot active"></span>
           <span class="ws-dot"></span>
         </div>
@@ -59,8 +59,8 @@
               <p class="progress-target-text" id="progressTargetText">of Rp100,000,000</p>
               <div class="progress-slider-track">
                 <div class="progress-slider-fill" id="mainProgressFill"></div>
-                <span class="progress-slider-thumb" id="mainRunner">🏃</span>
-                <span class="progress-slider-finish">🏁</span>
+                <span class="progress-slider-thumb" id="mainRunner" aria-hidden="true"></span>
+                <span class="progress-slider-finish" aria-hidden="true"><i data-lucide="flag"></i></span>
               </div>
               <p class="progress-percent-center" id="mainProgressText">0%</p>
               <p class="progress-note-center" id="heroNote">Start the journey.</p>
@@ -73,7 +73,7 @@
                   <p class="panel-eyebrow">Allocation</p>
                   <h3 class="panel-title">Portfolio Balance</h3>
                 </div>
-                <strong class="panel-chevron" id="allocationChevron">↑</strong>
+                <strong class="panel-chevron is-open" id="allocationChevron">↑</strong>
               </button>
               <div id="allocationPanel" class="panel-body">
                 <div class="tab-bar">
@@ -103,7 +103,7 @@
               </button>
               <div id="nextMovePanel" class="panel-body hidden">
                 <div class="insight-box">
-                  <div class="insight-icon">🧭</div>
+                  <div class="insight-icon" aria-hidden="true"><i data-lucide="compass"></i></div>
                   <div>
                     <h4 id="nextMoveTitle">Start with your first record.</h4>
                     <p id="nextMoveText">Add your holdings first. The tracker will suggest what needs balance.</p>
@@ -203,150 +203,140 @@
           </section>
         </div>
 
-        <!-- ===== SETTINGS PAGE ===== -->
-        <div id="settingsPage" class="page">
-          <section class="page-header-card">
-            <p class="panel-eyebrow">Settings</p>
-            <h2 class="page-title">Personalize</h2>
-            <p class="page-desc">Manage your goal, allocation, and dropdown data.</p>
-          </section>
+        <!-- ===== SETTINGS PAGE =====
+             Same layout as Money Settings: sections open, actions in their
+             headers, only deletion folded away. -->
+        <div id="settingsPage" class="page settings-page">
+          <header class="settings-head">
+            <h2 class="page-title">Settings</h2>
+          </header>
+
+          <nav class="settings-nav" aria-label="Bagian settings">
+            <a href="#invSetGoal" class="settings-nav-chip active" onclick="settingsJump(event,'invSetGoal')">Target</a>
+            <a href="#invSetAlloc" class="settings-nav-chip" onclick="settingsJump(event,'invSetAlloc')">Alokasi</a>
+            <a href="#invSetMaster" class="settings-nav-chip" onclick="settingsJump(event,'invSetMaster')">Master</a>
+            <a href="#invSetData" class="settings-nav-chip" onclick="settingsJump(event,'invSetData')">Data</a>
+          </nav>
 
           <!-- Goal -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('investGoalPanel')">
+          <section class="set-section" id="invSetGoal">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Goal</p>
-                <h3 class="panel-title">Main Target</h3>
+                <h3 class="set-section-title">Target Utama</h3>
+                <p class="set-section-sub">Ditampilkan di progress dashboard</p>
               </div>
-              <strong class="panel-chevron" id="investGoalChevron">↓</strong>
-            </button>
-            <div id="investGoalPanel" class="panel-body hidden">
-              <form id="targetForm" class="stack-form" onsubmit="submitTarget(event)">
-                <label class="form-label">Target Name <input type="text" name="targetName" id="targetNameInput" class="form-input" placeholder="First 100 Million" required></label>
-                <label class="form-label">Target Amount <input type="number" name="targetAmount" id="targetAmountInput" class="form-input" placeholder="100000000" required></label>
-                <label class="form-label">Notes <textarea name="notes" id="targetNotesInput" class="form-input" rows="2" placeholder="Main investment goal"></textarea></label>
-                <button class="btn-primary" type="submit">Save Goal</button>
+            </div>
+            <div class="set-card">
+              <form id="targetForm" class="set-form-grid" onsubmit="submitTarget(event)">
+                <label class="form-label">Nama target <input type="text" name="targetName" id="targetNameInput" class="form-input" placeholder="First 100 Million" required></label>
+                <label class="form-label">Jumlah (Rp) <input type="number" name="targetAmount" id="targetAmountInput" class="form-input" placeholder="100000000" inputmode="numeric" required></label>
+                <label class="form-label set-span-2">Catatan <input type="text" name="notes" id="targetNotesInput" class="form-input" placeholder="Main investment goal"></label>
+                <button class="btn-primary set-span-2" type="submit">Simpan target</button>
               </form>
             </div>
           </section>
 
-          <!-- Allocation Targets -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('investAllocPanel')">
+          <!-- Allocation targets -->
+          <section class="set-section" id="invSetAlloc">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Allocation</p>
-                <h3 class="panel-title">Target Balance</h3>
+                <h3 class="set-section-title">Target Alokasi</h3>
+                <p class="set-section-sub">Total harus 100%</p>
               </div>
-              <strong class="panel-chevron" id="investAllocChevron">↓</strong>
-            </button>
-            <div id="investAllocPanel" class="panel-body hidden">
+              <button type="button" class="set-add-btn" onclick="addAllocationTargetRow()"><i data-lucide="plus"></i>Sektor</button>
+            </div>
+            <div class="set-card">
               <form id="allocationTargetForm" onsubmit="submitAllocationTargets(event)">
                 <div id="allocationTargetRows" class="allocation-rows">Loading allocation targets...</div>
-                <div class="allocation-total-box" id="allocationTotalBox">
-                  <span>Total Allocation</span>
-                  <strong id="allocationTargetTotal">0%</strong>
-                </div>
-                <div class="form-actions">
-                  <button type="button" class="btn-ghost" onclick="addAllocationTargetRow()">+ Add Sector</button>
-                  <button type="submit" class="btn-primary">Save Allocation</button>
+                <div class="set-alloc-foot">
+                  <div class="allocation-total-box" id="allocationTotalBox">
+                    <span>Total</span>
+                    <strong id="allocationTargetTotal">0%</strong>
+                  </div>
+                  <button type="submit" class="btn-primary">Simpan</button>
                 </div>
               </form>
             </div>
           </section>
 
-          <!-- Master Data -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('investMasterPanel')">
+          <!-- Master data -->
+          <section class="set-section" id="invSetMaster">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Master Data</p>
-                <h3 class="panel-title">Dropdown Options</h3>
+                <h3 class="set-section-title">Master Data</h3>
+                <p class="set-section-sub">Pilihan di form transaksi</p>
               </div>
-              <strong class="panel-chevron" id="investMasterChevron">↓</strong>
-            </button>
-            <div id="investMasterPanel" class="panel-body hidden">
-              <div class="master-grid">
-                <div class="master-box">
-                  <div class="master-box-head">
-                    <h4>Platforms</h4>
-                    <button class="btn-mini" onclick="openQuickSetting('Platform')">+ Add</button>
-                  </div>
-                  <div id="platformChips" class="chip-wrap"></div>
+            </div>
+            <div class="set-card set-master">
+              <div class="set-master-row">
+                <div class="set-master-head">
+                  <h4>Platform</h4>
+                  <button class="set-mini-add" aria-label="Tambah platform" onclick="openQuickSetting('Platform')"><i data-lucide="plus"></i></button>
                 </div>
-                <div class="master-box">
-                  <div class="master-box-head">
-                    <h4>Sectors</h4>
-                    <button class="btn-mini" onclick="openQuickSetting('Sector')">+ Add</button>
-                  </div>
-                  <div id="sectorChips" class="chip-wrap"></div>
+                <div id="platformChips" class="chip-wrap"></div>
+              </div>
+              <div class="set-master-row">
+                <div class="set-master-head">
+                  <h4>Sektor</h4>
+                  <button class="set-mini-add" aria-label="Tambah sektor" onclick="openQuickSetting('Sector')"><i data-lucide="plus"></i></button>
                 </div>
-                <div class="master-box">
-                  <div class="master-box-head">
-                    <h4>Transaction Types</h4>
-                    <button class="btn-mini" onclick="openQuickSetting('TransactionType')">+ Add</button>
-                  </div>
-                  <div id="transactionTypeChips" class="chip-wrap"></div>
+                <div id="sectorChips" class="chip-wrap"></div>
+              </div>
+              <div class="set-master-row">
+                <div class="set-master-head">
+                  <h4>Tipe transaksi</h4>
+                  <button class="set-mini-add" aria-label="Tambah tipe transaksi" onclick="openQuickSetting('TransactionType')"><i data-lucide="plus"></i></button>
                 </div>
+                <div id="transactionTypeChips" class="chip-wrap"></div>
               </div>
             </div>
           </section>
 
-          <!-- Export Data -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('investExportPanel')">
+          <!-- Data -->
+          <section class="set-section" id="invSetData">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Backup</p>
-                <h3 class="panel-title">Export Data</h3>
-              </div>
-              <strong class="panel-chevron" id="investExportChevron">↓</strong>
-            </button>
-            <div id="investExportPanel" class="panel-body hidden">
-              <p class="settings-desc">Download data investasi dalam format CSV.</p>
-              <div class="export-options">
-                <button class="btn-primary btn-full" onclick="investExportData('all')"><i data-lucide="download" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px;"></i>Export Semua Data</button>
-                <button class="btn-ghost btn-full" onclick="investExportData('transactions')"><i data-lucide="file-text" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Export Transaksi</button>
-                <button class="btn-ghost btn-full" onclick="investExportData('portfolio')"><i data-lucide="file-text" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Export Portfolio</button>
+                <h3 class="set-section-title">Data</h3>
+                <p class="set-section-sub">Backup &amp; restore via CSV</p>
               </div>
             </div>
-          </section>
-
-          <!-- Import Data -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('investImportPanel')">
-              <div>
-                <p class="panel-eyebrow">Restore</p>
-                <h3 class="panel-title">Import Data</h3>
-              </div>
-              <strong class="panel-chevron" id="investImportChevron">↓</strong>
-            </button>
-            <div id="investImportPanel" class="panel-body hidden">
-              <p class="settings-desc">Import transaksi investasi dari file CSV.</p>
-              <div class="import-actions">
-                <button class="btn-ghost btn-full" onclick="investDownloadTemplate()"><i data-lucide="file-down" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Download Template CSV</button>
-                <label class="btn-primary btn-full import-label">
-                  <i data-lucide="upload" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px;"></i>Pilih File CSV &amp; Import
-                  <input type="file" id="investImportFile" accept=".csv" onchange="investImportData(event)" style="display:none;">
+            <div class="set-card">
+              <div class="set-action-grid">
+                <button class="set-action" onclick="investExportData('all')">
+                  <span class="set-action-icon"><i data-lucide="download"></i></span>
+                  <span>Export semua</span>
+                </button>
+                <label class="set-action">
+                  <span class="set-action-icon"><i data-lucide="upload"></i></span>
+                  <span>Import CSV</span>
+                  <input type="file" id="investImportFile" accept=".csv" onchange="investImportData(event)" hidden>
                 </label>
+                <button class="set-action" onclick="investDownloadTemplate()">
+                  <span class="set-action-icon"><i data-lucide="file-down"></i></span>
+                  <span>Template</span>
+                </button>
               </div>
+              <p class="set-inline-links">
+                Export sebagian:
+                <button type="button" onclick="investExportData('transactions')">Transaksi</button> ·
+                <button type="button" onclick="investExportData('portfolio')">Portfolio</button>
+              </p>
               <div id="investImportStatus" class="import-status" style="display:none;"></div>
             </div>
-          </section>
 
-          <!-- Danger Zone -->
-          <section class="panel-card danger-zone-card">
-            <button class="panel-toggle" onclick="togglePanel('investDangerPanel')">
-              <div>
-                <p class="panel-eyebrow" style="color:var(--error);">Danger Zone</p>
-                <h3 class="panel-title">Delete Data</h3>
-              </div>
-              <strong class="panel-chevron" id="investDangerChevron">↓</strong>
-            </button>
-            <div id="investDangerPanel" class="panel-body hidden">
-              <p class="settings-desc" style="color:var(--text-muted);">Hapus data investasi secara permanen. <strong style="color:var(--error)">Tidak dapat dibatalkan</strong>.</p>
-              <div class="danger-options">
-                <button class="btn-danger btn-full" onclick="investDeletePrompt('transactions')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Transaksi</button>
-                <button class="btn-danger btn-full" onclick="investDeletePrompt('portfolio')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Portfolio Values</button>
-                <button class="btn-danger btn-full" onclick="investDeletePrompt('settings')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Settings &amp; Master Data</button>
-                <button class="btn-danger-critical btn-full" onclick="investDeletePrompt('all')"><i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Data (Reset Total)</button>
+            <div class="set-card set-danger">
+              <button class="set-danger-toggle" onclick="togglePanel('investDangerPanel')" aria-expanded="false">
+                <span class="set-danger-label"><i data-lucide="alert-triangle"></i>Hapus data</span>
+                <strong class="panel-chevron" id="investDangerChevron">↓</strong>
+              </button>
+              <div id="investDangerPanel" class="hidden">
+                <p class="set-hint">Permanen dan <strong style="color:var(--error)">tidak dapat dibatalkan</strong>.</p>
+                <div class="set-danger-grid">
+                  <button class="btn-danger" onclick="investDeletePrompt('transactions')">Transaksi</button>
+                  <button class="btn-danger" onclick="investDeletePrompt('portfolio')">Portfolio</button>
+                  <button class="btn-danger" onclick="investDeletePrompt('settings')">Settings</button>
+                  <button class="btn-danger-critical" onclick="investDeletePrompt('all')">Reset total</button>
+                </div>
               </div>
             </div>
           </section>
@@ -391,10 +381,10 @@
             <div class="mm-networth-card" id="mmNetworthCard">
               <div class="mm-networth-header-row">
                 <span class="mm-networth-label">NETWORTH</span>
-                <button class="mm-networth-eye" onclick="toggleAmountVisibility()">
+                <button class="mm-networth-eye" aria-label="Tampilkan/sembunyikan nominal" onclick="toggleAmountVisibility()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
-                <button class="mm-networth-arrow" id="mmNetworthDetailBtn">
+                <button class="mm-networth-arrow" id="mmNetworthDetailBtn" aria-label="Detail networth">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
                 </button>
               </div>
@@ -473,7 +463,7 @@
                     <div class="mm-budget-title" id="mmBudgetTitle">Living</div>
                     <div class="mm-budget-subtitle" id="mmBudgetSubtitle">Rp 0 Budget</div>
                   </div>
-                  <button class="mm-budget-arrow" id="mmBudgetDetailBtn" onclick="mmShowBudgetDetail()">
+                  <button class="mm-budget-arrow" id="mmBudgetDetailBtn" aria-label="Detail budget" onclick="mmShowBudgetDetail()">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
                   </button>
                 </div>
@@ -519,9 +509,9 @@
             <div id="mmHistoryAllTime" class="mm-history-content"></div>
             <div id="mmHistoryMonth" class="mm-history-content" style="display:none;">
               <div class="mm-month-nav">
-                <button class="btn-ghost" onclick="mmPrevMonth()">&lt;</button>
+                <button class="btn-ghost" aria-label="Bulan sebelumnya" onclick="mmPrevMonth()">&lt;</button>
                 <strong id="mmHistoryMonthLabel">-</strong>
-                <button class="btn-ghost" onclick="mmNextMonth()">&gt;</button>
+                <button class="btn-ghost" aria-label="Bulan berikutnya" onclick="mmNextMonth()">&gt;</button>
               </div>
               <div class="mm-month-summary">
                 <div class="item"><span>Income</span><strong class="positive" id="mmHistIncome">Rp 0</strong></div>
@@ -545,43 +535,46 @@
           </section>
         </div>
 
-        <!-- ===== MM SETTINGS PAGE ===== -->
-        <div id="mmSettingsPage" class="page">
-          <section class="page-header-card">
-            <p class="panel-eyebrow">Settings</p>
-            <h2 class="page-title">Money Settings</h2>
-            <p class="page-desc">Manage accounts, categories, and allocation.</p>
-          </section>
+        <!-- ===== MM SETTINGS PAGE =====
+             Everything that is edited often is open on arrival, with its
+             action in the section header: add an account or category, or
+             edit the split, in one tap. Only the destructive section stays
+             folded. -->
+        <div id="mmSettingsPage" class="page settings-page">
+          <header class="settings-head">
+            <h2 class="page-title">Settings</h2>
+          </header>
 
-          <!-- Accounts Manager -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('mmSettingsAccPanel')">
+          <nav class="settings-nav" aria-label="Bagian settings">
+            <a href="#mmSetAccounts" class="settings-nav-chip active" onclick="settingsJump(event,'mmSetAccounts')">Akun</a>
+            <a href="#mmSetBudget" class="settings-nav-chip" onclick="settingsJump(event,'mmSetBudget')">Budget</a>
+            <a href="#mmSetCategories" class="settings-nav-chip" onclick="settingsJump(event,'mmSetCategories')">Kategori</a>
+            <a href="#mmSetData" class="settings-nav-chip" onclick="settingsJump(event,'mmSetData')">Data</a>
+          </nav>
+
+          <!-- Accounts -->
+          <section class="set-section" id="mmSetAccounts">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Accounts</p>
-                <h3 class="panel-title">Manage Accounts</h3>
+                <h3 class="set-section-title">Akun</h3>
+                <p class="set-section-sub" id="mmSettingsAccSummary">Ketuk akun untuk edit</p>
               </div>
-              <strong class="panel-chevron" id="mmSettingsAccChevron">↓</strong>
-            </button>
-            <div id="mmSettingsAccPanel" class="panel-body hidden">
-              <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-                <button class="btn-mini" onclick="mmShowAddAccount()">+ Add</button>
-              </div>
-              <div id="mmSettingsAccountsList" class="mm-settings-accounts"></div>
+              <button class="set-add-btn" onclick="mmShowAddAccount()"><i data-lucide="plus"></i>Akun</button>
             </div>
+            <div id="mmSettingsAccountsList" class="set-list"></div>
           </section>
 
-          <!-- Allocation Editor -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('mmSettingsAllocPanel')">
+          <!-- Budget split -->
+          <section class="set-section" id="mmSetBudget">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Allocation</p>
-                <h3 class="panel-title">Budget Split</h3>
+                <h3 class="set-section-title">Budget Split</h3>
+                <p class="set-section-sub">Pembagian pemasukan per pos</p>
               </div>
-              <strong class="panel-chevron" id="mmSettingsAllocChevron">↓</strong>
-            </button>
-            <div id="mmSettingsAllocPanel" class="panel-body hidden">
+              <button class="set-add-btn" id="mmAllocEditBtn" onclick="mmToggleAllocEdit()"><i data-lucide="sliders-horizontal"></i>Edit</button>
+            </div>
+            <div class="set-card">
               <div id="mmAllocReadOnly" class="mm-alloc-readonly"></div>
-              <button class="btn-ghost btn-full" style="margin-top:10px;" id="mmAllocEditBtn" onclick="mmToggleAllocEdit()">Edit Allocation</button>
               <form id="mmAllocationForm" onsubmit="mmSubmitAllocation(event)" style="display:none;">
                 <div id="mmAllocationRows" class="allocation-rows"></div>
                 <div class="allocation-total-box" id="mmAllocTotalBox">
@@ -589,88 +582,74 @@
                   <strong id="mmAllocTotal">0%</strong>
                 </div>
                 <div class="form-actions">
-                  <button type="button" class="btn-ghost" onclick="mmAddAllocRow()">+ Add</button>
-                  <button type="button" class="btn-ghost" onclick="mmToggleAllocEdit()">Cancel</button>
-                  <button type="submit" class="btn-primary">Save</button>
+                  <button type="button" class="btn-ghost" onclick="mmAddAllocRow()">+ Pos</button>
+                  <button type="button" class="btn-ghost" onclick="mmToggleAllocEdit()">Batal</button>
+                  <button type="submit" class="btn-primary">Simpan</button>
                 </div>
               </form>
             </div>
           </section>
 
-          <!-- Category Manager -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('mmSettingsCatPanel')">
+          <!-- Categories -->
+          <section class="set-section" id="mmSetCategories">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Categories</p>
-                <h3 class="panel-title">Expense &amp; Income</h3>
+                <h3 class="set-section-title">Kategori</h3>
+                <p class="set-section-sub">Expense &amp; income</p>
               </div>
-              <strong class="panel-chevron" id="mmSettingsCatChevron">↓</strong>
-            </button>
-            <div id="mmSettingsCatPanel" class="panel-body hidden">
-              <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-                <button class="btn-mini" onclick="mmShowAddCategory()">+ Add</button>
-              </div>
+              <button class="set-add-btn" onclick="mmShowAddCategory()"><i data-lucide="plus"></i>Kategori</button>
+            </div>
+            <div class="set-card">
               <div id="mmCategoriesList" class="mm-categories-list"></div>
             </div>
           </section>
 
-          <!-- Export Data -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('mmSettingsExportPanel')">
+          <!-- Data: backup, restore, delete -->
+          <section class="set-section" id="mmSetData">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Backup</p>
-                <h3 class="panel-title">Export Data</h3>
-              </div>
-              <strong class="panel-chevron" id="mmSettingsExportChevron">↓</strong>
-            </button>
-            <div id="mmSettingsExportPanel" class="panel-body hidden">
-              <p class="settings-desc">Download data keuangan dalam format CSV. Bisa dibuka di Excel/Google Sheets.</p>
-              <div class="export-options">
-                <button class="btn-primary btn-full" onclick="mmExportData('all')"><i data-lucide="download" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px;"></i>Export Semua Data</button>
-                <button class="btn-ghost btn-full" onclick="mmExportData('transactions')"><i data-lucide="file-text" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Export Transaksi</button>
-                <button class="btn-ghost btn-full" onclick="mmExportData('accounts')"><i data-lucide="file-text" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Export Akun</button>
+                <h3 class="set-section-title">Data</h3>
+                <p class="set-section-sub">Backup &amp; restore via CSV</p>
               </div>
             </div>
-          </section>
-
-          <!-- Import Data -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('mmSettingsImportPanel')">
-              <div>
-                <p class="panel-eyebrow">Restore</p>
-                <h3 class="panel-title">Import Data</h3>
-              </div>
-              <strong class="panel-chevron" id="mmSettingsImportChevron">↓</strong>
-            </button>
-            <div id="mmSettingsImportPanel" class="panel-body hidden">
-              <p class="settings-desc">Import transaksi dari file CSV. Data akan <strong>ditambahkan</strong> ke data existing, bukan menimpa.</p>
-              <div class="import-actions">
-                <button class="btn-ghost btn-full" onclick="mmDownloadTemplate()"><i data-lucide="file-down" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Download Template CSV</button>
-                <label class="btn-primary btn-full import-label">
-                  <i data-lucide="upload" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px;"></i>Pilih File CSV &amp; Import
-                  <input type="file" id="mmImportFile" accept=".csv" onchange="mmImportData(event)" style="display:none;">
+            <div class="set-card">
+              <div class="set-action-grid">
+                <button class="set-action" onclick="mmExportData('all')">
+                  <span class="set-action-icon"><i data-lucide="download"></i></span>
+                  <span>Export semua</span>
+                </button>
+                <label class="set-action">
+                  <span class="set-action-icon"><i data-lucide="upload"></i></span>
+                  <span>Import CSV</span>
+                  <input type="file" id="mmImportFile" accept=".csv" onchange="mmImportData(event)" hidden>
                 </label>
+                <button class="set-action" onclick="mmDownloadTemplate()">
+                  <span class="set-action-icon"><i data-lucide="file-down"></i></span>
+                  <span>Template</span>
+                </button>
               </div>
+              <p class="set-inline-links">
+                Export sebagian:
+                <button type="button" onclick="mmExportData('transactions')">Transaksi</button> ·
+                <button type="button" onclick="mmExportData('accounts')">Akun</button>
+              </p>
+              <p class="set-hint">Import <strong>menambahkan</strong> data, tidak menimpa yang sudah ada.</p>
               <div id="mmImportStatus" class="import-status" style="display:none;"></div>
             </div>
-          </section>
 
-          <!-- Danger Zone -->
-          <section class="panel-card danger-zone-card">
-            <button class="panel-toggle" onclick="togglePanel('mmSettingsDangerPanel')">
-              <div>
-                <p class="panel-eyebrow" style="color:var(--error);">Danger Zone</p>
-                <h3 class="panel-title">Delete Data</h3>
-              </div>
-              <strong class="panel-chevron" id="mmSettingsDangerChevron">↓</strong>
-            </button>
-            <div id="mmSettingsDangerPanel" class="panel-body hidden">
-              <p class="settings-desc" style="color:var(--text-muted);">Hapus data secara permanen. Tindakan ini <strong style="color:var(--error)">tidak dapat dibatalkan</strong>.</p>
-              <div class="danger-options">
-                <button class="btn-danger btn-full" onclick="mmDeleteDataPrompt('transactions')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Transaksi</button>
-                <button class="btn-danger btn-full" onclick="mmDeleteDataPrompt('accounts')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Akun</button>
-                <button class="btn-danger btn-full" onclick="mmDeleteDataPrompt('categories')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Kategori</button>
-                <button class="btn-danger-critical btn-full" onclick="mmDeleteDataPrompt('all')"><i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Data (Reset Total)</button>
+            <div class="set-card set-danger">
+              <button class="set-danger-toggle" onclick="togglePanel('mmSettingsDangerPanel')" aria-expanded="false">
+                <span class="set-danger-label"><i data-lucide="alert-triangle"></i>Hapus data</span>
+                <strong class="panel-chevron" id="mmSettingsDangerChevron">↓</strong>
+              </button>
+              <div id="mmSettingsDangerPanel" class="hidden">
+                <p class="set-hint">Permanen dan <strong style="color:var(--error)">tidak dapat dibatalkan</strong>.</p>
+                <div class="set-danger-grid">
+                  <button class="btn-danger" onclick="mmDeleteDataPrompt('transactions')">Transaksi</button>
+                  <button class="btn-danger" onclick="mmDeleteDataPrompt('accounts')">Akun</button>
+                  <button class="btn-danger" onclick="mmDeleteDataPrompt('categories')">Kategori</button>
+                  <button class="btn-danger-critical" onclick="mmDeleteDataPrompt('all')">Reset total</button>
+                </div>
               </div>
             </div>
           </section>
@@ -711,7 +690,7 @@
           <small>Update Value</small>
         </button>
       </div>
-      <button class="fab-btn" id="fabBtn" onclick="toggleFab()">
+      <button class="fab-btn" id="fabBtn" aria-label="Tambah transaksi" onclick="toggleFab()">
         <i data-lucide="plus" class="fab-main-icon"></i>
       </button>
     </div>
@@ -732,7 +711,7 @@
           <small>Transfer</small>
         </button>
       </div>
-      <button class="fab-btn" id="mmFabBtn" onclick="mmToggleFab()">
+      <button class="fab-btn" id="mmFabBtn" aria-label="Tambah transaksi" onclick="mmToggleFab()">
         <i data-lucide="plus" class="fab-main-icon"></i>
       </button>
     </div>
@@ -938,7 +917,7 @@
     <div class="modal-card">
       <div class="modal-head">
         <h3 id="mmModalTitle">Add</h3>
-        <button class="modal-close" onclick="closeModal('mmModal')">×</button>
+        <button class="modal-close" aria-label="Tutup" onclick="closeModal('mmModal')">×</button>
       </div>
       <form id="mmModalForm" onsubmit="mmSubmitModal(event)">
         <div id="mmModalBody"></div>
@@ -971,7 +950,7 @@
     <div class="modal-card">
       <div class="modal-head">
         <h3>Add Item</h3>
-        <button class="modal-close" onclick="closeModal('quickSettingModal')">×</button>
+        <button class="modal-close" aria-label="Tutup" onclick="closeModal('quickSettingModal')">×</button>
       </div>
       <form id="quickSettingForm" onsubmit="submitQuickSetting(event)">
         <input type="hidden" name="key" id="quickSettingKey">
@@ -1029,8 +1008,8 @@
           <svg viewBox="0 0 48 48" width="44" height="44">
             <defs>
               <linearGradient id="authMarkGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="#10b981"/>
-                <stop offset="1" stop-color="#06b6d4"/>
+                <stop offset="0" stop-color="#3B82F6"/>
+                <stop offset="1" stop-color="#1D4ED8"/>
               </linearGradient>
             </defs>
             <rect width="48" height="48" rx="12" fill="url(#authMarkGrad)"/>
@@ -1079,7 +1058,7 @@
         meta.name = 'viewport';
         document.head.appendChild(meta);
       }
-      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+      meta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
       try {
         if (window.frameElement) {
           window.frameElement.style.width = '100%';
