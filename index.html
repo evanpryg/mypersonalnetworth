@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <base target="_top">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#09090b">
+  <meta name="theme-color" content="#0F172A">
   <!-- Installed to the home screen this opens standalone, with its own icon
        and no browser chrome — the difference between a bookmark and an app. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -22,8 +22,12 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
 /* ============================================================
-   INVEST TRACK — Mobile-First Fintech Dark UI
-   Font: Inter | Colors: Zinc + Emerald + Cyan
+   MONEYMATE — Mobile-First Fintech Dark UI
+   Design system (ui-ux-pro-max): Glassmorphism on deep navy,
+   "trust blue + profit green". Font: Inter, tabular figures.
+   Glass (blur) is reserved for chrome that floats over content —
+   header, tab bar, sheets, modals, the net-worth hero — and kept
+   off the dozens of list cards, where it would only cost frames.
    ============================================================ */
 
 /* === RESET & BASE === */
@@ -39,22 +43,66 @@ html, body {
   overflow-x: hidden !important;
 }
 
+/* overflow-x: hidden turns body into a scroll container that never
+   scrolls (the document does), which silently breaks every
+   position: sticky below it — the header and settings nav scrolled away.
+   clip hides the overflow without creating a scroll container. */
+@supports (overflow: clip) {
+  html, body { overflow-x: clip !important; }
+}
+
 :root {
-  --bg: #09090b;
-  --bg-card: #18181b;
-  --accent: #10b981;
-  --accent2: #06b6d4;
-  --text: #fafafa;
-  --text-muted: #a1a1aa;
-  --border: rgba(255,255,255,0.06);
-  --success: #10b981;
-  --error: #ef4444;
-  --warning: #f59e0b;
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg: #0F172A;
+  --bg-card: #192134;
+  --bg-elevated: #222C42;
+  --glass-bg: rgba(15,23,42,0.72);
+  --glass-card: rgba(25,33,52,0.78);
+  --glass-border: rgba(255,255,255,0.10);
+
+  /* Text — muted is slate-400: 6.3:1 on cards, above the 4.5 floor */
+  --text: #F8FAFC;
+  --text-muted: #94A3B8;
+  --border: rgba(255,255,255,0.08);
+
+  /* Brand — trust blue. --accent is the readable tint for text and
+     icons on dark; --accent-strong is the fill that carries white
+     text at 5.2:1. Tints use --accent-rgb. */
+  --accent: #60A5FA;
+  --accent-strong: #2563EB;
+  --accent-rgb: 59,130,246;
+  --accent2: #22D3EE;
+  --on-accent: #FFFFFF;
+
+  /* Call to action — profit green, with dark ink (7:1). */
+  --cta: #10B981;
+  --cta-rgb: 16,185,129;
+  --on-cta: #052E22;
+
+  /* Semantic */
+  --success: #34D399;
+  --success-rgb: 16,185,129;
+  --error: #F87171;
+  --error-rgb: 239,68,68;
+  --warning: #FBBF24;
+  --info: #A78BFA;
+  --info-rgb: 167,139,250;
+
   --radius: 16px;
   --radius-sm: 12px;
-  --shadow: 0 8px 32px rgba(0,0,0,0.4);
-  --accent-gradient: linear-gradient(135deg, #10b981, #06b6d4);
-  --tab-height: 56px;
+  --shadow: 0 12px 32px rgba(2,6,23,0.55);
+  --accent-gradient: linear-gradient(90deg, #3B82F6, #22D3EE);
+  --btn-gradient: linear-gradient(135deg, #2563EB, #1D4ED8);
+  --cta-gradient: linear-gradient(135deg, #34D399, #10B981);
+  --focus-ring: 0 0 0 3px rgba(96,165,250,0.55);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 150ms;
+  --dur: 220ms;
+
+  --tab-height: 60px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -89,7 +137,14 @@ body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-weight: 400;
-  background: var(--bg);
+  font-feature-settings: 'cv11', 'ss01';
+  background-color: var(--bg);
+  /* Two soft light sources give the glass layers something to blur;
+     fixed so they don't scroll away and leave a flat page behind. */
+  background-image:
+    radial-gradient(900px 520px at 100% -10%, rgba(59,130,246,0.16), transparent 60%),
+    radial-gradient(700px 480px at -10% 30%, rgba(16,185,129,0.08), transparent 60%);
+  background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
@@ -97,13 +152,37 @@ body {
 }
 
 ::selection {
-  background: rgba(16,185,129,0.3);
+  background: rgba(var(--accent-rgb),0.35);
   color: #fff;
 }
 
-::-webkit-scrollbar { width: 4px; height: 4px; }
+/* Keyboard focus is always visible; pointer taps don't draw it. */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.form-input:focus-visible,
+.auth-input:focus-visible,
+.tx-notes-input:focus-visible,
+.tx-amount-field:focus-visible { outline: none; }
+
+button, [role="button"], label.import-label, select { cursor: pointer; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
+::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.25); border-radius: 99px; }
+
+/* One switch for everything that moves. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* === APP SHELL === */
 .app-shell {
@@ -133,7 +212,7 @@ body {
 .page { display: none; }
 .page.active-page {
   display: block;
-  animation: fadeInUp 0.35s ease both;
+  animation: fadeInUp 0.32s var(--ease-out) both;
 }
 
 .hidden { display: none !important; }
@@ -145,35 +224,59 @@ body {
   left: 0;
   right: 0;
   z-index: 100;
-  height: var(--tab-height);
-  padding-bottom: var(--safe-bottom);
-  background: rgba(9,9,11,0.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid var(--border);
+  height: calc(var(--tab-height) + var(--safe-bottom));
+  padding: 0 8px var(--safe-bottom);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-top: 1px solid var(--glass-border);
   display: flex;
   justify-content: space-around;
   align-items: center;
 }
 
 .tab-item {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   padding: 8px 0;
   border: none;
   background: none;
   color: var(--text-muted);
   font-family: inherit;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.2s;
-  min-height: 44px;
-  min-width: 44px;
+  transition: color var(--dur);
+  min-height: 48px;
+  min-width: 48px;
 }
+
+/* Active tab gets a pill behind its icon, not just a colour change —
+   colour alone isn't a reliable signal. */
+.tab-item::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 52px;
+  height: 30px;
+  border-radius: 99px;
+  background: rgba(var(--accent-rgb),0.16);
+  transform: translateX(-50%) scaleX(0.4);
+  opacity: 0;
+  transition: transform var(--dur) var(--ease-out), opacity var(--dur);
+}
+
+.tab-item.active::before {
+  transform: translateX(-50%) scaleX(1);
+  opacity: 1;
+}
+
+.tab-item > * { position: relative; }
 
 .tab-item svg { transition: transform 0.2s, color 0.2s; }
 
@@ -204,7 +307,11 @@ body {
 }
 
 .tab-item.active svg {
-  transform: scale(1.1);
+  transform: translateY(1px);
+}
+
+@media (hover: hover) {
+  .tab-item:hover:not(.active) { color: var(--text); }
 }
 
 .tab-item small {
@@ -236,22 +343,27 @@ body {
 .fab-btn {
   width: 56px;
   height: 56px;
-  border-radius: 50%;
-  border: none;
-  background: var(--accent-gradient);
-  color: #fff;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: var(--cta-gradient);
+  color: var(--on-cta);
   display: grid;
   place-items: center;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(16,185,129,0.35);
-  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.3s;
+  box-shadow: 0 10px 28px rgba(var(--cta-rgb),0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+  transition: transform var(--dur) var(--ease-out), box-shadow var(--dur), border-radius var(--dur);
+}
+
+@media (hover: hover) {
+  .fab-btn:hover { box-shadow: 0 14px 34px rgba(var(--cta-rgb),0.45), inset 0 1px 0 rgba(255,255,255,0.3); }
 }
 
 .fab-btn:active { transform: scale(0.92); }
 
 .fab-btn.open {
   transform: rotate(45deg);
-  box-shadow: 0 4px 16px rgba(16,185,129,0.2);
+  border-radius: 50%;
+  box-shadow: 0 4px 16px rgba(var(--cta-rgb),0.2);
 }
 
 .fab-menu {
@@ -277,23 +389,26 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 16px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  padding: 8px 16px 8px 8px;
+  background: var(--glass-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
   color: var(--text);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   box-shadow: var(--shadow);
-  transition: transform 0.15s, background 0.15s;
-  min-height: 44px;
+  transition: transform var(--dur-fast), background var(--dur-fast);
+  min-height: 48px;
+  margin-left: auto;
 }
 
 .fab-option:active { transform: scale(0.96); }
-.fab-option:hover { background: #27272a; }
+.fab-option:hover { background: var(--bg-elevated); }
 
 .fab-option span {
   display: flex;
@@ -302,17 +417,19 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 10px;
-  background: rgba(16,185,129,0.1);
+  background: rgba(var(--accent-rgb),0.1);
   color: var(--accent);
 }
 
-.fab-option small { font-size: 13px; font-weight: 600; }
+.fab-option small { font-size: 14px; font-weight: 600; }
 
 .fab-overlay {
   position: fixed;
   inset: 0;
   z-index: 105;
-  background: rgba(0,0,0,0.4);
+  background: rgba(2,6,23,0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   animation: fadeIn 0.2s ease;
 }
 
@@ -321,7 +438,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 300;
-  background: var(--bg, #09090b);
+  background: var(--bg);
   display: flex;
   flex-direction: column;
   animation: fadeIn 0.15s ease;
@@ -336,8 +453,8 @@ body {
 }
 
 .mm-search-back {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   border: none;
   border-radius: 50%;
@@ -358,10 +475,17 @@ body {
   align-items: center;
   gap: 8px;
   padding: 0 12px;
-  height: 40px;
-  border-radius: 12px;
+  height: 44px;
+  border-radius: 14px;
   background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
   color: var(--text-muted);
+  transition: border-color var(--dur), box-shadow var(--dur);
+}
+
+.mm-search-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .mm-search-field input {
@@ -372,7 +496,7 @@ body {
   outline: none;
   color: var(--text);
   font-family: inherit;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 /* Safari draws its own clear button on type=search; we have our own. */
@@ -383,6 +507,8 @@ body {
   background: none;
   color: var(--text-muted);
   padding: 4px;
+  min-width: 32px;
+  min-height: 32px;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -414,7 +540,7 @@ body {
 }
 
 .mm-search-results mark {
-  background: rgba(16,185,129,0.22);
+  background: rgba(var(--accent-rgb),0.22);
   color: var(--text);
   border-radius: 3px;
   padding: 0 1px;
@@ -425,7 +551,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 400;
-  background: var(--bg, #09090b);
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -436,10 +562,13 @@ body {
 .auth-card {
   width: 100%;
   max-width: 380px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background: var(--glass-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
   border-radius: 24px;
   padding: 28px 24px;
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
 .auth-brand {
@@ -489,15 +618,17 @@ body {
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: rgba(255,255,255,0.03);
+  background: rgba(255,255,255,0.04);
   color: var(--text);
   font-family: inherit;
-  font-size: 15px;
+  font-size: 16px;
+  min-height: 48px;
 }
 
 .auth-input:focus {
   outline: none;
   border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .auth-error {
@@ -525,18 +656,25 @@ body {
 
 /* === PROGRESS HERO === */
 .progress-hero {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(var(--accent-rgb),0.22), transparent 55%),
+    var(--glass-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
   border-radius: 24px;
   padding: 24px;
-  margin-bottom: 14px;
-  animation: fadeInUp 0.4s ease both;
+  margin: 0 16px 14px;
+  animation: fadeInUp 0.4s var(--ease-out) both;
   text-align: center;
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.07);
 }
 
 .progress-big-value {
   margin: 8px 0 4px;
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 800;
   color: var(--text);
   letter-spacing: -0.03em;
@@ -552,11 +690,11 @@ body {
 
 .progress-slider-track {
   position: relative;
-  height: 12px;
-  background: rgba(255,255,255,0.06);
+  height: 10px;
+  background: rgba(255,255,255,0.08);
   border-radius: 99px;
   overflow: visible;
-  margin: 0 20px;
+  margin: 0 24px 0 12px;
 }
 
 .progress-slider-fill {
@@ -564,28 +702,36 @@ body {
   width: 0%;
   border-radius: 99px;
   background: var(--accent-gradient);
-  box-shadow: 0 0 10px rgba(16,185,129,0.25);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb),0.25);
   transition: width 0.7s ease;
 }
 
+/* A plain knob instead of the emoji runner: renders the same on every
+   platform and reads as "you are here" on a progress track. */
 .progress-slider-thumb {
   position: absolute;
   top: 50%;
   left: 0%;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 4px solid var(--accent-strong);
+  box-shadow: 0 0 0 4px rgba(var(--accent-rgb),0.25), 0 2px 8px rgba(0,0,0,0.4);
   transform: translate(-50%, -50%);
-  font-size: 22px;
-  transition: left 0.7s ease;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  transition: left 0.7s var(--ease-out);
 }
 
 .progress-slider-finish {
   position: absolute;
   top: 50%;
-  right: -12px;
+  right: -22px;
   transform: translateY(-50%);
-  font-size: 16px;
-  opacity: 0.5;
+  display: flex;
+  color: var(--text-muted);
 }
+
+.progress-slider-finish svg { width: 16px; height: 16px; }
 
 .progress-percent-center {
   margin: 14px 0 4px;
@@ -609,9 +755,12 @@ body {
   border-radius: 20px;
   padding: 18px;
   margin-bottom: 14px;
-  animation: fadeInUp 0.4s ease both;
-  animation-delay: 0.1s;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 1px 2px rgba(2,6,23,0.3);
+  animation: fadeInUp 0.4s var(--ease-out) both;
+  animation-delay: 0.06s;
 }
+
+.dashboard-wrap > .panel-card { margin-left: 16px; margin-right: 16px; }
 
 .panel-header {
   display: flex;
@@ -663,16 +812,43 @@ body {
 .panel-toggle .panel-eyebrow { margin: 0 0 2px; }
 .panel-toggle .panel-title { margin: 0; }
 
-.panel-chevron {
-  width: 32px;
-  height: 32px;
+/* The arrow glyph JS writes into these is kept for state, but hidden;
+   a drawn chevron rotates instead so the change is animated. */
+.panel-chevron,
+.details-toggle strong {
+  position: relative;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: rgba(255,255,255,0.06);
   display: grid;
   place-items: center;
-  font-size: 14px;
-  font-weight: 700;
-  transition: transform 0.3s;
+  font-size: 0;
+  color: var(--text-muted);
+  transition: transform var(--dur) var(--ease-out), background var(--dur), color var(--dur);
+}
+
+.panel-chevron::before,
+.details-toggle strong::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.panel-chevron.is-open,
+.details-toggle strong.is-open {
+  transform: rotate(180deg);
+  background: rgba(var(--accent-rgb),0.16);
+  color: var(--accent);
+}
+
+@media (hover: hover) {
+  .panel-toggle:hover .panel-chevron,
+  .details-toggle:hover strong { color: var(--text); }
 }
 
 .panel-body {
@@ -684,9 +860,10 @@ body {
   display: flex;
   gap: 4px;
   margin-bottom: 14px;
-  background: rgba(255,255,255,0.03);
-  border-radius: 10px;
-  padding: 3px;
+  background: rgba(2,6,23,0.35);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
 }
 
 .tab-btn {
@@ -695,18 +872,19 @@ body {
   background: transparent;
   color: var(--text-muted);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: 9px;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  min-height: 36px;
+  transition: background var(--dur), color var(--dur);
+  min-height: 40px;
 }
 
 .tab-btn.active {
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-strong);
+  color: var(--on-accent);
+  box-shadow: 0 2px 10px rgba(var(--accent-rgb),0.35);
 }
 
 .tab-btn:hover:not(.active) {
@@ -745,8 +923,8 @@ body {
   align-items: center;
   padding: 12px;
   border-radius: var(--radius-sm);
-  background: rgba(16,185,129,0.06);
-  border: 1px solid rgba(16,185,129,0.15);
+  background: rgba(var(--accent-rgb),0.06);
+  border: 1px solid rgba(var(--accent-rgb),0.15);
   margin-top: 4px;
 }
 
@@ -764,19 +942,18 @@ body {
 }
 
 /* === PAGE HEADER === */
+/* Page titles sit on the page, not in a box: one less card in a stack
+   of cards, and the heading reads as a heading. */
 .page-header-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 14px;
-  animation: fadeInUp 0.3s ease both;
+  padding: 8px 4px 4px;
+  margin-bottom: 16px;
+  animation: fadeInUp 0.3s var(--ease-out) both;
 }
 
 .page-title {
   margin: 4px 0 0;
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 28px;
+  font-weight: 800;
   color: var(--text);
   letter-spacing: -0.03em;
 }
@@ -853,9 +1030,9 @@ body {
   margin-top: 2px;
 }
 
-.status-balanced { background: rgba(16,185,129,0.12); color: var(--success); }
+.status-balanced { background: rgba(var(--success-rgb),0.12); color: var(--success); }
 .status-overweight { background: rgba(245,158,11,0.12); color: var(--warning); }
-.status-underweight { background: rgba(96,165,250,0.12); color: #60a5fa; }
+.status-underweight { background: rgba(96,165,250,0.12); color: var(--info); }
 .status-muted { background: rgba(255,255,255,0.04); color: var(--text-muted); }
 
 /* === INSIGHT BOX === */
@@ -865,8 +1042,8 @@ body {
   gap: 12px;
   padding: 14px;
   border-radius: var(--radius);
-  background: rgba(16,185,129,0.05);
-  border: 1px solid rgba(16,185,129,0.1);
+  background: rgba(var(--accent-rgb),0.05);
+  border: 1px solid rgba(var(--accent-rgb),0.1);
 }
 
 .insight-icon {
@@ -875,10 +1052,13 @@ body {
   display: grid;
   place-items: center;
   border-radius: var(--radius-sm);
-  background: var(--bg-card);
+  background: rgba(var(--accent-rgb),0.14);
+  color: var(--accent);
   font-size: 20px;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(var(--accent-rgb),0.2);
 }
+
+.insight-icon svg { width: 20px; height: 20px; }
 
 .insight-box h4 {
   margin: 0;
@@ -916,9 +1096,9 @@ body {
   color: var(--text-muted);
 }
 
-.balance-chip.status-balanced { background: rgba(16,185,129,0.1); color: var(--success); border-color: rgba(16,185,129,0.2); }
+.balance-chip.status-balanced { background: rgba(var(--success-rgb),0.1); color: var(--success); border-color: rgba(var(--success-rgb),0.2); }
 .balance-chip.status-overweight { background: rgba(245,158,11,0.1); color: var(--warning); border-color: rgba(245,158,11,0.2); }
-.balance-chip.status-underweight { background: rgba(96,165,250,0.1); color: #60a5fa; border-color: rgba(96,165,250,0.2); }
+.balance-chip.status-underweight { background: rgba(96,165,250,0.1); color: var(--info); border-color: rgba(96,165,250,0.2); }
 
 /* === DCA BOX === */
 .dca-box {
@@ -1003,9 +1183,12 @@ body {
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.sector-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+@media (hover: hover) {
+  .sector-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(var(--accent-rgb),0.3);
+    box-shadow: 0 8px 24px rgba(2,6,23,0.4);
+  }
 }
 
 .sector-card h3 {
@@ -1051,17 +1234,8 @@ body {
   min-height: 44px;
 }
 
-.details-toggle:hover { color: var(--accent); }
-
-.details-toggle strong {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.06);
-  display: grid;
-  place-items: center;
-  font-size: 14px;
-  transition: transform 0.3s;
+@media (hover: hover) {
+  .details-toggle:hover { color: var(--accent); }
 }
 
 .asset-details { margin-top: 14px; }
@@ -1077,7 +1251,7 @@ table {
 
 th {
   text-align: left;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -1094,11 +1268,11 @@ td {
   font-variant-numeric: tabular-nums;
 }
 
-tr:hover td { background: rgba(16,185,129,0.03); }
+tr:hover td { background: rgba(var(--accent-rgb),0.03); }
 
 .platform-header-row td {
-  background: rgba(16,185,129,0.04);
-  border-bottom: 1px solid rgba(16,185,129,0.12);
+  background: rgba(var(--accent-rgb),0.04);
+  border-bottom: 1px solid rgba(var(--accent-rgb),0.12);
   padding: 12px 8px;
   font-size: 13px;
 }
@@ -1122,7 +1296,7 @@ tr:hover td { background: rgba(16,185,129,0.03); }
   display: inline-flex;
   padding: 3px 8px;
   border-radius: 99px;
-  background: rgba(16,185,129,0.1);
+  background: rgba(var(--accent-rgb),0.1);
   color: var(--accent);
   font-size: 10px;
   font-weight: 700;
@@ -1247,34 +1421,36 @@ tr:hover td { background: rgba(16,185,129,0.03); }
   border-radius: 99px;
   font-size: 10px;
   font-weight: 700;
-  background: rgba(16,185,129,0.1);
+  background: rgba(var(--accent-rgb),0.1);
   color: var(--accent);
 }
 
-.history-type.buy { background: rgba(96,165,250,0.1); color: #60a5fa; }
+.history-type.buy { background: rgba(96,165,250,0.1); color: var(--info); }
 .history-type.sell { background: rgba(245,158,11,0.1); color: var(--warning); }
-.history-type.deposit { background: rgba(16,185,129,0.1); color: var(--success); }
-.history-type.withdraw { background: rgba(239,68,68,0.1); color: var(--error); }
+.history-type.deposit { background: rgba(var(--success-rgb),0.12); color: var(--success); }
+.history-type.withdraw { background: rgba(var(--error-rgb),0.1); color: var(--error); }
 
 .history-delete-btn {
   margin-top: 6px;
   border: none;
   border-radius: 99px;
-  padding: 4px 10px;
-  background: rgba(239,68,68,0.1);
+  padding: 6px 12px;
+  min-height: 32px;
+  background: rgba(var(--error-rgb),0.12);
   color: var(--error);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.2s;
 }
 
-.history-delete-btn:hover { background: rgba(239,68,68,0.2); }
+.history-delete-btn:hover { background: rgba(var(--error-rgb),0.2); }
 .history-delete-btn.disabled { background: rgba(255,255,255,0.04); color: var(--text-muted); cursor: not-allowed; }
 
 .filter-select {
   max-width: 160px;
+  min-height: 40px;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
@@ -1291,17 +1467,22 @@ tr:hover td { background: rgba(16,185,129,0.03); }
   width: 100%;
   padding: 12px 14px;
   height: 48px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
+  background: rgba(2,6,23,0.35);
   color: var(--text);
   font-family: inherit;
-  font-size: 14px;
+  /* 16px: anything smaller makes iOS Safari zoom the page on focus. */
+  font-size: 16px;
   font-weight: 500;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color var(--dur), box-shadow var(--dur);
   -webkit-appearance: none;
   appearance: none;
+}
+
+@media (min-width: 769px) {
+  .form-input { font-size: 14px; }
 }
 
 textarea.form-input { height: auto; resize: vertical; }
@@ -1309,14 +1490,14 @@ textarea.form-input { height: auto; resize: vertical; }
 select.form-input {
   appearance: none;
   -webkit-appearance: none;
-  background-color: rgba(255,255,255,0.03);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2310b981' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 6 8 10 12 6'/%3E%3C/svg%3E");
+  background-color: rgba(2,6,23,0.35);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2360a5fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 6 8 10 12 6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   background-size: 16px;
   padding-right: 40px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
   color: var(--text);
   font-weight: 500;
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
@@ -1324,27 +1505,27 @@ select.form-input {
 }
 
 select.form-input:hover {
-  border-color: rgba(16,185,129,0.3);
-  background-color: rgba(16,185,129,0.03);
+  border-color: rgba(var(--accent-rgb),0.3);
+  background-color: rgba(var(--accent-rgb),0.03);
 }
 
 select.form-input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(16,185,129,0.1);
-  background-color: rgba(16,185,129,0.03);
+  box-shadow: var(--focus-ring);
+  background-color: rgba(var(--accent-rgb),0.05);
 }
 
 .form-input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(16,185,129,0.1);
+  box-shadow: var(--focus-ring);
 }
 
-.form-input::placeholder { color: rgba(161,161,170,0.5); }
+.form-input::placeholder { color: rgba(148,163,184,0.55); }
 
 .form-label {
   display: grid;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -1361,64 +1542,80 @@ select.form-input:focus {
 
 /* === BUTTONS === */
 .btn-primary {
-  border: none;
-  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
   padding: 12px 20px;
-  background: var(--accent-gradient);
-  color: #fff;
+  background: var(--btn-gradient);
+  color: var(--on-accent);
   font-family: inherit;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(16,185,129,0.25);
-  transition: transform 0.15s, box-shadow 0.15s;
-  min-height: 44px;
+  box-shadow: 0 6px 18px rgba(var(--accent-rgb),0.3), inset 0 1px 0 rgba(255,255,255,0.18);
+  transition: transform var(--dur-fast), box-shadow var(--dur-fast), filter var(--dur-fast);
+  min-height: 48px;
 }
 
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(16,185,129,0.3); }
+@media (hover: hover) {
+  .btn-primary:hover { filter: brightness(1.08); box-shadow: 0 10px 26px rgba(var(--accent-rgb),0.38), inset 0 1px 0 rgba(255,255,255,0.18); }
+}
 .btn-primary:active { transform: scale(0.97); }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 .btn-full { width: 100%; }
 
 .btn-ghost {
-  border: 1px solid var(--border);
-  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
   padding: 10px 16px;
-  background: transparent;
-  color: var(--text-muted);
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
   min-height: 44px;
 }
 
-.btn-ghost:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); }
+@media (hover: hover) {
+  .btn-ghost:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.2); }
+}
+.btn-ghost:active { transform: scale(0.97); }
 
 .btn-mini {
-  border: none;
+  border: 1px solid rgba(var(--accent-rgb),0.25);
   border-radius: 99px;
-  padding: 6px 12px;
-  background: rgba(16,185,129,0.1);
+  padding: 6px 14px;
+  background: rgba(var(--accent-rgb),0.12);
   color: var(--accent);
   font-family: inherit;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
-  min-height: 32px;
+  transition: background var(--dur-fast);
+  min-height: 36px;
 }
 
-.btn-mini:hover { background: rgba(16,185,129,0.18); }
+@media (hover: hover) {
+  .btn-mini:hover { background: rgba(var(--accent-rgb),0.2); }
+}
 
 /* === ACTION SHEET (Bottom Sheet) === */
 .action-sheet-backdrop {
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(2,6,23,0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1431,20 +1628,26 @@ select.form-input:focus {
   max-height: 85vh;
   max-height: 85dvh;
   overflow-y: auto;
-  background: var(--bg-card);
-  border-top-left-radius: 24px;
-  border-top-right-radius: 24px;
-  border: 1px solid var(--border);
+  overscroll-behavior: contain;
+  background:
+    linear-gradient(180deg, rgba(var(--accent-rgb),0.07), transparent 140px),
+    rgba(25,33,52,0.92);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+  border: 1px solid var(--glass-border);
   border-bottom: none;
-  padding: 16px 20px 32px;
-  animation: slideUp 0.3s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 -12px 40px rgba(2,6,23,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+  padding: 12px 20px calc(28px + var(--safe-bottom));
+  animation: slideUp 0.32s var(--ease-out);
 }
 
 .action-sheet-handle {
   width: 40px;
-  height: 4px;
+  height: 5px;
   border-radius: 99px;
-  background: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.22);
   margin: 0 auto 16px;
 }
 
@@ -1476,7 +1679,7 @@ select.form-input:focus {
   position: fixed;
   inset: 0;
   z-index: 210;
-  background: rgba(0,0,0,0.6);
+  background: rgba(2,6,23,0.65);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: grid;
@@ -1487,12 +1690,16 @@ select.form-input:focus {
 
 .modal-card {
   width: min(420px, 100%);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  background: rgba(25,33,52,0.94);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
   padding: 20px;
-  box-shadow: var(--shadow);
-  animation: scaleIn 0.25s ease;
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.08);
+  animation: scaleIn 0.25s var(--ease-out);
 }
 
 .modal-head {
@@ -1510,8 +1717,8 @@ select.form-input:focus {
 }
 
 .modal-close {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: 50%;
   background: rgba(255,255,255,0.06);
@@ -1523,7 +1730,7 @@ select.form-input:focus {
   transition: background 0.2s, color 0.2s;
 }
 
-.modal-close:hover { background: rgba(239,68,68,0.1); color: var(--error); }
+.modal-close:hover { background: rgba(var(--error-rgb),0.1); color: var(--error); }
 
 .modal-actions {
   display: flex;
@@ -1558,7 +1765,7 @@ select.form-input:focus {
   height: 40px;
   border: none;
   border-radius: var(--radius-sm);
-  background: rgba(239,68,68,0.1);
+  background: rgba(var(--error-rgb),0.1);
   color: var(--error);
   font-size: 16px;
   font-weight: 700;
@@ -1566,7 +1773,7 @@ select.form-input:focus {
   transition: background 0.15s;
 }
 
-.remove-row-btn:hover { background: rgba(239,68,68,0.2); }
+.remove-row-btn:hover { background: rgba(var(--error-rgb),0.2); }
 
 .allocation-total-box {
   margin-top: 12px;
@@ -1581,9 +1788,9 @@ select.form-input:focus {
 
 .allocation-total-box span { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 .allocation-total-box strong { font-size: 18px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
-.allocation-total-box.good { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.2); }
+.allocation-total-box.good { background: rgba(var(--success-rgb),0.08); border-color: rgba(var(--success-rgb),0.22); }
 .allocation-total-box.good strong { color: var(--success); }
-.allocation-total-box.bad { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); }
+.allocation-total-box.bad { background: rgba(var(--error-rgb),0.08); border-color: rgba(var(--error-rgb),0.2); }
 .allocation-total-box.bad strong { color: var(--error); }
 
 /* === MASTER DATA === */
@@ -1619,7 +1826,7 @@ select.form-input:focus {
 .settings-chip {
   padding: 5px 10px;
   border-radius: 99px;
-  background: rgba(16,185,129,0.1);
+  background: rgba(var(--accent-rgb),0.1);
   color: var(--accent);
   font-size: 12px;
   font-weight: 600;
@@ -1632,20 +1839,24 @@ select.form-input:focus {
   right: 16px;
   bottom: calc(var(--tab-height) + var(--safe-bottom) + 20px);
   z-index: 300;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px 16px;
-  font-size: 13px;
+  background: rgba(25,33,52,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text);
   text-align: center;
   box-shadow: var(--shadow);
-  animation: fadeInUp 0.3s ease;
+  animation: fadeInUp 0.3s var(--ease-out);
 }
 
-.toast.success { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.25); color: var(--success); }
-.toast.error { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.25); color: var(--error); }
+/* Tinted over the solid glass, not instead of it, so the text keeps its
+   contrast whatever is scrolling underneath. */
+.toast.success { background: linear-gradient(rgba(var(--success-rgb),0.18), rgba(var(--success-rgb),0.18)), rgba(25,33,52,0.94); border-color: rgba(var(--success-rgb),0.35); color: var(--success); }
+.toast.error { background: linear-gradient(rgba(var(--error-rgb),0.18), rgba(var(--error-rgb),0.18)), rgba(25,33,52,0.94); border-color: rgba(var(--error-rgb),0.35); color: var(--error); }
 
 /* ============================================================
    RESPONSIVE — Desktop (>768px)
@@ -1689,7 +1900,8 @@ select.form-input:focus {
      are still there on a phone, and this is where it matters most. */
   .main-content { padding: 12px 12px calc(var(--tab-height) + var(--safe-bottom) + 88px); }
 
-  .progress-hero { padding: 16px; border-radius: 16px; }
+  .progress-hero { padding: 20px 16px; border-radius: 20px; }
+  .progress-big-value { font-size: 30px; }
 
   .panel-card { padding: 14px; border-radius: 16px; }
 
@@ -1719,11 +1931,11 @@ select.form-input:focus {
   /* Installed as a standalone app the status bar is translucent and the page
      starts at the very top of the screen — without this the title sits under
      the clock and the notch. */
-  padding: calc(14px + env(safe-area-inset-top, 0px)) 20px 14px;
-  background: rgba(9,9,11,0.92);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid var(--border);
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border-bottom: 1px solid var(--glass-border);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   min-height: 52px;
@@ -1747,24 +1959,23 @@ select.form-input:focus {
 }
 
 .ws-subtitle {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  opacity: 0.6;
   transition: opacity 0.3s;
 }
 
 .ws-header-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
 .global-eye-btn {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: 50%;
   background: transparent;
@@ -1783,17 +1994,18 @@ select.form-input:focus {
 
 .global-eye-btn.hidden-mode {
   color: var(--error);
-  background: rgba(239,68,68,0.06);
+  background: rgba(var(--error-rgb),0.06);
 }
 
 .ws-indicator {
   display: flex;
   gap: 6px;
   align-items: center;
-  padding: 6px 10px;
+  min-height: 36px;
+  padding: 6px 12px;
   border-radius: 20px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--glass-border);
   cursor: pointer;
 }
 
@@ -1809,7 +2021,7 @@ select.form-input:focus {
   width: 18px;
   border-radius: 10px;
   background: var(--accent-gradient);
-  box-shadow: 0 0 8px rgba(16,185,129,0.3);
+  box-shadow: 0 0 8px rgba(var(--accent-rgb),0.3);
 }
 
 .ws-title-wrap:active h1 {
@@ -1866,13 +2078,13 @@ select.form-input:focus {
 /* Single header action — search. It earns its place now that it opens
    something; the notification bell that used to sit beside it did not. */
 .mm-header-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   align-self: center;
-  border-radius: 50%;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--glass-border);
   color: var(--text);
   display: grid;
   place-items: center;
@@ -1887,17 +2099,23 @@ select.form-input:focus {
 }
 
 /* --- Networth Card --- */
+/* The one card that should read as floating above the page: frosted
+   glass over a blue light source, brighter top edge as the highlight. */
 .mm-networth-card {
-  margin: 12px 16px;
-  padding: 20px;
-  background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(6,182,212,0.05) 100%);
-  border-radius: var(--radius);
-  border: 1px solid rgba(16,185,129,0.15);
+  margin: 12px 16px 16px;
+  padding: 22px 20px 20px;
+  background:
+    radial-gradient(120% 110% at 100% 0%, rgba(59,130,246,0.38) 0%, transparent 55%),
+    radial-gradient(90% 90% at 0% 100%, rgba(34,211,238,0.14) 0%, transparent 60%),
+    var(--glass-card);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border-radius: 24px;
+  border: 1px solid rgba(147,197,253,0.22);
   position: relative;
   overflow: hidden;
-  /* The one card that should read as floating above the page. */
-  box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
-  animation: fadeInUp 0.4s ease both;
+  box-shadow: 0 16px 40px rgba(2,6,23,0.55), inset 0 1px 0 rgba(255,255,255,0.12);
+  animation: fadeInUp 0.4s var(--ease-out) both;
 }
 .mm-networth-header-row {
   display: flex;
@@ -1906,30 +2124,33 @@ select.form-input:focus {
   margin-bottom: 8px;
 }
 .mm-networth-label {
-  color: var(--text-muted);
+  color: #CBD5E1;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 1px;
+  letter-spacing: 0.12em;
 }
 .mm-networth-eye {
   background: none;
   border: none;
-  color: var(--text-muted);
-  padding: 4px;
+  color: #CBD5E1;
+  width: 36px;
+  height: 36px;
+  margin: -8px 0;
+  border-radius: 50%;
   cursor: pointer;
-  display: flex;
-  align-items: center;
+  display: grid;
+  place-items: center;
 }
 .mm-networth-arrow {
   position: absolute !important;
-  top: 16px;
-  right: 16px;
-  width: 32px !important;
-  height: 32px !important;
+  top: 14px;
+  right: 14px;
+  width: 40px !important;
+  height: 40px !important;
   border-radius: 50% !important;
-  background: var(--accent) !important;
-  color: #09090b !important;
-  border: none !important;
+  background: rgba(255,255,255,0.14) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
   display: flex !important;
   align-items: center;
   justify-content: center;
@@ -1938,32 +2159,38 @@ select.form-input:focus {
 }
 .mm-networth-arrow:active { transform: scale(0.92); }
 .mm-networth-amount {
-  font-size: 32px;
+  position: relative;
+  z-index: 1;
+  font-size: 34px;
   font-weight: 800;
   color: var(--text);
-  margin: 4px 0;
-  letter-spacing: -0.03em;
+  margin: 6px 0 8px;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
 }
 .mm-networth-change {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
-  color: var(--text-muted);
+  color: #CBD5E1;
 }
 .mm-change-badge {
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 20px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .mm-change-badge.up {
-  background: rgba(16,185,129,0.15);
-  color: var(--accent);
+  background: rgba(var(--success-rgb),0.2);
+  color: var(--success);
 }
 .mm-change-badge.down {
-  background: rgba(239,68,68,0.15);
+  background: rgba(var(--error-rgb),0.2);
   color: var(--error);
 }
 .mm-change-vs { font-size: 12px; }
@@ -1973,7 +2200,7 @@ select.form-input:focus {
   right: 0;
   width: 55%;
   height: 75%;
-  opacity: 0.4;
+  opacity: 0.55;
   pointer-events: none;
 }
 
@@ -1988,49 +2215,51 @@ select.form-input:focus {
 .mm-summary-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   padding: 14px 8px;
   text-align: center;
-  animation: fadeInUp 0.4s ease both;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+  animation: fadeInUp 0.4s var(--ease-out) both;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.045);
+  min-width: 0;
 }
 .mm-summary-card:nth-child(2) { animation-delay: 0.05s; }
 .mm-summary-card:nth-child(3) { animation-delay: 0.1s; }
 .mm-summary-card:nth-child(4) { animation-delay: 0.15s; }
 .mm-summary-icon {
   width: 36px; height: 36px;
-  border-radius: 50%;
+  border-radius: 12px;
   margin: 0 auto 8px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.mm-summary-icon.income { background: rgba(16,185,129,0.12); color: var(--accent); }
-.mm-summary-icon.expense { background: rgba(239,68,68,0.12); color: var(--error); }
-.mm-summary-icon.saving { background: rgba(59,130,246,0.12); color: #3b82f6; }
-.mm-summary-icon.rate { background: rgba(16,185,129,0.12); color: var(--accent); }
+.mm-summary-icon.income { background: rgba(var(--success-rgb),0.15); color: var(--success); }
+.mm-summary-icon.expense { background: rgba(var(--error-rgb),0.15); color: var(--error); }
+.mm-summary-icon.saving { background: rgba(var(--accent-rgb),0.15); color: var(--accent); }
+.mm-summary-icon.rate { background: rgba(var(--success-rgb),0.15); color: var(--success); }
 .mm-summary-value {
   font-size: 14px;
   font-weight: 700;
   color: var(--text);
   margin-bottom: 2px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* Labels recede so the figures carry the hierarchy: uppercase, tracked out,
    dimmer. Before this, value and label were only 3px apart in size. */
 .mm-summary-label {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  opacity: 0.75;
+  letter-spacing: 0.06em;
 }
 .mm-summary-sub {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--text-muted);
   margin-top: 2px;
-  opacity: 0.6;
 }
 
 /* Period label shared by a row of tiles, instead of repeating it in each. */
@@ -2045,38 +2274,41 @@ select.form-input:focus {
 
 /* --- Expense/Income Section --- */
 .mm-expense-section {
-  margin: 0 16px 16px;
+  margin: 0 16px 20px;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 20px;
   padding: 16px;
-  animation: fadeInUp 0.5s ease both;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+  animation: fadeInUp 0.5s var(--ease-out) both;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.045);
 }
 .mm-expense-tabs {
   display: flex;
-  background: rgba(255,255,255,0.04);
-  border-radius: 25px;
-  padding: 3px;
+  gap: 4px;
+  background: rgba(2,6,23,0.35);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px;
   margin-bottom: 16px;
 }
 .mm-expense-tab {
   flex: 1;
+  min-height: 40px;
   padding: 8px;
-  border-radius: 22px;
+  border-radius: 10px;
   border: none;
   background: transparent;
   color: var(--text-muted);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: background var(--dur), color var(--dur);
   font-family: inherit;
 }
 .mm-expense-tab.active {
-  background: var(--accent);
-  color: #09090b;
-  font-weight: 600;
+  background: var(--accent-strong);
+  color: var(--on-accent);
+  box-shadow: 0 2px 10px rgba(var(--accent-rgb),0.35);
 }
 .mm-expense-content {
   display: flex;
@@ -2194,47 +2426,60 @@ select.form-input:focus {
   margin-bottom: 12px;
 }
 .mm-section-header h3 {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--text);
   margin: 0;
 }
 .mm-view-all {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--accent);
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 4px;
   font-family: inherit;
-  padding: 0;
-  transition: color 0.2s;
+  min-height: 44px;
+  padding: 0 0 0 12px;
+  transition: color var(--dur);
 }
-.mm-view-all:active { color: var(--accent); }
+.mm-view-all:active { color: var(--text); }
+@media (hover: hover) {
+  .mm-view-all:hover { color: var(--text); }
+}
 .mm-accounts-scroll {
   display: flex;
   gap: 12px;
   overflow-x: auto;
   padding-bottom: 4px;
   scrollbar-width: none;
+  scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
 }
 .mm-accounts-scroll::-webkit-scrollbar { display: none; }
 .mm-account-card {
-  min-width: 140px;
-  max-width: 160px;
-  background: var(--bg-card);
+  min-width: 148px;
+  max-width: 168px;
+  background:
+    linear-gradient(160deg, rgba(255,255,255,0.05), transparent 60%),
+    var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   padding: 14px;
   flex-shrink: 0;
   cursor: pointer;
-  transition: background 0.2s;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+  transition: background var(--dur), border-color var(--dur);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  scroll-snap-align: start;
 }
-.mm-account-card:active { background: rgba(255,255,255,0.04); }
+.mm-account-card:active { background: var(--bg-elevated); }
+@media (hover: hover) {
+  .mm-account-card:hover { border-color: rgba(var(--accent-rgb),0.35); }
+}
 .mm-account-top {
   display: flex;
   align-items: center;
@@ -2264,12 +2509,12 @@ select.form-input:focus {
   font-size: 10px;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
   font-weight: 600;
-  opacity: 0.75;
 }
 .mm-account-balance {
-  font-size: 15px;
+  font-size: 16px;
+  letter-spacing: -0.01em;
   font-weight: 700;
   color: var(--text);
   font-variant-numeric: tabular-nums;
@@ -2283,8 +2528,9 @@ select.form-input:focus {
 .mm-budget-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 20px;
   padding: 16px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.045);
 }
 .mm-budget-header {
   display: flex;
@@ -2294,8 +2540,8 @@ select.form-input:focus {
 }
 .mm-budget-icon {
   width: 40px; height: 40px;
-  border-radius: 50%;
-  background: rgba(16,185,129,0.08);
+  border-radius: 12px;
+  background: rgba(var(--accent-rgb),0.15);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2314,11 +2560,11 @@ select.form-input:focus {
   margin-top: 2px;
 }
 .mm-budget-arrow {
-  width: 32px; height: 32px;
+  width: 40px; height: 40px;
   border-radius: 50%;
-  background: var(--accent);
-  border: none;
-  color: #09090b;
+  background: rgba(var(--accent-rgb),0.15);
+  border: 1px solid rgba(var(--accent-rgb),0.3);
+  color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2434,7 +2680,7 @@ select.form-input:focus {
 }
 .mm-tx-amount-dash.income-color { color: var(--success); }
 .mm-tx-amount-dash.expense-color { color: var(--error); }
-.mm-tx-amount-dash.transfer-color { color: #60a5fa; }
+.mm-tx-amount-dash.transfer-color { color: var(--info); }
 
 
 /* --- Accounts List --- */
@@ -2457,7 +2703,7 @@ select.form-input:focus {
   display: grid;
   place-items: center;
   border-radius: 10px;
-  background: rgba(16,185,129,0.08);
+  background: rgba(var(--accent-rgb),0.08);
 }
 
 .mm-account-info { flex: 1; }
@@ -2536,7 +2782,7 @@ select.form-input:focus {
 }
 
 .mm-cal-amount {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -2561,8 +2807,9 @@ select.form-input:focus {
 }
 
 .mm-cal-day:hover { background: rgba(255,255,255,0.04); }
-.mm-cal-day.today { background: rgba(16,185,129,0.1); color: var(--accent); border: 1px solid rgba(16,185,129,0.3); }
-.mm-cal-day.selected { background: rgba(16,185,129,0.22); color: var(--text); border: 1px solid var(--accent); }
+.mm-cal-day.today { background: rgba(var(--accent-rgb),0.12); color: var(--accent); border: 1px solid rgba(var(--accent-rgb),0.35); }
+.mm-cal-day.selected { background: var(--accent-strong); color: var(--on-accent); border: 1px solid var(--accent); box-shadow: 0 4px 12px rgba(var(--accent-rgb),0.35); }
+.mm-cal-day.selected .mm-cal-amount { color: inherit !important; opacity: 0.9; }
 .mm-cal-day.empty { cursor: default; }
 
 /* History month: list header with day label + reset button */
@@ -2662,7 +2909,7 @@ select.form-input:focus {
 .mm-tx-amount { text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .mm-tx-amount.income-amt { color: var(--success); }
 .mm-tx-amount.expense-amt { color: var(--error); }
-.mm-tx-amount.transfer-amt { color: #60a5fa; }
+.mm-tx-amount.transfer-amt { color: var(--info); }
 
 /* --- Monthly Summary Card --- */
 .mm-month-summary {
@@ -2710,10 +2957,10 @@ select.form-input:focus {
 
 .mm-settings-acc-row .actions { display: flex; gap: 6px; }
 .mm-settings-acc-row .actions button {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: rgba(255,255,255,0.04);
   color: var(--text-muted);
   font-size: 14px;
@@ -2721,7 +2968,7 @@ select.form-input:focus {
   display: grid;
   place-items: center;
 }
-.mm-settings-acc-row .actions button:hover { background: rgba(239,68,68,0.1); color: var(--error); }
+.mm-settings-acc-row .actions button:hover { background: rgba(var(--error-rgb),0.1); color: var(--error); }
 
 /* --- Categories List --- */
 .mm-categories-list { display: grid; gap: 6px; }
@@ -2736,20 +2983,21 @@ select.form-input:focus {
   padding: 5px 10px;
   margin: 2px 4px 2px 0;
   border-radius: 99px;
-  background: rgba(16,185,129,0.08);
+  background: rgba(var(--accent-rgb),0.08);
   color: var(--text);
   font-size: 12px;
   font-weight: 500;
 }
 
 .mm-cat-chip .delete-cat {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
+  margin-right: -4px;
   border: none;
-  background: rgba(239,68,68,0.2);
+  background: rgba(var(--error-rgb),0.2);
   color: var(--error);
   border-radius: 50%;
-  font-size: 10px;
+  font-size: 12px;
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -2902,7 +3150,7 @@ select.form-input:focus {
 }
 
 .mm-account-row-mini:active {
-  background: rgba(16,185,129,0.04);
+  background: rgba(var(--accent-rgb),0.04);
 }
 
 .mm-account-row-mini:last-child { border-bottom: none; }
@@ -2952,7 +3200,7 @@ select.form-input:focus {
 }
 
 .chart-mini-stat-label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -3025,9 +3273,9 @@ select.form-input:focus {
 }
 
 .chart-cat-item.active {
-  border-color: rgba(16,185,129,0.4);
-  background: rgba(16,185,129,0.04);
-  box-shadow: 0 0 12px rgba(16,185,129,0.08);
+  border-color: rgba(var(--accent-rgb),0.4);
+  background: rgba(var(--accent-rgb),0.04);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb),0.08);
 }
 
 .chart-cat-icon {
@@ -3435,7 +3683,7 @@ select.form-input:focus {
   width: 32px;
   height: 32px;
   border-radius: 10px;
-  background: rgba(16,185,129,0.10);
+  background: rgba(var(--accent-rgb),0.10);
   color: var(--accent);
   flex-shrink: 0;
 }
@@ -3456,7 +3704,7 @@ select.form-input:focus {
   align-items: center;
   gap: 20px;
   padding: 28px 20px;
-  background: linear-gradient(135deg, rgba(16,185,129,0.05), rgba(6,182,212,0.05));
+  background: linear-gradient(135deg, rgba(var(--accent-rgb),0.05), rgba(6,182,212,0.05));
 }
 
 .insight-health-visual {
@@ -3973,8 +4221,8 @@ select.form-input:focus {
 
 /* Recommendations */
 .insight-recommendations-card {
-  background: linear-gradient(135deg, rgba(16,185,129,0.04), rgba(6,182,212,0.04));
-  border: 1px solid rgba(16,185,129,0.15);
+  background: linear-gradient(135deg, rgba(var(--accent-rgb),0.04), rgba(6,182,212,0.04));
+  border: 1px solid rgba(var(--accent-rgb),0.15);
 }
 
 .insight-rec-list {
@@ -4099,21 +4347,21 @@ select.form-input:focus {
 }
 
 .import-status.success {
-  background: rgba(16,185,129,0.1);
+  background: rgba(var(--success-rgb),0.1);
   color: var(--success);
-  border: 1px solid rgba(16,185,129,0.2);
+  border: 1px solid rgba(var(--success-rgb),0.25);
 }
 
 .import-status.error {
-  background: rgba(239,68,68,0.1);
+  background: rgba(var(--error-rgb),0.1);
   color: var(--error);
-  border: 1px solid rgba(239,68,68,0.2);
+  border: 1px solid rgba(var(--error-rgb),0.2);
 }
 
 /* Danger Zone */
 .danger-zone-card {
-  border-color: rgba(239,68,68,0.15);
-  background: rgba(239,68,68,0.02);
+  border-color: rgba(var(--error-rgb),0.15);
+  background: rgba(var(--error-rgb),0.02);
 }
 
 .danger-options {
@@ -4123,10 +4371,10 @@ select.form-input:focus {
 }
 
 .btn-danger {
-  border: 1px solid rgba(239,68,68,0.25);
+  border: 1px solid rgba(var(--error-rgb),0.25);
   border-radius: 99px;
   padding: 12px 20px;
-  background: rgba(239,68,68,0.06);
+  background: rgba(var(--error-rgb),0.06);
   color: var(--error);
   font-family: inherit;
   font-size: 13px;
@@ -4137,15 +4385,15 @@ select.form-input:focus {
 }
 
 .btn-danger:hover {
-  background: rgba(239,68,68,0.12);
-  border-color: rgba(239,68,68,0.4);
+  background: rgba(var(--error-rgb),0.12);
+  border-color: rgba(var(--error-rgb),0.4);
 }
 
 .btn-danger-critical {
-  border: 1px solid rgba(239,68,68,0.4);
+  border: 1px solid rgba(var(--error-rgb),0.4);
   border-radius: 99px;
   padding: 12px 20px;
-  background: rgba(239,68,68,0.1);
+  background: rgba(var(--error-rgb),0.1);
   color: #fff;
   font-family: inherit;
   font-size: 13px;
@@ -4156,8 +4404,8 @@ select.form-input:focus {
 }
 
 .btn-danger-critical:hover {
-  background: rgba(239,68,68,0.2);
-  box-shadow: 0 4px 16px rgba(239,68,68,0.2);
+  background: rgba(var(--error-rgb),0.2);
+  box-shadow: 0 4px 16px rgba(var(--error-rgb),0.2);
 }
 
 /* ============================================================
@@ -4176,30 +4424,32 @@ select.form-input:focus {
 .tx-type-tabs {
   display: flex;
   gap: 4px;
-  background: rgba(255,255,255,0.03);
-  border-radius: 12px;
-  padding: 3px;
+  background: rgba(2,6,23,0.4);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px;
   margin-bottom: 20px;
 }
 
 .tx-type-tab {
   flex: 1;
+  min-height: 42px;
   border: none;
   background: transparent;
   color: var(--text-muted);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   padding: 10px 12px;
   border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background var(--dur), color var(--dur), box-shadow var(--dur);
 }
 
 .tx-type-tab.active {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+  background: var(--accent-strong);
+  color: var(--on-accent);
+  box-shadow: 0 2px 10px rgba(var(--accent-rgb),0.35);
 }
 
 .tx-amount-hero {
@@ -4256,34 +4506,41 @@ select.form-input:focus {
   flex-wrap: wrap;
   gap: 8px;
 }
+/* Previously pointed at --text-secondary / --bg-tertiary / --danger,
+   none of which exist, so it rendered unstyled. */
 .iv-cash-info {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 12px;
-  color: var(--text-secondary);
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
 }
 .iv-cash-info.insufficient {
-  color: var(--danger);
-  background: rgba(239,68,68,0.1);
+  color: var(--error);
+  background: rgba(var(--error-rgb),0.1);
 }
 
 .tx-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 16px;
-  border: 1px solid var(--border);
+  min-height: 40px;
+  padding: 9px 16px;
+  border: 1px solid rgba(255,255,255,0.10);
   border-radius: 99px;
-  background: rgba(255,255,255,0.03);
-  color: var(--text-muted);
+  background: rgba(255,255,255,0.04);
+  color: #CBD5E1;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+  transition: background var(--dur), border-color var(--dur), color var(--dur), transform var(--dur-fast);
   -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  .tx-chip:hover:not(.active) { background: rgba(255,255,255,0.08); color: var(--text); }
 }
 
 .tx-chip:active {
@@ -4291,11 +4548,10 @@ select.form-input:focus {
 }
 
 .tx-chip.active {
-  background: rgba(16,185,129,0.12);
+  background: rgba(var(--accent-rgb),0.14);
   border-color: var(--chip-color, var(--accent));
   color: var(--chip-color, var(--accent));
-  box-shadow: 0 2px 10px rgba(16,185,129,0.15);
-  transform: scale(1.02);
+  box-shadow: 0 0 0 1px var(--chip-color, var(--accent)) inset, 0 2px 10px rgba(var(--accent-rgb),0.15);
 }
 
 .tx-chip-icon {
@@ -4329,7 +4585,7 @@ select.form-input:focus {
 }
 
 .tx-date-card:hover {
-  border-color: rgba(16,185,129,0.3);
+  border-color: rgba(var(--accent-rgb),0.3);
 }
 
 .tx-date-wrapper {
@@ -4362,24 +4618,26 @@ select.form-input:focus {
 
 .tx-notes-input {
   width: 100%;
+  min-height: 48px;
   padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
+  background: rgba(2,6,23,0.35);
   color: var(--text);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 500;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color var(--dur), box-shadow var(--dur);
 }
 
 .tx-notes-input:focus {
   border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .tx-notes-input::placeholder {
-  color: rgba(161,161,170,0.5);
+  color: rgba(148,163,184,0.55);
 }
 
 .tx-recent-chips {
@@ -4404,7 +4662,7 @@ select.form-input:focus {
 }
 
 .tx-recent-chip:hover {
-  background: rgba(16,185,129,0.06);
+  background: rgba(var(--accent-rgb),0.06);
   color: var(--text);
 }
 
@@ -4417,6 +4675,320 @@ select.form-input:focus {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ============================================================
+   SETTINGS — grouped list layout
+   Open sections with their action in the header, a sticky chip nav
+   to jump between them, and only destructive/rare items folded.
+   ============================================================ */
+.settings-head { padding: 4px 4px 0; }
+.settings-head .page-title { font-size: 26px; margin: 0; }
+
+.settings-nav {
+  position: sticky;
+  top: calc(68px + env(safe-area-inset-top, 0px));
+  z-index: 80;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 8px -16px 14px;
+  padding: 10px 16px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-bottom: 1px solid var(--border);
+}
+.settings-nav::-webkit-scrollbar { display: none; }
+@media (max-width: 480px) { .settings-nav { margin-left: -12px; margin-right: -12px; padding-left: 12px; padding-right: 12px; } }
+@media (min-width: 769px) { .settings-nav { margin-left: -32px; margin-right: -32px; padding-left: 32px; padding-right: 32px; } }
+
+.settings-nav-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: 99px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: #CBD5E1;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--dur), color var(--dur), border-color var(--dur);
+  -webkit-tap-highlight-color: transparent;
+}
+.settings-nav-chip.active {
+  background: var(--accent-strong);
+  border-color: transparent;
+  color: var(--on-accent);
+}
+@media (hover: hover) {
+  .settings-nav-chip:not(.active):hover { background: rgba(255,255,255,0.08); color: var(--text); }
+}
+
+.set-section {
+  margin-bottom: 24px;
+  scroll-margin-top: calc(68px + 72px + env(safe-area-inset-top, 0px));
+  animation: fadeInUp 0.3s var(--ease-out) both;
+}
+
+.set-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 0 4px 8px;
+}
+.set-section-title { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+.set-section-sub { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+.set-add-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px 0 10px;
+  border-radius: 99px;
+  border: 1px solid rgba(var(--accent-rgb),0.3);
+  background: rgba(var(--accent-rgb),0.14);
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast), transform var(--dur-fast);
+}
+.set-add-btn svg { width: 16px; height: 16px; }
+.set-add-btn:active { transform: scale(0.96); }
+@media (hover: hover) { .set-add-btn:hover { background: rgba(var(--accent-rgb),0.24); } }
+
+.set-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.045);
+}
+.set-card + .set-card { margin-top: 10px; }
+.set-card-flush { padding: 0; overflow: hidden; }
+.set-card .empty-state { padding: 4px 0; }
+
+.set-hint { margin: 10px 0 0; font-size: 12px; line-height: 1.5; color: var(--text-muted); }
+.set-muted { font-size: 12px; color: var(--text-muted); }
+.set-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.07);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  vertical-align: 1px;
+}
+
+/* --- Accounts as a list: row = edit, trash = delete --- */
+.set-card-flush .mm-settings-acc-row {
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 8px 10px 14px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--dur-fast);
+}
+.set-card-flush .mm-settings-acc-row:last-child { border-bottom: none; }
+.set-card-flush .mm-settings-acc-row:active { background: rgba(255,255,255,0.05); }
+@media (hover: hover) { .set-card-flush .mm-settings-acc-row:hover { background: rgba(255,255,255,0.03); } }
+.set-card-flush .mm-settings-acc-row .icon { width: 38px; height: 38px; border-radius: 12px; background: rgba(var(--accent-rgb),0.12); color: var(--accent); }
+.set-card-flush .mm-settings-acc-row .info { min-width: 0; }
+.set-card-flush .mm-settings-acc-row .info .name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.set-card-flush .mm-settings-acc-row .info .meta { font-size: 13px; font-variant-numeric: tabular-nums; margin-top: 1px; }
+.set-card-flush .mm-settings-acc-row .actions { align-items: center; gap: 2px; }
+.set-card-flush .mm-settings-acc-row .actions button { width: 40px; height: 40px; background: transparent; }
+.set-row-chevron { display: flex; color: var(--text-muted); opacity: 0.7; }
+
+/* --- Budget split: stacked bar + legend --- */
+.set-alloc-bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  border-radius: 99px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.06);
+}
+.set-alloc-bar span { height: 100%; transition: width 0.5s var(--ease-out); }
+.set-alloc-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  margin-top: 14px;
+}
+.set-alloc-item { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; }
+.set-alloc-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.set-alloc-name { flex: 1; min-width: 0; color: #CBD5E1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.set-alloc-item strong { font-variant-numeric: tabular-nums; }
+/* Allocation editor rows: one line per sector even on a phone, and no
+   card-in-a-card border since the section card already frames them. */
+.set-card .allocation-target-row {
+  grid-template-columns: 1fr 84px 40px;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+}
+.set-card .allocation-target-row .remove-row-btn { width: 40px; height: 40px; }
+.set-alloc-foot { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.set-alloc-foot .allocation-total-box { flex: 1; margin-top: 0; min-height: 48px; }
+
+/* --- Categories: type heading, one row per category --- */
+.set-cat-type {
+  margin: 16px 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.mm-categories-list > .set-cat-type:first-child { margin-top: 0; }
+.mm-categories-list .mm-cat-group { margin-bottom: 12px; }
+.mm-categories-list .mm-cat-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.set-count {
+  padding: 0 7px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.07);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.set-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.set-chip-row .mm-cat-chip {
+  margin: 0;
+  gap: 4px;
+  padding: 3px 3px 3px 10px;
+  min-height: 30px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  font-size: 12.5px;
+}
+.set-chip-row .mm-cat-chip .delete-cat { background: transparent; color: var(--text-muted); width: 24px; height: 24px; margin: 0; font-size: 15px; }
+@media (hover: hover) { .set-chip-row .mm-cat-chip .delete-cat:hover { background: rgba(var(--error-rgb),0.18); color: var(--error); } }
+
+/* --- Data: three primary actions in one row --- */
+.set-action-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.set-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 84px;
+  padding: 12px 6px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
+}
+.set-action:active { transform: scale(0.97); }
+@media (hover: hover) { .set-action:hover { background: rgba(255,255,255,0.06); border-color: rgba(var(--accent-rgb),0.35); } }
+.set-action:focus-within { border-color: var(--accent); }
+.set-action-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: rgba(var(--accent-rgb),0.14);
+  color: var(--accent);
+}
+.set-action-icon svg { width: 18px; height: 18px; }
+
+.set-inline-links { margin: 12px 0 0; font-size: 12px; color: var(--text-muted); }
+.set-inline-links button {
+  min-height: 32px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* --- Folded rows: delete data, database connection --- */
+.set-danger { padding: 0; border-color: rgba(var(--error-rgb),0.2); }
+.set-db { border-color: var(--border); }
+.set-danger-toggle {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px 0 14px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+.set-danger-toggle .panel-chevron { width: 32px; height: 32px; }
+.set-danger-label { display: inline-flex; align-items: center; gap: 8px; color: var(--error); font-size: 14px; font-weight: 600; }
+.set-danger-label svg { width: 16px; height: 16px; }
+.set-db-label { color: #CBD5E1; }
+.set-danger > div[id] { padding: 0 14px 14px; }
+.set-danger > div[id] > .set-hint:first-child { margin-top: 0; }
+.set-danger-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.set-danger-grid .btn-danger,
+.set-danger-grid .btn-danger-critical { border-radius: 12px; padding: 10px; }
+.set-danger-grid .btn-danger-critical { grid-column: 1 / -1; }
+.set-danger .btn-danger { border-radius: 12px; }
+
+/* --- Forms and master data --- */
+.set-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.set-span-2 { grid-column: 1 / -1; }
+@media (max-width: 360px) { .set-form-grid { grid-template-columns: 1fr; } }
+
+.set-master { padding: 2px 14px; }
+.set-master-row { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.set-master-row:last-child { border-bottom: none; }
+.set-master-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.set-master-head h4 { margin: 0; font-size: 13px; font-weight: 600; color: var(--text); }
+.set-mini-add {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: -4px -4px -4px 0;
+  border-radius: 11px;
+  border: 1px solid rgba(var(--accent-rgb),0.3);
+  background: rgba(var(--accent-rgb),0.14);
+  color: var(--accent);
+  cursor: pointer;
+}
+.set-mini-add svg { width: 16px; height: 16px; }
+.set-master .settings-chip { background: rgba(255,255,255,0.05); color: #CBD5E1; border: 1px solid var(--border); }
 
 </style>
 
@@ -4437,7 +5009,7 @@ select.form-input:focus {
           <svg class="eye-icon-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
           <svg class="eye-icon-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><line x1="1" y1="1" x2="23" y2="23"></line><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path></svg>
         </button>
-        <div class="ws-indicator" onclick="switchWorkspace()">
+        <div class="ws-indicator" role="button" tabindex="0" aria-label="Ganti workspace" onclick="switchWorkspace()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchWorkspace();}">
           <span class="ws-dot active"></span>
           <span class="ws-dot"></span>
         </div>
@@ -4459,8 +5031,8 @@ select.form-input:focus {
               <p class="progress-target-text" id="progressTargetText">of Rp100,000,000</p>
               <div class="progress-slider-track">
                 <div class="progress-slider-fill" id="mainProgressFill"></div>
-                <span class="progress-slider-thumb" id="mainRunner">🏃</span>
-                <span class="progress-slider-finish">🏁</span>
+                <span class="progress-slider-thumb" id="mainRunner" aria-hidden="true"></span>
+                <span class="progress-slider-finish" aria-hidden="true"><i data-lucide="flag"></i></span>
               </div>
               <p class="progress-percent-center" id="mainProgressText">0%</p>
               <p class="progress-note-center" id="heroNote">Start the journey.</p>
@@ -4473,7 +5045,7 @@ select.form-input:focus {
                   <p class="panel-eyebrow">Allocation</p>
                   <h3 class="panel-title">Portfolio Balance</h3>
                 </div>
-                <strong class="panel-chevron" id="allocationChevron">↑</strong>
+                <strong class="panel-chevron is-open" id="allocationChevron">↑</strong>
               </button>
               <div id="allocationPanel" class="panel-body">
                 <div class="tab-bar">
@@ -4503,7 +5075,7 @@ select.form-input:focus {
               </button>
               <div id="nextMovePanel" class="panel-body hidden">
                 <div class="insight-box">
-                  <div class="insight-icon">🧭</div>
+                  <div class="insight-icon" aria-hidden="true"><i data-lucide="compass"></i></div>
                   <div>
                     <h4 id="nextMoveTitle">Start with your first record.</h4>
                     <p id="nextMoveText">Add your holdings first. The tracker will suggest what needs balance.</p>
@@ -4603,150 +5175,140 @@ select.form-input:focus {
           </section>
         </div>
 
-        <!-- ===== SETTINGS PAGE ===== -->
-        <div id="settingsPage" class="page">
-          <section class="page-header-card">
-            <p class="panel-eyebrow">Settings</p>
-            <h2 class="page-title">Personalize</h2>
-            <p class="page-desc">Manage your goal, allocation, and dropdown data.</p>
-          </section>
+        <!-- ===== SETTINGS PAGE =====
+             Same layout as Money Settings: sections open, actions in their
+             headers, only deletion folded away. -->
+        <div id="settingsPage" class="page settings-page">
+          <header class="settings-head">
+            <h2 class="page-title">Settings</h2>
+          </header>
+
+          <nav class="settings-nav" aria-label="Bagian settings">
+            <a href="#invSetGoal" class="settings-nav-chip active" onclick="settingsJump(event,'invSetGoal')">Target</a>
+            <a href="#invSetAlloc" class="settings-nav-chip" onclick="settingsJump(event,'invSetAlloc')">Alokasi</a>
+            <a href="#invSetMaster" class="settings-nav-chip" onclick="settingsJump(event,'invSetMaster')">Master</a>
+            <a href="#invSetData" class="settings-nav-chip" onclick="settingsJump(event,'invSetData')">Data</a>
+          </nav>
 
           <!-- Goal -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('investGoalPanel')">
+          <section class="set-section" id="invSetGoal">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Goal</p>
-                <h3 class="panel-title">Main Target</h3>
+                <h3 class="set-section-title">Target Utama</h3>
+                <p class="set-section-sub">Ditampilkan di progress dashboard</p>
               </div>
-              <strong class="panel-chevron" id="investGoalChevron">↓</strong>
-            </button>
-            <div id="investGoalPanel" class="panel-body hidden">
-              <form id="targetForm" class="stack-form" onsubmit="submitTarget(event)">
-                <label class="form-label">Target Name <input type="text" name="targetName" id="targetNameInput" class="form-input" placeholder="First 100 Million" required></label>
-                <label class="form-label">Target Amount <input type="number" name="targetAmount" id="targetAmountInput" class="form-input" placeholder="100000000" required></label>
-                <label class="form-label">Notes <textarea name="notes" id="targetNotesInput" class="form-input" rows="2" placeholder="Main investment goal"></textarea></label>
-                <button class="btn-primary" type="submit">Save Goal</button>
+            </div>
+            <div class="set-card">
+              <form id="targetForm" class="set-form-grid" onsubmit="submitTarget(event)">
+                <label class="form-label">Nama target <input type="text" name="targetName" id="targetNameInput" class="form-input" placeholder="First 100 Million" required></label>
+                <label class="form-label">Jumlah (Rp) <input type="number" name="targetAmount" id="targetAmountInput" class="form-input" placeholder="100000000" inputmode="numeric" required></label>
+                <label class="form-label set-span-2">Catatan <input type="text" name="notes" id="targetNotesInput" class="form-input" placeholder="Main investment goal"></label>
+                <button class="btn-primary set-span-2" type="submit">Simpan target</button>
               </form>
             </div>
           </section>
 
-          <!-- Allocation Targets -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('investAllocPanel')">
+          <!-- Allocation targets -->
+          <section class="set-section" id="invSetAlloc">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Allocation</p>
-                <h3 class="panel-title">Target Balance</h3>
+                <h3 class="set-section-title">Target Alokasi</h3>
+                <p class="set-section-sub">Total harus 100%</p>
               </div>
-              <strong class="panel-chevron" id="investAllocChevron">↓</strong>
-            </button>
-            <div id="investAllocPanel" class="panel-body hidden">
+              <button type="button" class="set-add-btn" onclick="addAllocationTargetRow()"><i data-lucide="plus"></i>Sektor</button>
+            </div>
+            <div class="set-card">
               <form id="allocationTargetForm" onsubmit="submitAllocationTargets(event)">
                 <div id="allocationTargetRows" class="allocation-rows">Loading allocation targets...</div>
-                <div class="allocation-total-box" id="allocationTotalBox">
-                  <span>Total Allocation</span>
-                  <strong id="allocationTargetTotal">0%</strong>
-                </div>
-                <div class="form-actions">
-                  <button type="button" class="btn-ghost" onclick="addAllocationTargetRow()">+ Add Sector</button>
-                  <button type="submit" class="btn-primary">Save Allocation</button>
+                <div class="set-alloc-foot">
+                  <div class="allocation-total-box" id="allocationTotalBox">
+                    <span>Total</span>
+                    <strong id="allocationTargetTotal">0%</strong>
+                  </div>
+                  <button type="submit" class="btn-primary">Simpan</button>
                 </div>
               </form>
             </div>
           </section>
 
-          <!-- Master Data -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('investMasterPanel')">
+          <!-- Master data -->
+          <section class="set-section" id="invSetMaster">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Master Data</p>
-                <h3 class="panel-title">Dropdown Options</h3>
+                <h3 class="set-section-title">Master Data</h3>
+                <p class="set-section-sub">Pilihan di form transaksi</p>
               </div>
-              <strong class="panel-chevron" id="investMasterChevron">↓</strong>
-            </button>
-            <div id="investMasterPanel" class="panel-body hidden">
-              <div class="master-grid">
-                <div class="master-box">
-                  <div class="master-box-head">
-                    <h4>Platforms</h4>
-                    <button class="btn-mini" onclick="openQuickSetting('Platform')">+ Add</button>
-                  </div>
-                  <div id="platformChips" class="chip-wrap"></div>
+            </div>
+            <div class="set-card set-master">
+              <div class="set-master-row">
+                <div class="set-master-head">
+                  <h4>Platform</h4>
+                  <button class="set-mini-add" aria-label="Tambah platform" onclick="openQuickSetting('Platform')"><i data-lucide="plus"></i></button>
                 </div>
-                <div class="master-box">
-                  <div class="master-box-head">
-                    <h4>Sectors</h4>
-                    <button class="btn-mini" onclick="openQuickSetting('Sector')">+ Add</button>
-                  </div>
-                  <div id="sectorChips" class="chip-wrap"></div>
+                <div id="platformChips" class="chip-wrap"></div>
+              </div>
+              <div class="set-master-row">
+                <div class="set-master-head">
+                  <h4>Sektor</h4>
+                  <button class="set-mini-add" aria-label="Tambah sektor" onclick="openQuickSetting('Sector')"><i data-lucide="plus"></i></button>
                 </div>
-                <div class="master-box">
-                  <div class="master-box-head">
-                    <h4>Transaction Types</h4>
-                    <button class="btn-mini" onclick="openQuickSetting('TransactionType')">+ Add</button>
-                  </div>
-                  <div id="transactionTypeChips" class="chip-wrap"></div>
+                <div id="sectorChips" class="chip-wrap"></div>
+              </div>
+              <div class="set-master-row">
+                <div class="set-master-head">
+                  <h4>Tipe transaksi</h4>
+                  <button class="set-mini-add" aria-label="Tambah tipe transaksi" onclick="openQuickSetting('TransactionType')"><i data-lucide="plus"></i></button>
                 </div>
+                <div id="transactionTypeChips" class="chip-wrap"></div>
               </div>
             </div>
           </section>
 
-          <!-- Export Data -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('investExportPanel')">
+          <!-- Data -->
+          <section class="set-section" id="invSetData">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Backup</p>
-                <h3 class="panel-title">Export Data</h3>
-              </div>
-              <strong class="panel-chevron" id="investExportChevron">↓</strong>
-            </button>
-            <div id="investExportPanel" class="panel-body hidden">
-              <p class="settings-desc">Download data investasi dalam format CSV.</p>
-              <div class="export-options">
-                <button class="btn-primary btn-full" onclick="investExportData('all')"><i data-lucide="download" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px;"></i>Export Semua Data</button>
-                <button class="btn-ghost btn-full" onclick="investExportData('transactions')"><i data-lucide="file-text" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Export Transaksi</button>
-                <button class="btn-ghost btn-full" onclick="investExportData('portfolio')"><i data-lucide="file-text" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Export Portfolio</button>
+                <h3 class="set-section-title">Data</h3>
+                <p class="set-section-sub">Backup &amp; restore via CSV</p>
               </div>
             </div>
-          </section>
-
-          <!-- Import Data -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('investImportPanel')">
-              <div>
-                <p class="panel-eyebrow">Restore</p>
-                <h3 class="panel-title">Import Data</h3>
-              </div>
-              <strong class="panel-chevron" id="investImportChevron">↓</strong>
-            </button>
-            <div id="investImportPanel" class="panel-body hidden">
-              <p class="settings-desc">Import transaksi investasi dari file CSV.</p>
-              <div class="import-actions">
-                <button class="btn-ghost btn-full" onclick="investDownloadTemplate()"><i data-lucide="file-down" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Download Template CSV</button>
-                <label class="btn-primary btn-full import-label">
-                  <i data-lucide="upload" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px;"></i>Pilih File CSV &amp; Import
-                  <input type="file" id="investImportFile" accept=".csv" onchange="investImportData(event)" style="display:none;">
+            <div class="set-card">
+              <div class="set-action-grid">
+                <button class="set-action" onclick="investExportData('all')">
+                  <span class="set-action-icon"><i data-lucide="download"></i></span>
+                  <span>Export semua</span>
+                </button>
+                <label class="set-action">
+                  <span class="set-action-icon"><i data-lucide="upload"></i></span>
+                  <span>Import CSV</span>
+                  <input type="file" id="investImportFile" accept=".csv" onchange="investImportData(event)" hidden>
                 </label>
+                <button class="set-action" onclick="investDownloadTemplate()">
+                  <span class="set-action-icon"><i data-lucide="file-down"></i></span>
+                  <span>Template</span>
+                </button>
               </div>
+              <p class="set-inline-links">
+                Export sebagian:
+                <button type="button" onclick="investExportData('transactions')">Transaksi</button> ·
+                <button type="button" onclick="investExportData('portfolio')">Portfolio</button>
+              </p>
               <div id="investImportStatus" class="import-status" style="display:none;"></div>
             </div>
-          </section>
 
-          <!-- Danger Zone -->
-          <section class="panel-card danger-zone-card">
-            <button class="panel-toggle" onclick="togglePanel('investDangerPanel')">
-              <div>
-                <p class="panel-eyebrow" style="color:var(--error);">Danger Zone</p>
-                <h3 class="panel-title">Delete Data</h3>
-              </div>
-              <strong class="panel-chevron" id="investDangerChevron">↓</strong>
-            </button>
-            <div id="investDangerPanel" class="panel-body hidden">
-              <p class="settings-desc" style="color:var(--text-muted);">Hapus data investasi secara permanen. <strong style="color:var(--error)">Tidak dapat dibatalkan</strong>.</p>
-              <div class="danger-options">
-                <button class="btn-danger btn-full" onclick="investDeletePrompt('transactions')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Transaksi</button>
-                <button class="btn-danger btn-full" onclick="investDeletePrompt('portfolio')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Portfolio Values</button>
-                <button class="btn-danger btn-full" onclick="investDeletePrompt('settings')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Settings &amp; Master Data</button>
-                <button class="btn-danger-critical btn-full" onclick="investDeletePrompt('all')"><i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Data (Reset Total)</button>
+            <div class="set-card set-danger">
+              <button class="set-danger-toggle" onclick="togglePanel('investDangerPanel')" aria-expanded="false">
+                <span class="set-danger-label"><i data-lucide="alert-triangle"></i>Hapus data</span>
+                <strong class="panel-chevron" id="investDangerChevron">↓</strong>
+              </button>
+              <div id="investDangerPanel" class="hidden">
+                <p class="set-hint">Permanen dan <strong style="color:var(--error)">tidak dapat dibatalkan</strong>.</p>
+                <div class="set-danger-grid">
+                  <button class="btn-danger" onclick="investDeletePrompt('transactions')">Transaksi</button>
+                  <button class="btn-danger" onclick="investDeletePrompt('portfolio')">Portfolio</button>
+                  <button class="btn-danger" onclick="investDeletePrompt('settings')">Settings</button>
+                  <button class="btn-danger-critical" onclick="investDeletePrompt('all')">Reset total</button>
+                </div>
               </div>
             </div>
           </section>
@@ -4791,10 +5353,10 @@ select.form-input:focus {
             <div class="mm-networth-card" id="mmNetworthCard">
               <div class="mm-networth-header-row">
                 <span class="mm-networth-label">NETWORTH</span>
-                <button class="mm-networth-eye" onclick="toggleAmountVisibility()">
+                <button class="mm-networth-eye" aria-label="Tampilkan/sembunyikan nominal" onclick="toggleAmountVisibility()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
-                <button class="mm-networth-arrow" id="mmNetworthDetailBtn">
+                <button class="mm-networth-arrow" id="mmNetworthDetailBtn" aria-label="Detail networth">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
                 </button>
               </div>
@@ -4873,7 +5435,7 @@ select.form-input:focus {
                     <div class="mm-budget-title" id="mmBudgetTitle">Living</div>
                     <div class="mm-budget-subtitle" id="mmBudgetSubtitle">Rp 0 Budget</div>
                   </div>
-                  <button class="mm-budget-arrow" id="mmBudgetDetailBtn" onclick="mmShowBudgetDetail()">
+                  <button class="mm-budget-arrow" id="mmBudgetDetailBtn" aria-label="Detail budget" onclick="mmShowBudgetDetail()">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
                   </button>
                 </div>
@@ -4919,9 +5481,9 @@ select.form-input:focus {
             <div id="mmHistoryAllTime" class="mm-history-content"></div>
             <div id="mmHistoryMonth" class="mm-history-content" style="display:none;">
               <div class="mm-month-nav">
-                <button class="btn-ghost" onclick="mmPrevMonth()">&lt;</button>
+                <button class="btn-ghost" aria-label="Bulan sebelumnya" onclick="mmPrevMonth()">&lt;</button>
                 <strong id="mmHistoryMonthLabel">-</strong>
-                <button class="btn-ghost" onclick="mmNextMonth()">&gt;</button>
+                <button class="btn-ghost" aria-label="Bulan berikutnya" onclick="mmNextMonth()">&gt;</button>
               </div>
               <div class="mm-month-summary">
                 <div class="item"><span>Income</span><strong class="positive" id="mmHistIncome">Rp 0</strong></div>
@@ -4945,43 +5507,46 @@ select.form-input:focus {
           </section>
         </div>
 
-        <!-- ===== MM SETTINGS PAGE ===== -->
-        <div id="mmSettingsPage" class="page">
-          <section class="page-header-card">
-            <p class="panel-eyebrow">Settings</p>
-            <h2 class="page-title">Money Settings</h2>
-            <p class="page-desc">Manage accounts, categories, and allocation.</p>
-          </section>
+        <!-- ===== MM SETTINGS PAGE =====
+             Everything that is edited often is open on arrival, with its
+             action in the section header: add an account or category, or
+             edit the split, in one tap. Only the destructive section stays
+             folded. -->
+        <div id="mmSettingsPage" class="page settings-page">
+          <header class="settings-head">
+            <h2 class="page-title">Settings</h2>
+          </header>
 
-          <!-- Accounts Manager -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('mmSettingsAccPanel')">
+          <nav class="settings-nav" aria-label="Bagian settings">
+            <a href="#mmSetAccounts" class="settings-nav-chip active" onclick="settingsJump(event,'mmSetAccounts')">Akun</a>
+            <a href="#mmSetBudget" class="settings-nav-chip" onclick="settingsJump(event,'mmSetBudget')">Budget</a>
+            <a href="#mmSetCategories" class="settings-nav-chip" onclick="settingsJump(event,'mmSetCategories')">Kategori</a>
+            <a href="#mmSetData" class="settings-nav-chip" onclick="settingsJump(event,'mmSetData')">Data</a>
+          </nav>
+
+          <!-- Accounts -->
+          <section class="set-section" id="mmSetAccounts">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Accounts</p>
-                <h3 class="panel-title">Manage Accounts</h3>
+                <h3 class="set-section-title">Akun</h3>
+                <p class="set-section-sub" id="mmSettingsAccSummary">Ketuk akun untuk edit</p>
               </div>
-              <strong class="panel-chevron" id="mmSettingsAccChevron">↓</strong>
-            </button>
-            <div id="mmSettingsAccPanel" class="panel-body hidden">
-              <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-                <button class="btn-mini" onclick="mmShowAddAccount()">+ Add</button>
-              </div>
-              <div id="mmSettingsAccountsList" class="mm-settings-accounts"></div>
+              <button class="set-add-btn" onclick="mmShowAddAccount()"><i data-lucide="plus"></i>Akun</button>
             </div>
+            <div id="mmSettingsAccountsList" class="set-list"></div>
           </section>
 
-          <!-- Allocation Editor -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('mmSettingsAllocPanel')">
+          <!-- Budget split -->
+          <section class="set-section" id="mmSetBudget">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Allocation</p>
-                <h3 class="panel-title">Budget Split</h3>
+                <h3 class="set-section-title">Budget Split</h3>
+                <p class="set-section-sub">Pembagian pemasukan per pos</p>
               </div>
-              <strong class="panel-chevron" id="mmSettingsAllocChevron">↓</strong>
-            </button>
-            <div id="mmSettingsAllocPanel" class="panel-body hidden">
+              <button class="set-add-btn" id="mmAllocEditBtn" onclick="mmToggleAllocEdit()"><i data-lucide="sliders-horizontal"></i>Edit</button>
+            </div>
+            <div class="set-card">
               <div id="mmAllocReadOnly" class="mm-alloc-readonly"></div>
-              <button class="btn-ghost btn-full" style="margin-top:10px;" id="mmAllocEditBtn" onclick="mmToggleAllocEdit()">Edit Allocation</button>
               <form id="mmAllocationForm" onsubmit="mmSubmitAllocation(event)" style="display:none;">
                 <div id="mmAllocationRows" class="allocation-rows"></div>
                 <div class="allocation-total-box" id="mmAllocTotalBox">
@@ -4989,88 +5554,74 @@ select.form-input:focus {
                   <strong id="mmAllocTotal">0%</strong>
                 </div>
                 <div class="form-actions">
-                  <button type="button" class="btn-ghost" onclick="mmAddAllocRow()">+ Add</button>
-                  <button type="button" class="btn-ghost" onclick="mmToggleAllocEdit()">Cancel</button>
-                  <button type="submit" class="btn-primary">Save</button>
+                  <button type="button" class="btn-ghost" onclick="mmAddAllocRow()">+ Pos</button>
+                  <button type="button" class="btn-ghost" onclick="mmToggleAllocEdit()">Batal</button>
+                  <button type="submit" class="btn-primary">Simpan</button>
                 </div>
               </form>
             </div>
           </section>
 
-          <!-- Category Manager -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('mmSettingsCatPanel')">
+          <!-- Categories -->
+          <section class="set-section" id="mmSetCategories">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Categories</p>
-                <h3 class="panel-title">Expense &amp; Income</h3>
+                <h3 class="set-section-title">Kategori</h3>
+                <p class="set-section-sub">Expense &amp; income</p>
               </div>
-              <strong class="panel-chevron" id="mmSettingsCatChevron">↓</strong>
-            </button>
-            <div id="mmSettingsCatPanel" class="panel-body hidden">
-              <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-                <button class="btn-mini" onclick="mmShowAddCategory()">+ Add</button>
-              </div>
+              <button class="set-add-btn" onclick="mmShowAddCategory()"><i data-lucide="plus"></i>Kategori</button>
+            </div>
+            <div class="set-card">
               <div id="mmCategoriesList" class="mm-categories-list"></div>
             </div>
           </section>
 
-          <!-- Export Data -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('mmSettingsExportPanel')">
+          <!-- Data: backup, restore, delete -->
+          <section class="set-section" id="mmSetData">
+            <div class="set-section-head">
               <div>
-                <p class="panel-eyebrow">Backup</p>
-                <h3 class="panel-title">Export Data</h3>
-              </div>
-              <strong class="panel-chevron" id="mmSettingsExportChevron">↓</strong>
-            </button>
-            <div id="mmSettingsExportPanel" class="panel-body hidden">
-              <p class="settings-desc">Download data keuangan dalam format CSV. Bisa dibuka di Excel/Google Sheets.</p>
-              <div class="export-options">
-                <button class="btn-primary btn-full" onclick="mmExportData('all')"><i data-lucide="download" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px;"></i>Export Semua Data</button>
-                <button class="btn-ghost btn-full" onclick="mmExportData('transactions')"><i data-lucide="file-text" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Export Transaksi</button>
-                <button class="btn-ghost btn-full" onclick="mmExportData('accounts')"><i data-lucide="file-text" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Export Akun</button>
+                <h3 class="set-section-title">Data</h3>
+                <p class="set-section-sub">Backup &amp; restore via CSV</p>
               </div>
             </div>
-          </section>
-
-          <!-- Import Data -->
-          <section class="panel-card">
-            <button class="panel-toggle" onclick="togglePanel('mmSettingsImportPanel')">
-              <div>
-                <p class="panel-eyebrow">Restore</p>
-                <h3 class="panel-title">Import Data</h3>
-              </div>
-              <strong class="panel-chevron" id="mmSettingsImportChevron">↓</strong>
-            </button>
-            <div id="mmSettingsImportPanel" class="panel-body hidden">
-              <p class="settings-desc">Import transaksi dari file CSV. Data akan <strong>ditambahkan</strong> ke data existing, bukan menimpa.</p>
-              <div class="import-actions">
-                <button class="btn-ghost btn-full" onclick="mmDownloadTemplate()"><i data-lucide="file-down" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Download Template CSV</button>
-                <label class="btn-primary btn-full import-label">
-                  <i data-lucide="upload" style="width:16px;height:16px;vertical-align:-3px;margin-right:6px;"></i>Pilih File CSV &amp; Import
-                  <input type="file" id="mmImportFile" accept=".csv" onchange="mmImportData(event)" style="display:none;">
+            <div class="set-card">
+              <div class="set-action-grid">
+                <button class="set-action" onclick="mmExportData('all')">
+                  <span class="set-action-icon"><i data-lucide="download"></i></span>
+                  <span>Export semua</span>
+                </button>
+                <label class="set-action">
+                  <span class="set-action-icon"><i data-lucide="upload"></i></span>
+                  <span>Import CSV</span>
+                  <input type="file" id="mmImportFile" accept=".csv" onchange="mmImportData(event)" hidden>
                 </label>
+                <button class="set-action" onclick="mmDownloadTemplate()">
+                  <span class="set-action-icon"><i data-lucide="file-down"></i></span>
+                  <span>Template</span>
+                </button>
               </div>
+              <p class="set-inline-links">
+                Export sebagian:
+                <button type="button" onclick="mmExportData('transactions')">Transaksi</button> ·
+                <button type="button" onclick="mmExportData('accounts')">Akun</button>
+              </p>
+              <p class="set-hint">Import <strong>menambahkan</strong> data, tidak menimpa yang sudah ada.</p>
               <div id="mmImportStatus" class="import-status" style="display:none;"></div>
             </div>
-          </section>
 
-          <!-- Danger Zone -->
-          <section class="panel-card danger-zone-card">
-            <button class="panel-toggle" onclick="togglePanel('mmSettingsDangerPanel')">
-              <div>
-                <p class="panel-eyebrow" style="color:var(--error);">Danger Zone</p>
-                <h3 class="panel-title">Delete Data</h3>
-              </div>
-              <strong class="panel-chevron" id="mmSettingsDangerChevron">↓</strong>
-            </button>
-            <div id="mmSettingsDangerPanel" class="panel-body hidden">
-              <p class="settings-desc" style="color:var(--text-muted);">Hapus data secara permanen. Tindakan ini <strong style="color:var(--error)">tidak dapat dibatalkan</strong>.</p>
-              <div class="danger-options">
-                <button class="btn-danger btn-full" onclick="mmDeleteDataPrompt('transactions')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Transaksi</button>
-                <button class="btn-danger btn-full" onclick="mmDeleteDataPrompt('accounts')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Akun</button>
-                <button class="btn-danger btn-full" onclick="mmDeleteDataPrompt('categories')"><i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Kategori</button>
-                <button class="btn-danger-critical btn-full" onclick="mmDeleteDataPrompt('all')"><i data-lucide="alert-triangle" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Hapus Semua Data (Reset Total)</button>
+            <div class="set-card set-danger">
+              <button class="set-danger-toggle" onclick="togglePanel('mmSettingsDangerPanel')" aria-expanded="false">
+                <span class="set-danger-label"><i data-lucide="alert-triangle"></i>Hapus data</span>
+                <strong class="panel-chevron" id="mmSettingsDangerChevron">↓</strong>
+              </button>
+              <div id="mmSettingsDangerPanel" class="hidden">
+                <p class="set-hint">Permanen dan <strong style="color:var(--error)">tidak dapat dibatalkan</strong>.</p>
+                <div class="set-danger-grid">
+                  <button class="btn-danger" onclick="mmDeleteDataPrompt('transactions')">Transaksi</button>
+                  <button class="btn-danger" onclick="mmDeleteDataPrompt('accounts')">Akun</button>
+                  <button class="btn-danger" onclick="mmDeleteDataPrompt('categories')">Kategori</button>
+                  <button class="btn-danger-critical" onclick="mmDeleteDataPrompt('all')">Reset total</button>
+                </div>
               </div>
             </div>
           </section>
@@ -5111,7 +5662,7 @@ select.form-input:focus {
           <small>Update Value</small>
         </button>
       </div>
-      <button class="fab-btn" id="fabBtn" onclick="toggleFab()">
+      <button class="fab-btn" id="fabBtn" aria-label="Tambah transaksi" onclick="toggleFab()">
         <i data-lucide="plus" class="fab-main-icon"></i>
       </button>
     </div>
@@ -5132,7 +5683,7 @@ select.form-input:focus {
           <small>Transfer</small>
         </button>
       </div>
-      <button class="fab-btn" id="mmFabBtn" onclick="mmToggleFab()">
+      <button class="fab-btn" id="mmFabBtn" aria-label="Tambah transaksi" onclick="mmToggleFab()">
         <i data-lucide="plus" class="fab-main-icon"></i>
       </button>
     </div>
@@ -5338,7 +5889,7 @@ select.form-input:focus {
     <div class="modal-card">
       <div class="modal-head">
         <h3 id="mmModalTitle">Add</h3>
-        <button class="modal-close" onclick="closeModal('mmModal')">×</button>
+        <button class="modal-close" aria-label="Tutup" onclick="closeModal('mmModal')">×</button>
       </div>
       <form id="mmModalForm" onsubmit="mmSubmitModal(event)">
         <div id="mmModalBody"></div>
@@ -5371,7 +5922,7 @@ select.form-input:focus {
     <div class="modal-card">
       <div class="modal-head">
         <h3>Add Item</h3>
-        <button class="modal-close" onclick="closeModal('quickSettingModal')">×</button>
+        <button class="modal-close" aria-label="Tutup" onclick="closeModal('quickSettingModal')">×</button>
       </div>
       <form id="quickSettingForm" onsubmit="submitQuickSetting(event)">
         <input type="hidden" name="key" id="quickSettingKey">
@@ -5429,8 +5980,8 @@ select.form-input:focus {
           <svg viewBox="0 0 48 48" width="44" height="44">
             <defs>
               <linearGradient id="authMarkGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="#10b981"/>
-                <stop offset="1" stop-color="#06b6d4"/>
+                <stop offset="0" stop-color="#3B82F6"/>
+                <stop offset="1" stop-color="#1D4ED8"/>
               </linearGradient>
             </defs>
             <rect width="48" height="48" rx="12" fill="url(#authMarkGrad)"/>
@@ -5479,7 +6030,7 @@ select.form-input:focus {
         meta.name = 'viewport';
         document.head.appendChild(meta);
       }
-      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+      meta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
       try {
         if (window.frameElement) {
           window.frameElement.style.width = '100%';
@@ -6512,9 +7063,25 @@ function injectSupabaseSettingsCard() {
   if (!settingsPage) return;
   var currentUrl = safeStorage.getItem('supabase_url') || '';
   var currentKey = safeStorage.getItem('supabase_key') || '';
-  var cardHtml = '<section class="panel-card"><button class="panel-toggle" onclick="togglePanel(\'supabaseSettingsPanel\')"><div><p class="panel-eyebrow">Database</p><h3 class="panel-title">Supabase connection</h3></div><strong class="panel-chevron" id="supabaseSettingsChevron">↓</strong></button><div id="supabaseSettingsPanel" class="panel-body hidden"><form class="stack-form" onsubmit="saveSupabaseSettingsForm(event)" style="display:flex;flex-direction:column;gap:12px;"><label class="form-label" style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;">Supabase URL<input type="url" id="supabaseSettingsUrl" class="form-input" value="'+currentUrl+'" required placeholder="https://yourproject.supabase.co" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:#fff;"></label><label class="form-label" style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;">Supabase Anon Key<input type="password" id="supabaseSettingsKey" class="form-input" value="'+currentKey+'" required placeholder="Anon Key" style="width:100%;padding:8px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:#fff;"></label><div style="display:flex;gap:8px;margin-top:8px;"><button class="btn-primary" type="submit" style="flex:1;">Update Connection</button><button class="btn-ghost" type="button" onclick="resetSupabaseSettings()" style="color:var(--error);border-color:var(--error);">Disconnect</button></div></form></div></section>';
-  var headerCard = settingsPage.querySelector('.page-header-card');
-  if (headerCard) headerCard.insertAdjacentHTML('afterend', cardHtml);
+  if (document.getElementById('supabaseSettingsPanel')) return;
+  var attr = function(v) { return String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); };
+  // Set once and rarely touched, so it lives folded at the bottom of the
+  // Data section rather than as the first card on the page.
+  var cardHtml = '<div class="set-card set-danger set-db">'
+    + '<button class="set-danger-toggle" onclick="togglePanel(\'supabaseSettingsPanel\')" aria-expanded="false">'
+    + '<span class="set-danger-label set-db-label"><i data-lucide="database"></i>Koneksi Supabase</span>'
+    + '<strong class="panel-chevron" id="supabaseSettingsChevron">↓</strong></button>'
+    + '<div id="supabaseSettingsPanel" class="hidden">'
+    + '<form class="set-form-grid" onsubmit="saveSupabaseSettingsForm(event)">'
+    + '<label class="form-label set-span-2">Supabase URL<input type="url" id="supabaseSettingsUrl" class="form-input" value="' + attr(currentUrl) + '" required placeholder="https://yourproject.supabase.co"></label>'
+    + '<label class="form-label set-span-2">Anon Key<input type="password" id="supabaseSettingsKey" class="form-input" value="' + attr(currentKey) + '" required placeholder="Anon Key"></label>'
+    + '<button class="btn-primary" type="submit">Update</button>'
+    + '<button class="btn-danger" type="button" onclick="resetSupabaseSettings()">Disconnect</button>'
+    + '</form></div></div>';
+  var dataSection = document.getElementById('invSetData');
+  if (dataSection) dataSection.insertAdjacentHTML('beforeend', cardHtml);
+  else settingsPage.insertAdjacentHTML('beforeend', cardHtml);
+  if (window.lucide) lucide.createIcons();
 }
 
 // ============================================================
@@ -7095,6 +7662,42 @@ function injectAuthSettingsCard() {
     showToast(err.message || 'Failed.', 'error');
   }
 
+  /* === SETTINGS SECTION NAV ===
+     Chips at the top of each settings page jump to a section; the chip for
+     whichever section is on screen stays highlighted while scrolling. */
+  function settingsJump(event, sectionId) {
+    if (event) event.preventDefault();
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    section.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    setSettingsNavActive(section.closest('.settings-page'), sectionId);
+  }
+
+  function setSettingsNavActive(page, sectionId) {
+    if (!page) return;
+    page.querySelectorAll('.settings-nav-chip').forEach(chip => {
+      const on = chip.getAttribute('href') === '#' + sectionId;
+      chip.classList.toggle('active', on);
+      if (on) chip.setAttribute('aria-current', 'true'); else chip.removeAttribute('aria-current');
+    });
+  }
+
+  function initSettingsNav() {
+    if (!('IntersectionObserver' in window)) return;
+    document.querySelectorAll('.settings-page').forEach(page => {
+      const observer = new IntersectionObserver(entries => {
+        const visible = entries.filter(e => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible) setSettingsNavActive(page, visible.target.id);
+      }, { rootMargin: '-140px 0px -55% 0px' });
+      page.querySelectorAll('.set-section').forEach(s => observer.observe(s));
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initSettingsNav);
+  else initSettingsNav();
+
   /* === COLLAPSIBLE PANELS === */
   function togglePanel(panelId) {
     const panel = document.getElementById(panelId);
@@ -7102,7 +7705,12 @@ function injectAuthSettingsCard() {
     if (!panel) return;
     const isHidden = panel.classList.contains('hidden');
     panel.classList.toggle('hidden');
-    if (chevron) chevron.textContent = isHidden ? '↑' : '↓';
+    if (chevron) {
+      chevron.textContent = isHidden ? '↑' : '↓';
+      chevron.classList.toggle('is-open', isHidden);
+    }
+    const toggle = chevron && chevron.closest('button');
+    if (toggle) toggle.setAttribute('aria-expanded', String(isHidden));
   }
 
   /* === ALLOCATION TABS === */
@@ -7939,7 +8547,10 @@ function injectAuthSettingsCard() {
     if (!details) return;
     const isHidden = details.classList.contains('hidden');
     details.classList.toggle('hidden');
-    if (chevron) chevron.textContent = isHidden ? '↑' : '↓';
+    if (chevron) {
+      chevron.textContent = isHidden ? '↑' : '↓';
+      chevron.classList.toggle('is-open', isHidden);
+    }
   }
 
   /* === UTILITY === */
@@ -8780,7 +9391,7 @@ function mmRenderSparkline(data) {
     else ctx.lineTo(x, y);
   });
 
-  ctx.strokeStyle = '#10b981';
+  ctx.strokeStyle = '#34d399';
   ctx.lineWidth = 2.5;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
@@ -9018,7 +9629,7 @@ function mmRenderDonut(entries, total, type) {
               fontSize: '9px',
               fontFamily: 'Inter',
               fontWeight: 600,
-              color: '#a1a1aa',
+              color: '#94a3b8',
               offsetY: -6
             },
             value: {
@@ -9040,7 +9651,7 @@ function mmRenderDonut(entries, total, type) {
               fontSize: '9px',
               fontFamily: 'Inter',
               fontWeight: 600,
-              color: '#a1a1aa',
+              color: '#94a3b8',
               formatter: function(w) {
                 const t = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
                 if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••';
@@ -9057,7 +9668,7 @@ function mmRenderDonut(entries, total, type) {
     stroke: {
       show: true,
       width: 2,
-      colors: ['#09090b']
+      colors: ['#192134']
     },
     dataLabels: { enabled: false },
     legend: { show: false },
@@ -9377,11 +9988,11 @@ function mmRenderAllTime(data, container) {
     stroke: { curve: 'smooth', width: 2.5 },
     fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0, stops: [0, 100] } },
     grid: { show: true, borderColor: 'rgba(255,255,255,0.06)', strokeDashArray: 4, xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } }, padding: { top: 10, bottom: 0 } },
-    xaxis: { categories: chartData.map(d => mmFormatMonthLabel(d.month)), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { colors: '#a1a1aa', fontSize: '10px', fontFamily: 'Inter' } } },
+    xaxis: { categories: chartData.map(d => mmFormatMonthLabel(d.month)), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { colors: '#94a3b8', fontSize: '10px', fontFamily: 'Inter' } } },
     yaxis: { labels: { show: false }, max: function(max) { return max * 1.15; } },
     markers: { size: 0, hover: { size: 5, sizeOffset: 2 } },
     tooltip: { theme: 'dark', style: { fontSize: '12px', fontFamily: 'Inter' }, y: { formatter: function(val) { if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••'; return 'Rp' + Number(val).toLocaleString('id-ID'); } } },
-    legend: { show: true, position: 'top', horizontalAlign: 'center', fontSize: '11px', fontFamily: 'Inter', fontWeight: 600, labels: { colors: '#a1a1aa' }, markers: { width: 8, height: 8, radius: 4 } },
+    legend: { show: true, position: 'top', horizontalAlign: 'center', fontSize: '11px', fontFamily: 'Inter', fontWeight: 600, labels: { colors: '#94a3b8' }, markers: { width: 8, height: 8, radius: 4 } },
     dataLabels: { enabled: false }
   };
   mmHistoryChart = new ApexCharts(el, options);
@@ -9641,23 +10252,31 @@ function mmLoadSettings() {
 function mmRenderSettingsAccounts() {
   const container = document.getElementById('mmSettingsAccountsList');
   if (!container) return;
+  const summary = document.getElementById('mmSettingsAccSummary');
   if (!MM_ACCOUNTS.length) {
-    container.innerHTML = '<div class="empty-state">No accounts yet.</div>';
+    if (summary) summary.textContent = 'Belum ada akun';
+    container.innerHTML = '<div class="set-card"><div class="empty-state">Tambahkan akun pertama untuk mulai mencatat.</div></div>';
     return;
   }
-  container.innerHTML = MM_ACCOUNTS.map(a => `
-    <div class="mm-settings-acc-row">
+  const total = MM_ACCOUNTS.reduce((s, a) => s + (Number(a.balance ?? a.initialBalance) || 0), 0);
+  if (summary) summary.textContent = `${MM_ACCOUNTS.length} akun · ${mmFormatIDR(total)}`;
+  // The whole row opens the editor — the pencil button it replaces was a
+  // 32px target for the most common action on this page.
+  container.innerHTML = '<div class="set-card set-card-flush">' + MM_ACCOUNTS.map(a => `
+    <div class="mm-settings-acc-row" role="button" tabindex="0"
+         onclick="mmShowEditAccount('${jsStr(a.id)}', '${jsStr(a.name)}', '${jsStr(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})"
+         onkeydown="if(event.key==='Enter'){this.click();}">
       <span class="icon">${mmAccountIconSvg(a.icon, 18)}</span>
       <div class="info">
-        <div class="name">${escapeHtml(a.name)}</div>
-        <div class="meta">Balance: ${mmFormatIDR(a.balance || a.initialBalance)} · ${a.showOnDashboard ? 'Shown' : 'Hidden'}</div>
+        <div class="name">${escapeHtml(a.name)}${a.showOnDashboard ? '' : ' <span class="set-badge">Hidden</span>'}</div>
+        <div class="meta">${mmFormatIDR(a.balance ?? a.initialBalance)}</div>
       </div>
       <div class="actions">
-        <button aria-label="Edit akun" onclick="mmShowEditAccount('${jsStr(a.id)}', '${jsStr(a.name)}', '${jsStr(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">${lucideIconSvg('pencil', 15)}</button>
-        <button aria-label="Hapus akun" onclick="mmDeleteAccountConfirm('${jsStr(a.id)}')">${lucideIconSvg('trash', 15)}</button>
+        <button aria-label="Hapus akun ${escapeHtml(a.name)}" onclick="event.stopPropagation(); mmDeleteAccountConfirm('${jsStr(a.id)}')">${lucideIconSvg('trash', 16)}</button>
+        <span class="set-row-chevron" aria-hidden="true">${lucideIconSvg('chevron-right', 16)}</span>
       </div>
     </div>
-  `).join('');
+  `).join('') + '</div>';
 }
 
 function mmShowAddAccount() {
@@ -9724,28 +10343,35 @@ function mmRenderAllocReadOnly() {
     container.innerHTML = '<div class="empty-state">No allocation set.</div>';
     return;
   }
-  container.innerHTML = MM_ALLOCATION.map(a => `
-    <div class="mm-account-row-mini">
-      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${a.color || '#10b981'};margin-right:6px;"></span>${mmCategoryEmoji(a.category)} ${escapeHtml(a.category)}</span>
+  // One stacked bar shows the whole split at a glance; the legend below
+  // carries the exact numbers so colour is never the only cue.
+  const total = MM_ALLOCATION.reduce((s, a) => s + (Number(a.percent) || 0), 0);
+  const bar = MM_ALLOCATION.map(a => `<span style="width:${Math.max(0, Number(a.percent) || 0)}%;background:${a.color || '#3b82f6'}"></span>`).join('');
+  const legend = MM_ALLOCATION.map(a => `
+    <div class="set-alloc-item">
+      <span class="set-alloc-dot" style="background:${a.color || '#3b82f6'}"></span>
+      <span class="set-alloc-name">${escapeHtml(a.category)}</span>
       <strong>${a.percent}%</strong>
-    </div>
-  `).join('');
+    </div>`).join('');
+  const warn = Math.round(total) !== 100
+    ? `<p class="set-hint" style="color:var(--warning)">Total ${total}% — sebaiknya 100%.</p>` : '';
+  container.innerHTML = `<div class="set-alloc-bar" role="img" aria-label="Pembagian budget">${bar}</div><div class="set-alloc-legend">${legend}</div>${warn}`;
 }
 
 function mmToggleAllocEdit() {
   const form = document.getElementById('mmAllocationForm');
   const readOnly = document.getElementById('mmAllocReadOnly');
   const editBtn = document.getElementById('mmAllocEditBtn');
-  
+
   if (form.style.display === 'none') {
     form.style.display = 'block';
     readOnly.style.display = 'none';
-    editBtn.style.display = 'none';
+    editBtn.style.visibility = 'hidden';
     mmRenderAllocEditor();
   } else {
     form.style.display = 'none';
     readOnly.style.display = 'block';
-    editBtn.style.display = 'block';
+    editBtn.style.visibility = '';
   }
 }
 
@@ -9956,11 +10582,17 @@ function mmRenderCategories() {
     if (c.subcategory) groups[key].push(c.subcategory);
   });
 
-  container.innerHTML = Object.entries(groups).map(([key, subs]) => {
+  // Expense first, then Income, each category as one compact row of chips.
+  const entries = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  let lastType = '';
+  container.innerHTML = entries.map(([key, subs]) => {
+    const [type, category] = key.split(' — ');
+    const typeHead = type !== lastType ? `<div class="set-cat-type">${escapeHtml(type)}</div>` : '';
+    lastType = type;
     const chips = subs.length
-      ? subs.map(s => `<span class="mm-cat-chip">${escapeHtml(s)} <button class="delete-cat" onclick="mmDeleteCat('${jsStr(key)}','${jsStr(s)}')">×</button></span>`).join('')
-      : '<span style="font-size:11px;color:var(--text-muted);">No subcategories</span>';
-    return `<div class="mm-cat-group"><div class="mm-cat-group-title">${escapeHtml(key)}</div>${chips}</div>`;
+      ? subs.map(s => `<span class="mm-cat-chip">${escapeHtml(s)}<button class="delete-cat" aria-label="Hapus ${escapeHtml(s)}" onclick="mmDeleteCat('${jsStr(key)}','${jsStr(s)}')">×</button></span>`).join('')
+      : '<span class="set-muted">Tanpa subkategori</span>';
+    return `${typeHead}<div class="mm-cat-group"><div class="mm-cat-group-title">${escapeHtml(category || key)} <span class="set-count">${subs.length}</span></div><div class="set-chip-row">${chips}</div></div>`;
   }).join('');
 }
 
