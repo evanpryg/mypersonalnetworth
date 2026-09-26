@@ -126,7 +126,15 @@ body {
 
 /* The root gets the dark colour too: any area the browser hasn't painted
    yet during a fast scroll shows this instead of default white. */
-html { background-color: var(--bg); }
+html {
+  background-color: #0F172A;
+  background-color: var(--bg);
+  /* Hitting the end of a scroll made Android Chrome stretch/bounce the page
+     and paint the exposed edge in its default white canvas. The app has its
+     own refresh buttons, so the browser's overscroll effect isn't needed. */
+  overscroll-behavior-y: none;
+}
+body { overscroll-behavior-y: none; }
 
 /* Two soft light sources for the glass layers to blur. On their own fixed
    layer rather than background-attachment: fixed, which Android Chrome
