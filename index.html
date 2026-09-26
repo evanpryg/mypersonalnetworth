@@ -7,6 +7,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#0F172A">
+  <!-- Dark UA canvas from the first frame, so no white shows before the
+       stylesheet applies or at the edges of an overscroll. -->
+  <meta name="color-scheme" content="dark">
   <!-- Installed to the home screen this opens standalone, with its own icon
        and no browser chrome — the difference between a bookmark and an app. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -148,7 +151,15 @@ body {
 
 /* The root gets the dark colour too: any area the browser hasn't painted
    yet during a fast scroll shows this instead of default white. */
-html { background-color: var(--bg); }
+html {
+  background-color: #0F172A;
+  background-color: var(--bg);
+  /* Hitting the end of a scroll made Android Chrome stretch/bounce the page
+     and paint the exposed edge in its default white canvas. The app has its
+     own refresh buttons, so the browser's overscroll effect isn't needed. */
+  overscroll-behavior-y: none;
+}
+body { overscroll-behavior-y: none; }
 
 /* Two soft light sources for the glass layers to blur. On their own fixed
    layer rather than background-attachment: fixed, which Android Chrome
@@ -11695,11 +11706,18 @@ function computeHealth(data) {
   else if (data.savingRate > 0) add(5, 'Saving rate masih rendah (<10%)', false);
   else add(-10, 'Pengeluaran melebihi pemasukan', false);
 
-  const overBudget = data.budgetAnalysis.filter(b => b.progress > 1 && !b.isSaving);
+  // Every blown budget costs points in proportion to how far over it is
+  // (−8 at the line, up to −20 at double). The old rule *added* 8 for one
+  // blown budget, so a month with overspending could still score 100.
+  const overBudget = data.budgetAnalysis.filter(b => b.progress > 1 && b.target > 0 && !b.isSaving);
   const investOver = data.budgetAnalysis.filter(b => b.progress > 1 && b.isSaving);
-  if (overBudget.length === 0 && data.budgetAnalysis.length > 0) add(15, 'Semua budget terkendali', true);
-  else if (overBudget.length <= 1) add(8, `${overBudget.length} budget terlampaui`, false);
-  else add(-5, `${overBudget.length} budget terlampaui`, false);
+  if (overBudget.length === 0 && data.budgetAnalysis.some(b => b.target > 0)) {
+    add(15, 'Semua budget terkendali', true);
+  }
+  overBudget.forEach(b => {
+    const overPct = Math.min((b.progress - 1) * 100, 100);
+    add(-Math.round(8 + overPct * 0.12), `Budget ${b.category} lewat ${overPct.toFixed(0)}%`, false);
+  });
   if (investOver.length > 0) add(5, 'Investasi melebihi target', true);
 
   const history = data.monthlyHistory;
@@ -11714,7 +11732,14 @@ function computeHealth(data) {
     if (data.investmentData.portfolio.length >= 3) add(5, 'Portofolio terdiversifikasi', true);
   }
 
-  score = Math.max(0, Math.min(100, score));
+  // Caps: bonuses elsewhere can't paper over a real problem this month.
+  // A deficit keeps the score under "Cukup"; any blown budget keeps it
+  // out of "Sangat baik".
+  let cap = 100;
+  if (data.saving < 0) cap = 45;
+  else if (overBudget.length > 0) cap = 75;
+  if (score > cap) reasons.push({ text: `Skor dibatasi ${cap} karena ${data.saving < 0 ? 'defisit' : 'ada budget terlampaui'}`, good: false });
+  score = Math.max(0, Math.min(cap, score));
   let status, tone;
   if (score >= 80) { status = 'Sangat baik'; tone = 'good'; }
   else if (score >= 60) { status = 'Baik'; tone = 'ok'; }
