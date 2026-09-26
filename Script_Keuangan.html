@@ -817,36 +817,74 @@ function mmRenderDashboardTransactions() {
 
   const txs = (MM_DASHBOARD && MM_DASHBOARD.monthTransactions) || [];
   if (!txs.length) {
+    const count = document.getElementById('mmTxMonthCount');
+    if (count) count.textContent = '';
     container.innerHTML = mmEmpty('arrow-right-left', 'Belum ada transaksi bulan ini', 'Mulai dari yang barusan kamu belanjakan.', `<button class="mm-empty-action" onclick="mmShowActionSheet('expense')">Catat pengeluaran</button>`);
     return;
   }
 
-  // Sort by date desc, show latest 5
-  const sorted = [...txs].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  const display = sorted.slice(0, 5);
+  // The whole month, newest first, grouped by day with that day's net —
+  // the dashboard used to stop at the latest few and leave the rest of the
+  // month one tap away in History.
+  const sorted = [...txs].sort((a, b) =>
+    (b.date || '').localeCompare(a.date || '') || ((b.rowNumber || 0) - (a.rowNumber || 0)));
 
-  container.innerHTML = display.map(tx => {
-    const prefix = tx.type === 'Income' ? '+' : tx.type === 'Expense' ? '-' : '';
-    const colorClass = tx.type === 'Income' ? 'income-color' : tx.type === 'Expense' ? 'expense-color' : 'transfer-color';
-    const catColor = mmCategoryColor(tx.category, tx.type);
-    const catIcon = mmCategoryEmoji(tx.category, tx.type);
-    const label = tx.notes || tx.subcategory || tx.category || tx.type;
-    const category = tx.subcategory || tx.category || tx.type;
-    const dateStr = mmFormatDate(tx.date);
+  const groups = [];
+  sorted.forEach(tx => {
+    const last = groups[groups.length - 1];
+    if (last && last.date === tx.date) last.items.push(tx);
+    else groups.push({ date: tx.date, items: [tx] });
+  });
 
-    return `
-      <div class="mm-transaction-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
+  const count = document.getElementById('mmTxMonthCount');
+  if (count) count.textContent = sorted.length + ' transaksi';
+
+  container.innerHTML = groups.map(g => {
+    const net = g.items.reduce((sum, tx) =>
+      sum + (tx.type === 'Income' ? tx.amount : tx.type === 'Expense' ? -tx.amount : 0), 0);
+    const netClass = net > 0 ? 'income-color' : net < 0 ? 'expense-color' : '';
+    const netText = net === 0 ? '' : (net > 0 ? '+' : '-') + mmFormatIDR(Math.abs(net));
+    const rows = g.items.map(tx => {
+      const prefix = tx.type === 'Income' ? '+' : tx.type === 'Expense' ? '-' : '';
+      const colorClass = tx.type === 'Income' ? 'income-color' : tx.type === 'Expense' ? 'expense-color' : 'transfer-color';
+      const catColor = mmCategoryColor(tx.category, tx.type);
+      const catIcon = mmCategoryEmoji(tx.category, tx.type);
+      const label = tx.notes || tx.subcategory || tx.category || tx.type;
+      const meta = tx.type === 'Transfer'
+        ? (tx.account || '') + (tx.accountTo ? ' → ' + tx.accountTo : '')
+        : [tx.subcategory || tx.category || tx.type, tx.account].filter(Boolean).join(' · ');
+      return `
+      <div class="mm-transaction-item" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
         <div class="mm-tx-icon-dash" style="background:${catColor}18;color:${catColor}">${catIcon}</div>
         <div class="mm-tx-info-dash">
           <div class="mm-tx-name-dash">${escapeHtml(label)}</div>
-          <div class="mm-tx-category-dash">${escapeHtml(category)}</div>
+          <div class="mm-tx-category-dash">${escapeHtml(meta)}</div>
         </div>
-        <div class="mm-tx-right-dash">
-          <div class="mm-tx-date-dash">${dateStr}</div>
-          <div class="mm-tx-amount-dash ${colorClass}">${prefix}${mmFormatIDR(tx.amount)}</div>
+        <div class="mm-tx-amount-dash ${colorClass}">${prefix}${mmFormatIDR(tx.amount)}</div>
+      </div>`;
+    }).join('');
+    return `
+      <div class="mm-day-group">
+        <div class="mm-day-head">
+          <span>${mmDayLabel(g.date)}</span>
+          <strong class="${netClass}">${netText}</strong>
         </div>
+        ${rows}
       </div>`;
   }).join('');
+}
+
+// "Hari ini", "Kemarin", else "Sab, 26 Sep". Parsed as a local date: new
+// Date("2026-09-26") is UTC midnight and could land on the previous day.
+function mmDayLabel(dateStr) {
+  const parts = String(dateStr || '').split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return mmFormatDate(dateStr);
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  const today = localISODate();
+  const yesterday = localISODate(new Date(Date.now() - 86400000));
+  if (dateStr === today) return 'Hari ini';
+  if (dateStr === yesterday) return 'Kemarin';
+  return new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }).format(d);
 }
 
 /* === TRANSACTION DETAIL BOTTOM SHEET === */

@@ -118,16 +118,28 @@ body {
   font-weight: 400;
   font-feature-settings: 'cv11', 'ss01';
   background-color: var(--bg);
-  /* Two soft light sources give the glass layers something to blur;
-     fixed so they don't scroll away and leave a flat page behind. */
-  background-image:
-    radial-gradient(900px 520px at 100% -10%, rgba(59,130,246,0.16), transparent 60%),
-    radial-gradient(700px 480px at -10% 30%, rgba(99,102,241,0.10), transparent 60%);
-  background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   line-height: 1.5;
+}
+
+/* The root gets the dark colour too: any area the browser hasn't painted
+   yet during a fast scroll shows this instead of default white. */
+html { background-color: var(--bg); }
+
+/* Two soft light sources for the glass layers to blur. On their own fixed
+   layer rather than background-attachment: fixed, which Android Chrome
+   repaints late on scroll — that left white patches across the page. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 520px at 100% -10%, rgba(59,130,246,0.16), transparent 60%),
+    radial-gradient(700px 480px at -10% 30%, rgba(99,102,241,0.10), transparent 60%);
 }
 
 ::selection {
@@ -166,7 +178,9 @@ button, [role="button"], label.import-label, select { cursor: pointer; }
 /* === APP SHELL === */
 .app-shell {
   min-height: 100vh;
-  padding-bottom: calc(var(--tab-height) + var(--safe-bottom) + 8px);
+  /* No bottom padding here: .main-content already clears the tab bar and
+     the FAB, and padding both doubled the empty space under every page. */
+  padding-bottom: 0;
   padding-top: 0;
 }
 
@@ -175,7 +189,7 @@ button, [role="button"], label.import-label, select { cursor: pointer; }
   /* Bottom padding has to clear the tab bar AND the floating action button
      that sits above it, otherwise the FAB covers the last row of whatever
      card ends the page. */
-  padding: 16px 16px calc(var(--tab-height) + var(--safe-bottom) + 88px);
+  padding: 16px 16px calc(var(--tab-height) + var(--safe-bottom) + 80px);
   max-width: 960px;
   margin: 0 auto;
   width: 100%;
@@ -1844,7 +1858,7 @@ select.form-input:focus {
   .main-content {
     /* Bottom value must keep clearing the tab bar and the FAB, same as the
        base rule — only the horizontal padding changes at this width. */
-    padding: 32px 32px calc(var(--tab-height) + var(--safe-bottom) + 88px);
+    padding: 32px 32px calc(var(--tab-height) + var(--safe-bottom) + 80px);
   }
 
   .sector-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
@@ -1877,7 +1891,7 @@ select.form-input:focus {
 @media (max-width: 480px) {
   /* Keep the bottom clearance from the base rule — the tab bar and the FAB
      are still there on a phone, and this is where it matters most. */
-  .main-content { padding: 12px 12px calc(var(--tab-height) + var(--safe-bottom) + 88px); }
+  .main-content { padding: 12px 12px calc(var(--tab-height) + var(--safe-bottom) + 80px); }
 
   .progress-hero { padding: 20px 16px; border-radius: 20px; }
   .progress-big-value { font-size: 30px; }
@@ -4762,6 +4776,29 @@ select.form-input:focus {
 .mm-budget-row.is-over .mm-budget-bar-fill { background: var(--error); }
 .mm-budget-row.is-over .mm-budget-row-note,
 .mm-budget-row.is-over .mm-budget-row-pct { color: var(--error); }
+
+/* This month's transactions, one group per day */
+.dashboard-wrap > .mm-dash-section:last-child { margin-bottom: 0; }
+.mm-dash-card.mm-transaction-list { padding: 0 14px; gap: 0; }
+.mm-day-group + .mm-day-group { border-top: 1px solid var(--border); }
+.mm-day-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.mm-day-head strong { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mm-day-head .income-color { color: var(--success); }
+.mm-day-head .expense-color { color: var(--error); }
+.mm-day-group .mm-transaction-item { padding: 10px 0; border-bottom: none; }
+.mm-day-group .mm-transaction-item:last-child { padding-bottom: 12px; }
+.mm-day-group .mm-tx-icon-dash { width: 36px; height: 36px; border-radius: 11px; }
+.mm-day-group .mm-tx-category-dash { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mm-day-group .mm-tx-amount-dash { flex-shrink: 0; font-size: 14px; }
 
 /* Breakdown: segmented control sits in the section header */
 .mm-dash-section .mm-expense-tabs { margin: 0; padding: 3px; border-radius: 12px; }
