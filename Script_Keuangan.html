@@ -1329,11 +1329,12 @@ function mmFormatShort(value) {
   const abs = Math.abs(value);
   // toFixed gives "2.7", but everything else on screen uses id-ID where a dot
   // is the thousands separator — "2.7 jt" reads as 27 million. Use a comma.
-  const dec = (v) => v.toFixed(1).replace('.', ',');
+  // One decimal at most, and none when it is zero: "2 jt", not "2,0 jt".
+  const dec = (v) => v.toFixed(1).replace(/.0$/, '').replace('.', ',');
   if (abs >= 1000000000) return dec(value / 1000000000) + ' M';
   if (abs >= 1000000) return dec(value / 1000000) + ' jt';
-  if (abs >= 1000) return dec(value / 1000) + ' rb';
-  return String(value);
+  if (abs >= 1000) return Math.round(value / 1000) + ' rb';
+  return String(Math.round(value));
 }
 
 /* === SETTINGS === */
