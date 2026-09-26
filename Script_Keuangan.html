@@ -298,6 +298,10 @@ function mmToggleFab() {
 
 /* === DASHBOARD === */
 function mmLoadDashboard(skipIfCached) {
+  // Greeting and date don't depend on the database — show them right away
+  // instead of leaving the header blank until (or unless) the data arrives.
+  mmRenderHeader();
+
   if (!window.supabaseConnected) {
     const container = document.getElementById('mmAccountsScroll');
     if (container) container.innerHTML = '<div class="empty-state">Database is not connected. Configure connection in Settings.</div>';
@@ -315,7 +319,7 @@ function mmLoadDashboard(skipIfCached) {
   MM_MONTH_CACHE = {};
 
   const container = document.getElementById('mmAccountsScroll');
-  if (container) container.innerHTML = skAccounts(3);;
+  if (container) container.innerHTML = skAccounts(3);
 
   google.script.run
     .withSuccessHandler(data => {
@@ -324,7 +328,14 @@ function mmLoadDashboard(skipIfCached) {
       MM_ALLOCATION = data.allocation || [];
       mmRenderDashboard(data);
     })
-    .withFailureHandler(err => showToast(err.message || 'Failed to load dashboard.', 'error'))
+    .withFailureHandler(err => {
+      // Without this the account skeletons shimmered forever on failure.
+      if (container) container.innerHTML = mmEmpty('wallet', 'Gagal memuat data', 'Periksa koneksi lalu muat ulang halaman.', `<button class="mm-empty-action" onclick="mmLoadDashboard()">Coba lagi</button>`);
+      mmRenderBudgetCard([], 0);
+      mmRenderChart('expense');
+      mmRenderDashboardTransactions();
+      showToast(err.message || 'Failed to load dashboard.', 'error');
+    })
     .mmGetDashboard();
 
   // Load categories (lightweight, needed for dropdowns)
@@ -336,8 +347,7 @@ function mmLoadDashboard(skipIfCached) {
   }
 }
 
-function mmRenderDashboard(data) {
-  // Greeting
+function mmRenderHeader() {
   const hour = new Date().getHours();
   let greeting = 'Good evening,';
   if (hour < 12) greeting = 'Good morning,';
@@ -348,10 +358,14 @@ function mmRenderDashboard(data) {
   const savedName = safeStorage.getItem('mm_user_name') || 'Mr Evan 🌿';
   setText('mmUserName', savedName);
 
-  // Date display
   const now = new Date();
-  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  setText('mmDateText', now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear());
+  const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  setText('mmDateText', days[now.getDay()] + ', ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear());
+}
+
+function mmRenderDashboard(data) {
+  mmRenderHeader();
 
   // Net worth
   mmCountUp('mmNetWorthValue', data.netWorth);
@@ -374,9 +388,9 @@ function mmRenderDashboard(data) {
   mmRenderSparkline(data);
 
   // Summary values
-  setText('mmTotalIncome', mmFormatIDR(data.totalIncome));
-  setText('mmTotalExpense', mmFormatIDR(data.totalExpense));
-  setText('mmTotalSaving', mmFormatIDR(data.saving));
+  setText('mmTotalIncome', mmFormatIDRShort(data.totalIncome));
+  setText('mmTotalExpense', mmFormatIDRShort(data.totalExpense));
+  setText('mmTotalSaving', mmFormatIDRShort(data.saving));
 
   // Color saving
   const savingEl = document.getElementById('mmTotalSaving');
@@ -429,7 +443,7 @@ function mmRenderSparkline(data) {
     else ctx.lineTo(x, y);
   });
 
-  ctx.strokeStyle = '#34d399';
+  ctx.strokeStyle = '#93c5fd';
   ctx.lineWidth = 2.5;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
@@ -442,8 +456,8 @@ function mmRenderSparkline(data) {
   ctx.lineTo(0, h);
   ctx.closePath();
   const grad = ctx.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0, 'rgba(16,185,129,0.25)');
-  grad.addColorStop(1, 'rgba(16,185,129,0)');
+  grad.addColorStop(0, 'rgba(96,165,250,0.30)');
+  grad.addColorStop(1, 'rgba(96,165,250,0)');
   ctx.fillStyle = grad;
   ctx.fill();
 }
@@ -460,8 +474,8 @@ function mmRenderAccountCards(accounts) {
   }
 
   const typeColors = {
-    'Bank': '#3b82f6', 'E-Wallet': '#10b981', 'Cash': '#f59e0b',
-    'Credit Card': '#ef4444', 'Investment': '#8b5cf6', 'Other': '#6b7280'
+    'Bank': '#60a5fa', 'E-Wallet': '#22d3ee', 'Cash': '#fbbf24',
+    'Credit Card': '#f472b6', 'Investment': '#818cf8', 'Other': '#6b7280'
   };
 
   container.innerHTML = visible.map(a => {
@@ -488,28 +502,48 @@ function mmRenderBudgetCard(allocationCards, totalIncome) {
   // Keep the full allocation list for the detail sheet
   MM_ALLOC_CARDS = allocationCards || [];
 
-  // The dashboard card shows the primary "Living" budget (fallback to first card)
-  const living = MM_ALLOC_CARDS.find(c => c.category === 'Living') || MM_ALLOC_CARDS[0] || { category: 'Living', target: 0, spent: 0 };
-  const target = living.target || 0;
-  const spent = living.spent || 0;
-  const remaining = target - spent;
-  const pct = target > 0 ? Math.round((spent / target) * 100) : 0;
+  // Every pos in one compact list — the old card showed only "Living", so
+  // overspending anywhere else was invisible from the dashboard.
+  const list = document.getElementById('mmBudgetList');
+  const summary = document.getElementById('mmBudgetSummary');
+  if (!list) return;
 
-  setText('mmBudgetTitle', living.category);
-  setText('mmBudgetSubtitle', mmFormatIDR(target) + ' Budget');
-  setText('mmBudgetUsed', mmFormatIDR(spent) + ' used');
-  setText('mmBudgetPercent', pct + '%');
-  setText('mmBudgetRemaining', mmFormatIDR(Math.abs(remaining)) + (remaining >= 0 ? ' left' : ' over'));
-
-  const fill = document.getElementById('mmBudgetBarFill');
-  if (fill) {
-    fill.style.width = Math.min(pct, 100) + '%';
-    if (pct > 100) fill.style.background = 'linear-gradient(90deg, #ef4444, #f59e0b)';
-    else fill.style.background = '';
+  const cards = MM_ALLOC_CARDS.filter(c => (c.target || 0) > 0 || (c.spent || 0) > 0);
+  if (!cards.length) {
+    if (summary) summary.textContent = 'Belum ada pemasukan bulan ini';
+    list.innerHTML = mmEmpty('circle-dollar', 'Budget belum terbentuk', 'Budget dihitung dari pemasukan bulan ini dan pembagian di Settings.', `<button class="mm-empty-action" onclick="mmShowActionSheet('income')">Catat pemasukan</button>`);
+    return;
   }
 
-  const remaining_el = document.getElementById('mmBudgetRemaining');
-  if (remaining_el) remaining_el.style.color = remaining >= 0 ? 'var(--accent)' : 'var(--error)';
+  const totalTarget = cards.reduce((s, c) => s + (c.target || 0), 0);
+  const totalSpent = cards.reduce((s, c) => s + (c.spent || 0), 0);
+  const totalPct = totalTarget > 0 ? Math.round(totalSpent / totalTarget * 100) : 0;
+  if (summary) summary.textContent = `${mmFormatIDR(totalSpent)} dari ${mmFormatIDR(totalTarget)} · ${totalPct}%`;
+
+  list.innerHTML = cards.map(c => {
+    const target = c.target || 0;
+    const spent = c.spent || 0;
+    const remaining = target - spent;
+    const pct = target > 0 ? Math.round(spent / target * 100) : (spent > 0 ? 100 : 0);
+    const state = pct > 100 ? 'over' : pct >= 85 ? 'warn' : 'ok';
+    const color = mmCategoryColor(c.category);
+    const note = remaining >= 0 ? `sisa ${mmFormatIDRShort(remaining)}` : `lebih ${mmFormatIDRShort(-remaining)}`;
+    return `
+      <button type="button" class="mm-budget-row is-${state}" onclick="mmShowCategoryDetail('${jsStr(c.category)}')">
+        <span class="mm-budget-row-icon" style="background:${color}22;color:${color}">${mmCategoryEmoji(c.category)}</span>
+        <span class="mm-budget-row-body">
+          <span class="mm-budget-row-top">
+            <span class="mm-budget-row-name">${escapeHtml(c.category)}</span>
+            <span class="mm-budget-row-pct">${pct}%</span>
+          </span>
+          <span class="mm-budget-bar"><span class="mm-budget-bar-fill" style="width:${Math.min(pct, 100)}%"></span></span>
+          <span class="mm-budget-row-foot">
+            <span>${mmFormatIDRShort(spent)} / ${mmFormatIDRShort(target).replace('Rp ', '')}</span>
+            <span class="mm-budget-row-note">${note}</span>
+          </span>
+        </span>
+      </button>`;
+  }).join('');
 }
 
 /* Bottom sheet: full budget breakdown across all allocation categories */
@@ -587,7 +621,7 @@ function mmRenderChart(type) {
     return;
   }
 
-  const colors = ['#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#f97316', '#8b5cf6', '#ef4444', '#14b8a6', '#a855f7', '#06b6d4'];
+  const colors = ['#22d3ee', '#fbbf24', '#f472b6', '#818cf8', '#fb923c', '#a78bfa', '#2dd4bf', '#60a5fa', '#e879f9', '#94a3b8'];
   let entries = [];
   let total = 0;
 
@@ -787,9 +821,9 @@ function mmRenderDashboardTransactions() {
     return;
   }
 
-  // Sort by date desc, show latest 4
+  // Sort by date desc, show latest 5
   const sorted = [...txs].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  const display = sorted.slice(0, 4);
+  const display = sorted.slice(0, 5);
 
   container.innerHTML = display.map(tx => {
     const prefix = tx.type === 'Income' ? '+' : tx.type === 'Expense' ? '-' : '';
@@ -823,10 +857,10 @@ function mmShowTxDetail(rowNumber, type, account, accountTo, category, subcatego
   const prefix = type === 'Income' ? '+' : type === 'Expense' ? '-' : '';
   const color = type === 'Income' ? 'var(--success)' : type === 'Expense' ? 'var(--error)' : '#60a5fa';
   
-  let details = `<p style="font-size:12px;color:var(--text-muted);margin:4px 0;">${mmFormatDate(date)} · ${account}`;
-  if (type === 'Transfer' && accountTo) details += ` → ${accountTo}`;
-  if (category) details += ` · ${category}`;
-  if (subcategory) details += ` / ${subcategory}`;
+  let details = `<p style="font-size:12px;color:var(--text-muted);margin:4px 0;">${mmFormatDate(date)} · ${escapeHtml(account)}`;
+  if (type === 'Transfer' && accountTo) details += ` → ${escapeHtml(accountTo)}`;
+  if (category) details += ` · ${escapeHtml(category)}`;
+  if (subcategory) details += ` / ${escapeHtml(subcategory)}`;
   details += `</p>`;
   
   content.innerHTML = `
@@ -1022,7 +1056,7 @@ function mmRenderAllTime(data, container) {
   const options = {
     series: [{ name: 'Income', data: chartData.map(d => d.income) }, { name: 'Expense', data: chartData.map(d => d.expense) }],
     chart: { type: 'area', height: 200, background: 'transparent', toolbar: { show: false }, zoom: { enabled: false }, animations: { enabled: true, easing: 'easeinout', speed: 800 } },
-    colors: ['#10b981', '#ef4444'],
+    colors: ['#34d399', '#f87171'],
     stroke: { curve: 'smooth', width: 2.5 },
     fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0, stops: [0, 100] } },
     grid: { show: true, borderColor: 'rgba(255,255,255,0.06)', strokeDashArray: 4, xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } }, padding: { top: 10, bottom: 0 } },
@@ -1245,6 +1279,14 @@ function mmRenderTransactionList(transactions) {
 }
 
 /* === CALENDAR HELPERS === */
+// Compact rupiah for tight spots (hero strip, budget rows); honours the
+// hide-amounts toggle like mmFormatIDR does.
+function mmFormatIDRShort(value) {
+  if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••';
+  const v = Number(value) || 0;
+  return (v < 0 ? '-' : '') + 'Rp ' + mmFormatShort(Math.abs(v));
+}
+
 function mmFormatShort(value) {
   const abs = Math.abs(value);
   // toFixed gives "2.7", but everything else on screen uses id-ID where a dot
@@ -1525,10 +1567,10 @@ function mmRenderAllocEditor() {
   if (!container) return;
   if (!MM_ALLOCATION.length) {
     MM_ALLOCATION = [
-      { category: 'Living', percent: 50, icon: '🏠', color: '#10b981' },
-      { category: 'Playing', percent: 20, icon: '🎮', color: '#f59e0b' },
-      { category: 'Alms', percent: 10, icon: '🤲', color: '#ec4899' },
-      { category: 'Invest', percent: 20, icon: '📈', color: '#3b82f6' }
+      { category: 'Living', percent: 50, icon: '🏠', color: '#22d3ee' },
+      { category: 'Playing', percent: 20, icon: '🎮', color: '#fbbf24' },
+      { category: 'Alms', percent: 10, icon: '🤲', color: '#f472b6' },
+      { category: 'Invest', percent: 20, icon: '📈', color: '#818cf8' }
     ];
   }
   container.innerHTML = MM_ALLOCATION.map((item, i) => `
@@ -1536,7 +1578,7 @@ function mmRenderAllocEditor() {
       <input class="mm-alloc-icon-input form-input" type="text" value="${escapeHtml(item.icon || '')}" placeholder="🏠" style="width:50px;text-align:center;">
       <input class="mm-alloc-cat-input form-input" type="text" value="${escapeHtml(item.category)}" placeholder="Category">
       <input class="mm-alloc-pct-input form-input" type="number" step="0.01" min="0" max="100" value="${item.percent}" oninput="mmUpdateAllocTotal()">
-      <input class="mm-alloc-color-input form-input" type="color" value="${item.color || '#10b981'}" style="width:40px;padding:4px;height:40px;">
+      <input class="mm-alloc-color-input form-input" type="color" value="${item.color || '#22d3ee'}" style="width:40px;padding:4px;height:40px;">
       <button type="button" class="remove-row-btn" onclick="mmRemoveAllocRow(${i})">×</button>
     </div>`).join('');
   mmUpdateAllocTotal();
@@ -1794,11 +1836,11 @@ function mmShowAccountTransactions(accountName) {
 
 // Fixed category definitions with colors
 const MM_CATEGORY_CONFIG = {
-  'Living':   { color: '#10b981', icon: 'home' },
-  'Playing':  { color: '#f59e0b', icon: 'gamepad-2' },
-  'Alms':     { color: '#ec4899', icon: 'heart-handshake' },
-  'Invest':   { color: '#3b82f6', icon: 'trending-up' },
-  'Bisyaroh': { color: '#8b5cf6', icon: 'briefcase' },
+  'Living':   { color: '#22d3ee', icon: 'home' },
+  'Playing':  { color: '#fbbf24', icon: 'gamepad-2' },
+  'Alms':     { color: '#f472b6', icon: 'heart-handshake' },
+  'Invest':   { color: '#818cf8', icon: 'trending-up' },
+  'Bisyaroh': { color: '#fb923c', icon: 'briefcase' },
   'Other':    { color: '#64748b', icon: 'package' }
 };
 
@@ -1818,12 +1860,12 @@ function mmCategoryEmoji(category, txType) {
 
 function mmCategoryColor(category, txType) {
   // Transfer
-  if (txType === 'Transfer' || (!category && txType !== 'Income')) return '#60a5fa';
+  if (txType === 'Transfer' || (!category && txType !== 'Income')) return '#a78bfa';
   // Lookup from config
   const cfg = MM_CATEGORY_CONFIG[category];
   if (cfg) return cfg.color;
   // Income generic
-  if (txType === 'Income') return '#10b981';
+  if (txType === 'Income') return '#34d399';
   // Fallback
   return '#64748b';
 }
@@ -2018,7 +2060,7 @@ function downloadCsv(csvContent, name) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${name}-${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `${name}-${localISODate()}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

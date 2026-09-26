@@ -136,8 +136,8 @@ function renderHealthScore(data) {
   score = Math.max(0, Math.min(100, score));
 
   let status, statusColor, statusIcon;
-  if (score >= 80) { status = 'Excellent'; statusColor = '#10b981'; statusIcon = '🏆'; }
-  else if (score >= 60) { status = 'Good'; statusColor = '#06b6d4'; statusIcon = '👍'; }
+  if (score >= 80) { status = 'Excellent'; statusColor = '#34d399'; statusIcon = '🏆'; }
+  else if (score >= 60) { status = 'Good'; statusColor = '#60a5fa'; statusIcon = '👍'; }
   else if (score >= 40) { status = 'Fair'; statusColor = '#f59e0b'; statusIcon = '⚡'; }
   else { status = 'Poor'; statusColor = '#ef4444'; statusIcon = '⚠️'; }
 
@@ -433,7 +433,7 @@ function renderSpendingAnalysis(data) {
   if (!data.spendingByCategory.length) return '';
 
   const top5 = data.spendingByCategory.slice(0, 5);
-  const colors = ['#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#f97316'];
+  const colors = ['#22d3ee', '#fbbf24', '#f472b6', '#818cf8', '#fb923c'];
 
   // Build simple horizontal bar chart
   const maxAmount = top5[0] ? top5[0].amount : 1;

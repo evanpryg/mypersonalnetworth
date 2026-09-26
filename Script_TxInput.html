@@ -31,7 +31,7 @@ function mmShowActionSheet(type) {
   txSwitchType(type);
 
   // Set today's date
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISODate();
   document.getElementById('txDateHidden').value = today;
   txUpdateDateDisplay();
 
@@ -135,8 +135,8 @@ function txUpdateDateDisplay() {
   const labelEl = document.getElementById('txDateLabel');
   const valueEl = document.getElementById('txDateValue');
   const val = input.value;
-  const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const today = localISODate();
+  const yesterday = localISODate(new Date(Date.now() - 86400000));
 
   if (val === today) {
     labelEl.textContent = 'Today';
@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
    added in Settings would never show up here. Expense chips follow the budget
    allocation order the user set; anything only present in mm_categories is
    appended after it. */
-const TX_FALLBACK_COLORS = ['#10b981','#f59e0b','#ec4899','#3b82f6','#8b5cf6','#14b8a6','#f43f5e','#64748b'];
+const TX_FALLBACK_COLORS = ['#22d3ee','#fbbf24','#f472b6','#818cf8','#a78bfa','#2dd4bf','#fb923c','#94a3b8'];
 
 function txAvailableCategories() {
   const wantType = TX_TYPE === 'income' ? 'Income' : 'Expense';

@@ -350,26 +350,24 @@
     <div id="moneyWorkspace" class="workspace active">
       <main class="main-content">
 
-        <!-- ===== MM DASHBOARD PAGE ===== -->
+        <!-- ===== MM DASHBOARD PAGE =====
+             Ordered by how often each answer is needed: how much do I have,
+             how did this month go, where is my money, am I on budget, what
+             did I spend on, what happened last. The month's income/expense/
+             saving live inside the net worth card instead of three separate
+             tiles, and every section header carries its own action. -->
         <div id="mmDashboardPage" class="page active-page">
           <section class="dashboard-wrap">
 
-            <!-- Dashboard Header -->
-            <!-- Greeting and name share one line: the hero here is the net
-                 worth below, and on a phone this block used to eat a quarter
-                 of the screen before showing a single number. The search and
-                 notification buttons that sat on the right had no handlers
-                 at all — the bell even rendered an unread dot — so they are
-                 gone until they do something. -->
             <div class="mm-dashboard-header">
               <div class="mm-header-left">
                 <p class="mm-greeting-line">
-                  <span id="mmGreeting">Good morning,</span>
-                  <strong class="mm-user-name" id="mmUserName">Mr Evan 🌿</strong>
+                  <span id="mmGreeting">Halo,</span>
+                  <strong class="mm-user-name" id="mmUserName">Mr Evan</strong>
                 </p>
                 <p class="mm-date-display" id="mmDateDisplay">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  <span id="mmDateText"></span> ▾
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <span id="mmDateText"></span>
                 </p>
               </div>
               <button class="mm-header-btn" id="mmBtnSearch" aria-label="Cari transaksi" onclick="mmOpenSearch()">
@@ -377,119 +375,91 @@
               </button>
             </div>
 
-            <!-- Networth Card -->
+            <!-- Net worth + this month -->
             <div class="mm-networth-card" id="mmNetworthCard">
               <div class="mm-networth-header-row">
                 <span class="mm-networth-label">NETWORTH</span>
                 <button class="mm-networth-eye" aria-label="Tampilkan/sembunyikan nominal" onclick="toggleAmountVisibility()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
-                <button class="mm-networth-arrow" id="mmNetworthDetailBtn" aria-label="Detail networth">
+                <button class="mm-networth-arrow" id="mmNetworthDetailBtn" aria-label="Buka insight keuangan" onclick="mmShowPage('mmInsightPage')">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
                 </button>
               </div>
               <h2 class="mm-networth-amount" id="mmNetWorthValue">Rp 0</h2>
               <div class="mm-networth-change">
                 <span class="mm-change-badge up" id="mmChangeBadge">↑ 0%</span>
-                <span class="mm-change-vs">vs last month</span>
+                <span class="mm-change-vs">vs bulan lalu</span>
               </div>
-              <canvas id="mmNetworthSparkline" width="200" height="80"></canvas>
-            </div>
+              <canvas id="mmNetworthSparkline" width="200" height="80" aria-hidden="true"></canvas>
 
-            <!-- Summary Row. "This month" was repeated in all three tiles,
-                 eating a line each on a phone; it says it once now. -->
-            <p class="mm-section-caption">Bulan ini</p>
-            <div class="mm-summary-row">
-              <div class="mm-summary-card">
-                <div class="mm-summary-icon income">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg>
+              <div class="mm-hero-stats" aria-label="Ringkasan bulan ini">
+                <div class="mm-hero-stat">
+                  <span class="mm-hero-stat-label"><span class="mm-hero-dot in" aria-hidden="true">↓</span>Income</span>
+                  <strong id="mmTotalIncome">Rp 0</strong>
                 </div>
-                <div class="mm-summary-value" id="mmTotalIncome">Rp 0</div>
-                <div class="mm-summary-label">Income</div>
-              </div>
-              <div class="mm-summary-card">
-                <div class="mm-summary-icon expense">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+                <div class="mm-hero-stat">
+                  <span class="mm-hero-stat-label"><span class="mm-hero-dot out" aria-hidden="true">↑</span>Expense</span>
+                  <strong id="mmTotalExpense">Rp 0</strong>
                 </div>
-                <div class="mm-summary-value" id="mmTotalExpense">Rp 0</div>
-                <div class="mm-summary-label">Expense</div>
-              </div>
-              <div class="mm-summary-card">
-                <div class="mm-summary-icon saving">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                <div class="mm-hero-stat">
+                  <span class="mm-hero-stat-label">Saving</span>
+                  <strong id="mmTotalSaving">Rp 0</strong>
                 </div>
-                <div class="mm-summary-value" id="mmTotalSaving">Rp 0</div>
-                <div class="mm-summary-label">Saving</div>
               </div>
             </div>
 
-            <!-- Expense/Income Section -->
-            <div class="mm-expense-section" id="mmExpenseSection">
-              <div class="mm-expense-tabs">
-                <button class="mm-expense-tab active" data-tab="expense" onclick="mmSwitchChartTab(this,'expense')">Expense</button>
-                <button class="mm-expense-tab" data-tab="income" onclick="mmSwitchChartTab(this,'income')">Income</button>
-              </div>
-              <div class="mm-expense-content">
-                <div class="mm-donut-wrapper">
-                  <div id="mmChartDonut" class="chart-donut-wrap"></div>
-                </div>
-                <div id="mmChartCategoryList" class="mm-category-list"></div>
-              </div>
-              <div class="mm-donut-dots" id="mmDonutDots">
-                <span class="mm-dot active"></span>
-                <span class="mm-dot"></span>
-              </div>
-            </div>
-
-            <!-- Accounts Section -->
-            <div class="mm-accounts-section" id="mmAccountsSection">
+            <!-- Accounts -->
+            <section class="mm-dash-section" id="mmAccountsSection">
               <div class="mm-section-header">
-                <h3>Accounts</h3>
-                <button class="mm-view-all" onclick="mmShowPage('mmSettingsPage')">View all <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+                <h3>Akun</h3>
+                <button class="mm-view-all" onclick="mmShowPage('mmSettingsPage')">Kelola <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
               </div>
               <div class="mm-accounts-scroll" id="mmAccountsScroll">
                 <div class="empty-state">No accounts yet.</div>
               </div>
-            </div>
+            </section>
 
-            <!-- Budget Section -->
-            <div class="mm-budget-section" id="mmBudgetSection">
-              <div class="mm-budget-card">
-                <div class="mm-budget-header">
-                  <div class="mm-budget-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                  </div>
-                  <div class="mm-budget-info">
-                    <div class="mm-budget-title" id="mmBudgetTitle">Living</div>
-                    <div class="mm-budget-subtitle" id="mmBudgetSubtitle">Rp 0 Budget</div>
-                  </div>
-                  <button class="mm-budget-arrow" id="mmBudgetDetailBtn" aria-label="Detail budget" onclick="mmShowBudgetDetail()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-                  </button>
-                </div>
-                <div class="mm-budget-bar-wrapper">
-                  <div class="mm-budget-bar">
-                    <div class="mm-budget-bar-fill" id="mmBudgetBarFill" style="width:0%"></div>
-                  </div>
-                  <div class="mm-budget-stats">
-                    <span id="mmBudgetUsed">Rp 0 used</span>
-                    <span id="mmBudgetPercent" class="mm-budget-pct">0%</span>
-                  </div>
-                  <div class="mm-budget-remaining" id="mmBudgetRemaining">Rp 0 left</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Transactions Section -->
-            <div class="mm-transactions-section" id="mmTransactionsSection">
+            <!-- Budget: every pos, not just one -->
+            <section class="mm-dash-section" id="mmBudgetSection">
               <div class="mm-section-header">
-                <h3>Transactions This Month</h3>
-                <button class="mm-view-all" onclick="mmShowPage('mmHistoryPage')">View all <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+                <div>
+                  <h3>Budget bulan ini</h3>
+                  <p class="mm-section-sub" id="mmBudgetSummary">&nbsp;</p>
+                </div>
+                <button class="mm-view-all" id="mmBudgetDetailBtn" onclick="mmShowBudgetDetail()">Detail <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
               </div>
-              <div class="mm-transaction-list" id="mmDashboardTransactions"></div>
-            </div>
+              <div class="mm-dash-card mm-budget-list" id="mmBudgetList"></div>
+            </section>
 
-            <div style="height:100px;"></div>
+            <!-- Breakdown -->
+            <section class="mm-dash-section" id="mmExpenseSection">
+              <div class="mm-section-header">
+                <h3>Rincian</h3>
+                <div class="mm-expense-tabs" role="tablist">
+                  <button class="mm-expense-tab active" role="tab" data-tab="expense" onclick="mmSwitchChartTab(this,'expense')">Expense</button>
+                  <button class="mm-expense-tab" role="tab" data-tab="income" onclick="mmSwitchChartTab(this,'income')">Income</button>
+                </div>
+              </div>
+              <div class="mm-dash-card">
+                <div class="mm-expense-content">
+                  <div class="mm-donut-wrapper">
+                    <div id="mmChartDonut" class="chart-donut-wrap"></div>
+                  </div>
+                  <div id="mmChartCategoryList" class="mm-category-list"></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Latest transactions -->
+            <section class="mm-dash-section" id="mmTransactionsSection">
+              <div class="mm-section-header">
+                <h3>Transaksi terakhir</h3>
+                <button class="mm-view-all" onclick="mmShowPage('mmHistoryPage')">Semua <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+              </div>
+              <div class="mm-dash-card mm-transaction-list" id="mmDashboardTransactions"></div>
+            </section>
+
           </section>
         </div>
 

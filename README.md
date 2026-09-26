@@ -90,6 +90,7 @@ Run these in Supabase → SQL Editor, in order. Each one is a single transaction
 | `migrations/001_archive_2025.sql` | Folds 2025 detail into per-category monthly summaries in `mm_summary`, rolls each account's 2025 net into `initialbalance`, then deletes the detail rows. Refuses to run twice. |
 | `migrations/002_enable_rls.sql` | Enables RLS on every table and restricts access to one authenticated email. **Log in through the app first** — see Security above. |
 | `migrations/003_disable_rls.sql` | Reverts migration 002: disables RLS, drops owner-only policies, restores anonymous access. No login needed after this. |
+| `migrations/004_restore_anon_grants.sql` | Fixes `permission denied for table …` (code 42501): re-grants the `anon` role schema, table and sequence access, plus default privileges for future tables. Safe to re-run. |
 
 The balance roll-up in `001` is not optional: account balances are computed as `initialbalance` plus every transaction, so deleting history without it moves your net worth.
 

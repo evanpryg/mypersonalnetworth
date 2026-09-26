@@ -19,6 +19,14 @@ var safeStorage = {
 // The active Supabase client instance
 var _sb = null;
 
+// Local calendar date as YYYY-MM-DD. toISOString() is UTC, so in WIB it
+// returned yesterday between midnight and 07:00 and new records got the
+// wrong date.
+function localISODate(d) {
+  d = d || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 // Archived-year summaries never change during a session, so read them once.
 var _summaryCache = null;
 
@@ -366,7 +374,7 @@ var DB_API = {
     var cashItem = dashData.portfolio.find(function(i){return i.Sector==='Cash'&&i.Platform===platform;});
     var currentCash = cashItem ? cashItem.CurrentValueIDR : 0, difference = actualBalance - currentCash;
     if (Math.abs(difference)<1) return { success:true, message:'Balance already in sync.' };
-    var todayStr = new Date().toISOString().slice(0,10);
+    var todayStr = localISODate();
     var { error } = await _sb.from('transactions').insert(mapRowToDb({ Date:todayStr, Platform:platform, Sector:'Cash', Asset:getCashAssetName_(platform), TransactionType:'Cash Adjustment', AmountIDR:difference, Notes:notes, Status:'Active' }));
     if (error) throw error;
     return { success:true, message:'Balance synced. Adjusted '+(difference>=0?'+':'')+difference.toLocaleString('id-ID')+'.' };
@@ -504,7 +512,7 @@ var DB_API = {
 
   async mmGetAllocation() {
     var rows = await getRows_('mm_allocation');
-    if (!rows.length) return [{category:'Living',percent:50,icon:'🏠',color:'#10b981'},{category:'Playing',percent:20,icon:'🎮',color:'#f59e0b'},{category:'Alms',percent:10,icon:'🤲',color:'#ec4899'},{category:'Invest',percent:20,icon:'📈',color:'#3b82f6'}];
+    if (!rows.length) return [{category:'Living',percent:50,icon:'🏠',color:'#22d3ee'},{category:'Playing',percent:20,icon:'🎮',color:'#fbbf24'},{category:'Alms',percent:10,icon:'🤲',color:'#f472b6'},{category:'Invest',percent:20,icon:'📈',color:'#818cf8'}];
     return rows.map(function(r){return{category:normalize_(r.Category),percent:toNumber_(r.Percent),icon:normalize_(r.Icon)||'',color:normalize_(r.Color)||''};});
   },
 
@@ -851,7 +859,7 @@ var DB_API = {
     var dailyIncomeAvg=dayOfMonth>0?totalIncome/dayOfMonth:0,dailyExpenseAvg=dayOfMonth>0?totalExpense/dayOfMonth:0;
     var predictedIncome=totalIncome+(dailyIncomeAvg*remainingDays),predictedExpense=totalExpense+(dailyExpenseAvg*remainingDays),predictedSaving=predictedIncome-predictedExpense,predictedNetWorth=netWorth+predictedSaving-saving;
     var uniqueDates=[...new Set(allTransactions.map(function(tx){return tx.date;}))].sort().reverse();
-    var streak=0,checkDate=new Date(now);for(var i=0;i<uniqueDates.length&&i<365;i++){var dateStr=checkDate.toISOString().slice(0,10);if(uniqueDates.includes(dateStr)){streak++;checkDate.setDate(checkDate.getDate()-1);}else break;}
+    var streak=0,checkDate=new Date(now);for(var i=0;i<uniqueDates.length&&i<365;i++){var dateStr=localISODate(checkDate);if(uniqueDates.includes(dateStr)){streak++;checkDate.setDate(checkDate.getDate()-1);}else break;}
     var runningBalances={}; accounts.forEach(function(acc){runningBalances[acc.name]=acc.initialBalance;});
     var sortedTxs=allTransactions.slice().reverse(),monthlyNW={};
     sortedTxs.forEach(function(tx){
@@ -934,6 +942,21 @@ var DB_API = {
 };
 
 // Apps Script Runner Mock (intercepts google.script.run)
+// Postgres 42501 = the anon role has no privilege on the table. Every call
+// fails the same way, so say it once, plainly, instead of a toast per call.
+function showDbAccessBanner() {
+  if (document.getElementById('dbAccessBanner')) return;
+  var el = document.createElement('div');
+  el.id = 'dbAccessBanner';
+  el.className = 'db-banner';
+  el.setAttribute('role', 'alert');
+  el.innerHTML = '<strong>Database menolak akses</strong>'
+    + '<span>Data tidak bisa dibaca/disimpan. Jalankan <code>migrations/004_restore_anon_grants.sql</code> di Supabase → SQL Editor, lalu muat ulang.</span>'
+    + '<button type="button" onclick="location.reload()">Muat ulang</button>'
+    + '<button type="button" class="db-banner-close" aria-label="Tutup" onclick="this.parentNode.remove()">×</button>';
+  document.body.appendChild(el);
+}
+
 function AppsScriptMockRunner(successCb, failureCb) { this.successCb = successCb; this.failureCb = failureCb; }
 AppsScriptMockRunner.prototype.withSuccessHandler = function(cb) { this.successCb = cb; return this; };
 AppsScriptMockRunner.prototype.withFailureHandler = function(cb) { this.failureCb = cb; return this; };
@@ -949,6 +972,7 @@ var runnerProxyHandler = {
         if (runner.successCb) runner.successCb(result);
       } catch (err) {
         console.error('Error executing ' + methodName + ':', err);
+        if (err && err.code === '42501') showDbAccessBanner();
         if (runner.failureCb) runner.failureCb(err);
         else if (typeof showToast === 'function') showToast('Error: ' + (err.message || err), 'error');
       }
