@@ -670,8 +670,22 @@ var DB_API = {
       if(tx.type==='Transfer'&&tx.category==='Invest'){if(categoryExpenses['Invest']!==undefined) categoryExpenses['Invest']+=tx.amount;}
     });
     var saving=totalIncome-totalExpense;
+
+    // Last month, for pace comparisons on the dashboard: its totals, and how
+    // much had been spent by the same day of the month as today.
+    var pm=new Date(now.getFullYear(), now.getMonth()-1, 1);
+    var pmStart=pm.getFullYear()+'-'+String(pm.getMonth()+1).padStart(2,'0')+'-01';
+    var pmDays=new Date(pm.getFullYear(), pm.getMonth()+1, 0).getDate();
+    var pmSameDay=pm.getFullYear()+'-'+String(pm.getMonth()+1).padStart(2,'0')+'-'+String(Math.min(now.getDate(),pmDays)).padStart(2,'0');
+    var prevMonth={income:0,expense:0,expenseToDate:0,days:pmDays};
+    allTransactions.forEach(function(tx){
+      if(tx.date<pmStart||tx.date>=monthStartStr) return;
+      if(tx.type==='Income') prevMonth.income+=tx.amount;
+      if(tx.type==='Expense'){ prevMonth.expense+=tx.amount; if(tx.date<=pmSameDay) prevMonth.expenseToDate+=tx.amount; }
+    });
+
     var allocationCards=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.min(spent/target,1):0;return{category:a.category,percent:a.percent,icon:a.icon,color:a.color,spent:spent,target:target,progress:progress};});
-    return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,prevNetWorth:prevNetWorth,netWorthTrend:netWorthTrend,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
+    return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,prevNetWorth:prevNetWorth,netWorthTrend:netWorthTrend,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,prevMonth:prevMonth,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
   },
 
   // Years whose detail has been archived live in mm_summary instead of

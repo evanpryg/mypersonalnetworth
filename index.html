@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <base target="_top">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#0F172A">
@@ -51,127 +51,102 @@
     <div id="investWorkspace" class="workspace" style="display:none;">
       <main class="main-content">
 
-        <!-- ===== DASHBOARD PAGE ===== -->
+        <!-- ===== DASHBOARD PAGE =====
+             One screen that answers: what is it worth, am I up or down, how
+             close is the goal, what should the idle cash buy next, and which
+             holdings carry the portfolio. Nothing folded away by default. -->
         <div id="dashboardPage" class="page active-page">
           <section class="dashboard-wrap">
 
-            <!-- Progress Hero -->
-            <div class="progress-hero">
-              <p class="panel-eyebrow" id="mainTargetTitle">First 100 Million</p>
-              <h2 class="progress-big-value" id="progressMainValue">Rp0</h2>
-              <p class="progress-target-text" id="progressTargetText">of Rp100,000,000</p>
-              <div class="progress-slider-track">
-                <div class="progress-slider-fill" id="mainProgressFill"></div>
-                <span class="progress-slider-thumb" id="mainRunner" aria-hidden="true"></span>
-                <span class="progress-slider-finish" aria-hidden="true"><i data-lucide="flag"></i></span>
+            <!-- Value, P/L and goal -->
+            <div class="iv-hero">
+              <div class="iv-hero-top">
+                <span class="iv-hero-label">Nilai portofolio</span>
+                <span class="iv-hero-goal"><i data-lucide="flag"></i><span id="mainTargetTitle">First 100 Million</span></span>
               </div>
-              <p class="progress-percent-center" id="mainProgressText">0%</p>
-              <p class="progress-note-center" id="heroNote">Start the journey.</p>
+              <h2 class="iv-hero-value" id="progressMainValue">Rp0</h2>
+              <div class="iv-hero-pl">
+                <span class="mm-change-badge up" id="ivPlBadge">+0%</span>
+                <span class="iv-pl-amount" id="ivPlAmount">Rp0</span>
+                <span class="iv-muted">belum direalisasi</span>
+              </div>
+
+              <div class="iv-goal">
+                <div class="iv-goal-bar" id="ivGoalBar" role="progressbar" aria-label="Progres target" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <span class="iv-goal-fill" id="mainProgressFill"></span>
+                </div>
+                <div class="iv-goal-meta">
+                  <strong id="mainProgressText">0%</strong>
+                  <span id="progressTargetText">dari Rp0</span>
+                </div>
+                <p class="iv-goal-note" id="heroNote">Mulai catat investasi pertamamu.</p>
+              </div>
+
+              <div class="iv-hero-stats">
+                <div class="iv-hero-stat"><span>Modal</span><strong id="ivStatCapital">Rp0</strong></div>
+                <div class="iv-hero-stat"><span>Aset</span><strong id="ivStatAssets">Rp0</strong></div>
+                <div class="iv-hero-stat"><span>Cash</span><strong id="ivStatCash">Rp0</strong></div>
+              </div>
             </div>
 
-            <!-- Allocation -->
-            <section class="panel-card">
-              <button class="panel-toggle" onclick="togglePanel('allocationPanel')">
+            <!-- Next move: what the idle cash should buy -->
+            <section class="mm-dash-section">
+              <div class="mm-section-header">
                 <div>
-                  <p class="panel-eyebrow">Allocation</p>
-                  <h3 class="panel-title">Portfolio Balance</h3>
-                </div>
-                <strong class="panel-chevron is-open" id="allocationChevron">↑</strong>
-              </button>
-              <div id="allocationPanel" class="panel-body">
-                <div class="tab-bar">
-                  <button class="tab-btn active" onclick="switchAllocTab('balance')">Balance</button>
-                  <button class="tab-btn" onclick="switchAllocTab('platform')">By Platform</button>
-                </div>
-                <div id="allocTabBalance">
-                  <span class="panel-meta" id="allocationTotalText">Total Rp0</span>
-                  <div id="allocationFocusList" class="allocation-list">
-                    <div class="empty-state">No allocation data yet.</div>
-                  </div>
-                </div>
-                <div id="allocTabPlatform" style="display:none;">
-                  <div id="platformCashList" class="platform-cash-list">No platform data yet.</div>
+                  <h3>Langkah berikutnya</h3>
+                  <p class="mm-section-sub" id="dcaSuggestionTotal">&nbsp;</p>
                 </div>
               </div>
-            </section>
-
-            <!-- Next Move / Rebalance -->
-            <section class="panel-card">
-              <button class="panel-toggle" onclick="togglePanel('nextMovePanel')">
-                <div>
-                  <p class="panel-eyebrow">Next Move</p>
-                  <h3 class="panel-title">Rebalance Signal</h3>
-                </div>
-                <strong class="panel-chevron" id="nextMoveChevron">↓</strong>
-              </button>
-              <div id="nextMovePanel" class="panel-body hidden">
-                <div class="insight-box">
-                  <div class="insight-icon" aria-hidden="true"><i data-lucide="compass"></i></div>
+              <div class="mm-dash-card iv-next">
+                <div class="iv-next-signal">
+                  <span class="iv-next-icon" aria-hidden="true"><i data-lucide="compass"></i></span>
                   <div>
-                    <h4 id="nextMoveTitle">Start with your first record.</h4>
-                    <p id="nextMoveText">Add your holdings first. The tracker will suggest what needs balance.</p>
+                    <strong id="nextMoveTitle">Mulai dari catatan pertama.</strong>
+                    <p id="nextMoveText">Tambahkan aset dulu, nanti tracker menyarankan sektor mana yang perlu ditambah.</p>
                   </div>
                 </div>
-                <div id="balanceMap" class="chip-list">No balance map yet.</div>
-                <div class="dca-box">
-                  <div class="dca-box-header">
-                    <span>DCA from Total Cash</span>
-                    <strong id="dcaSuggestionTotal">Rp0</strong>
-                  </div>
-                  <div id="dcaSuggestionList" class="dca-list">No DCA suggestion yet.</div>
-                </div>
-                <div class="dca-box">
-                  <div class="dca-box-header">
-                    <span>DCA Plan Simulator</span>
-                  </div>
-                  <p class="dca-box-desc">Try a monthly amount and see where it should go.</p>
-                  <input type="number" id="dcaPlanAmount" class="form-input" placeholder="Example: 1000000" oninput="renderDcaPlanSimulator()">
-                  <div id="dcaPlanResult" class="dca-list" style="margin-top:12px;">Enter an amount to simulate your DCA plan.</div>
-                </div>
+                <div id="dcaSuggestionList" class="iv-dca-list"></div>
+                <details class="iv-sim">
+                  <summary><span>Simulasi setoran bulanan</span><i data-lucide="chevron-down"></i></summary>
+                  <input type="number" id="dcaPlanAmount" class="form-input" placeholder="Contoh: 1000000" inputmode="numeric" oninput="renderDcaPlanSimulator()">
+                  <div id="dcaPlanResult" class="iv-dca-list"></div>
+                </details>
               </div>
             </section>
 
-            <!-- Sector Performance -->
-            <section class="panel-card">
-              <button class="panel-toggle" onclick="togglePanel('perfPanel')">
+            <!-- Allocation vs target -->
+            <section class="mm-dash-section">
+              <div class="mm-section-header">
                 <div>
-                  <p class="panel-eyebrow">Performance</p>
-                  <h3 class="panel-title">Sector Growth</h3>
+                  <h3>Alokasi</h3>
+                  <p class="mm-section-sub" id="allocationTotalText">&nbsp;</p>
                 </div>
-                <strong class="panel-chevron" id="perfChevron">↓</strong>
-              </button>
-              <div id="perfPanel" class="panel-body hidden">
-                <div id="sectorPerformanceCards" class="sector-grid">
-                  <div class="empty-state">No sector performance yet.</div>
+                <div class="mm-expense-tabs" role="tablist">
+                  <button class="mm-expense-tab active" role="tab" id="ivAllocTabSector" onclick="switchAllocTab('balance')">Sektor</button>
+                  <button class="mm-expense-tab" role="tab" id="ivAllocTabPlatform" onclick="switchAllocTab('platform')">Platform</button>
                 </div>
+              </div>
+              <div class="mm-dash-card">
+                <div id="allocationFocusList" class="iv-alloc-list">
+                  <div class="empty-state">No allocation data yet.</div>
+                </div>
+                <div id="platformCashList" class="iv-alloc-list" style="display:none;"></div>
               </div>
             </section>
 
-            <!-- Asset Details -->
-            <section class="panel-card">
-              <button class="details-toggle" onclick="toggleAssetDetails()">
-                <span>View Asset Details</span>
-                <strong id="detailsChevron">↓</strong>
-              </button>
-              <div id="assetDetails" class="asset-details hidden">
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Sector</th>
-                        <th>Asset</th>
-                        <th>Growth</th>
-                        <th>Capital</th>
-                        <th>Value</th>
-                        <th>P/L</th>
-                      </tr>
-                    </thead>
-                    <tbody id="portfolioTable">
-                      <tr><td colspan="6" class="empty-table">No portfolio data yet.</td></tr>
-                    </tbody>
-                  </table>
+            <!-- Holdings -->
+            <section class="mm-dash-section">
+              <div class="mm-section-header">
+                <div>
+                  <h3>Aset</h3>
+                  <p class="mm-section-sub" id="ivHoldingsSub">&nbsp;</p>
+                </div>
+                <div class="mm-expense-tabs" role="tablist">
+                  <button class="mm-expense-tab iv-sort-tab active" role="tab" data-sort="value" onclick="ivSortHoldings('value')">Nilai</button>
+                  <button class="mm-expense-tab iv-sort-tab" role="tab" data-sort="pl" onclick="ivSortHoldings('pl')">Return</button>
                 </div>
               </div>
+              <div class="mm-dash-card mm-transaction-list" id="ivHoldingsList"></div>
             </section>
 
           </section>
@@ -354,11 +329,11 @@
       <main class="main-content">
 
         <!-- ===== MM DASHBOARD PAGE =====
-             Ordered by how often each answer is needed: how much do I have,
-             how did this month go, where is my money, am I on budget, what
-             did I spend on, what happened last. The month's income/expense/
-             saving live inside the net worth card instead of three separate
-             tiles, and every section header carries its own action. -->
+             Answers, top to bottom: how much do I have and which way is it
+             moving; how is this month going (cash flow, pace, what is safe
+             to spend per day); what needs attention; where the money went;
+             what happened. Every number that can be compared is compared —
+             to last month, to the budget, or to income. -->
         <div id="mmDashboardPage" class="page active-page">
           <section class="dashboard-wrap">
 
@@ -378,10 +353,10 @@
               </button>
             </div>
 
-            <!-- Net worth + this month -->
+            <!-- Net worth + this month's cash flow -->
             <div class="mm-networth-card" id="mmNetworthCard">
               <div class="mm-networth-header-row">
-                <span class="mm-networth-label">NETWORTH</span>
+                <span class="mm-networth-label">Total saldo</span>
                 <button class="mm-networth-eye" aria-label="Tampilkan/sembunyikan nominal" onclick="toggleAmountVisibility()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -392,34 +367,60 @@
               <h2 class="mm-networth-amount" id="mmNetWorthValue">Rp 0</h2>
               <div class="mm-networth-change">
                 <span class="mm-change-badge up" id="mmChangeBadge">↑ 0%</span>
-                <span class="mm-change-vs">vs bulan lalu</span>
+                <span class="mm-change-vs" id="mmChangeText">vs akhir bulan lalu</span>
               </div>
               <canvas id="mmNetworthSparkline" width="200" height="80" aria-hidden="true"></canvas>
 
-              <div class="mm-hero-stats" aria-label="Ringkasan bulan ini">
-                <div class="mm-hero-stat">
-                  <span class="mm-hero-stat-label"><span class="mm-hero-dot in" aria-hidden="true">↓</span>Income</span>
-                  <strong id="mmTotalIncome">Rp 0</strong>
+              <div class="mm-cashflow" aria-label="Arus kas bulan ini">
+                <div class="mm-cashflow-head">
+                  <span id="mmCashflowTitle">Arus kas bulan ini</span>
+                  <span class="mm-rate-chip" id="mmSavingRate">–</span>
                 </div>
-                <div class="mm-hero-stat">
-                  <span class="mm-hero-stat-label"><span class="mm-hero-dot out" aria-hidden="true">↑</span>Expense</span>
-                  <strong id="mmTotalExpense">Rp 0</strong>
+                <!-- Share of income already spent; the rest of the track is
+                     what is left. -->
+                <div class="mm-cashflow-bar" role="img" id="mmCashflowBar" aria-label="Porsi pemasukan yang terpakai">
+                  <span class="mm-cashflow-fill" id="mmCashflowFill"></span>
                 </div>
-                <div class="mm-hero-stat">
-                  <span class="mm-hero-stat-label">Saving</span>
-                  <strong id="mmTotalSaving">Rp 0</strong>
+                <div class="mm-hero-stats">
+                  <div class="mm-hero-stat">
+                    <span class="mm-hero-stat-label"><span class="mm-hero-dot in" aria-hidden="true">↓</span>Masuk</span>
+                    <strong id="mmTotalIncome">Rp 0</strong>
+                  </div>
+                  <div class="mm-hero-stat">
+                    <span class="mm-hero-stat-label"><span class="mm-hero-dot out" aria-hidden="true">↑</span>Keluar</span>
+                    <strong id="mmTotalExpense">Rp 0</strong>
+                  </div>
+                  <div class="mm-hero-stat">
+                    <span class="mm-hero-stat-label">Sisa</span>
+                    <strong id="mmTotalSaving">Rp 0</strong>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Accounts -->
-            <section class="mm-dash-section" id="mmAccountsSection">
+            <!-- Month pulse: safe daily spend, pace, projection, alerts -->
+            <section class="mm-dash-section" id="mmPulseSection">
               <div class="mm-section-header">
-                <h3>Akun</h3>
-                <button class="mm-view-all" onclick="mmShowPage('mmSettingsPage')">Kelola <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+                <div>
+                  <h3>Ringkasan bulan ini</h3>
+                  <p class="mm-section-sub" id="mmPulseSub">&nbsp;</p>
+                </div>
               </div>
-              <div class="mm-accounts-scroll" id="mmAccountsScroll">
-                <div class="empty-state">No accounts yet.</div>
+              <div class="mm-pulse-grid" id="mmPulseGrid"></div>
+              <div class="mm-alerts" id="mmAlerts"></div>
+            </section>
+
+            <!-- Daily spending -->
+            <section class="mm-dash-section" id="mmDailySection">
+              <div class="mm-section-header">
+                <div>
+                  <h3>Pengeluaran harian</h3>
+                  <p class="mm-section-sub" id="mmDailySub">&nbsp;</p>
+                </div>
+              </div>
+              <div class="mm-dash-card mm-daily-card">
+                <div class="mm-daily-chart" id="mmDailyChart"></div>
+                <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
               </div>
             </section>
 
@@ -427,7 +428,7 @@
             <section class="mm-dash-section" id="mmBudgetSection">
               <div class="mm-section-header">
                 <div>
-                  <h3>Budget bulan ini</h3>
+                  <h3>Budget</h3>
                   <p class="mm-section-sub" id="mmBudgetSummary">&nbsp;</p>
                 </div>
                 <button class="mm-view-all" id="mmBudgetDetailBtn" onclick="mmShowBudgetDetail()">Detail <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
@@ -435,13 +436,27 @@
               <div class="mm-dash-card mm-budget-list" id="mmBudgetList"></div>
             </section>
 
+            <!-- Accounts -->
+            <section class="mm-dash-section" id="mmAccountsSection">
+              <div class="mm-section-header">
+                <div>
+                  <h3>Akun</h3>
+                  <p class="mm-section-sub" id="mmAccountsSub">&nbsp;</p>
+                </div>
+                <button class="mm-view-all" onclick="mmShowPage('mmSettingsPage')">Kelola <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+              </div>
+              <div class="mm-accounts-grid" id="mmAccountsScroll">
+                <div class="empty-state">No accounts yet.</div>
+              </div>
+            </section>
+
             <!-- Breakdown -->
             <section class="mm-dash-section" id="mmExpenseSection">
               <div class="mm-section-header">
-                <h3>Rincian</h3>
+                <h3>Rincian kategori</h3>
                 <div class="mm-expense-tabs" role="tablist">
-                  <button class="mm-expense-tab active" role="tab" data-tab="expense" onclick="mmSwitchChartTab(this,'expense')">Expense</button>
-                  <button class="mm-expense-tab" role="tab" data-tab="income" onclick="mmSwitchChartTab(this,'income')">Income</button>
+                  <button class="mm-expense-tab active" role="tab" data-tab="expense" onclick="mmSwitchChartTab(this,'expense')">Keluar</button>
+                  <button class="mm-expense-tab" role="tab" data-tab="income" onclick="mmSwitchChartTab(this,'income')">Masuk</button>
                 </div>
               </div>
               <div class="mm-dash-card">
@@ -1031,7 +1046,7 @@
         meta.name = 'viewport';
         document.head.appendChild(meta);
       }
-      meta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+      meta.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content';
       try {
         if (window.frameElement) {
           window.frameElement.style.width = '100%';

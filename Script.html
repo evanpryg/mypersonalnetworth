@@ -470,57 +470,63 @@
 
   /* === ALLOCATION TABS === */
   function switchAllocTab(tab) {
-    const balanceDiv = document.getElementById('allocTabBalance');
-    const platformDiv = document.getElementById('allocTabPlatform');
-    const btns = document.querySelectorAll('.tab-bar .tab-btn');
-
-    btns.forEach(b => b.classList.remove('active'));
-
-    if (tab === 'balance') {
-      balanceDiv.style.display = 'block';
-      platformDiv.style.display = 'none';
-      btns[0]?.classList.add('active');
-    } else {
-      balanceDiv.style.display = 'none';
-      platformDiv.style.display = 'block';
-      btns[1]?.classList.add('active');
-    }
+    const sectorList = document.getElementById('allocationFocusList');
+    const platformList = document.getElementById('platformCashList');
+    if (!sectorList || !platformList) return;
+    const isSector = tab !== 'platform';
+    sectorList.style.display = isSector ? '' : 'none';
+    platformList.style.display = isSector ? 'none' : '';
+    document.getElementById('ivAllocTabSector')?.classList.toggle('active', isSector);
+    document.getElementById('ivAllocTabPlatform')?.classList.toggle('active', !isSector);
   }
 
-  /* === PLATFORM CASH RENDERER === */
+  /* === PLATFORM BREAKDOWN ===
+     Value per platform with how much of it is uninvested cash. */
   function renderPlatformCash(portfolio) {
     const container = document.getElementById('platformCashList');
     if (!container) return;
     if (!portfolio || !portfolio.length) {
-      container.innerHTML = '<div class="empty-state">No platform data yet.</div>';
+      container.innerHTML = '<div class="empty-state">Belum ada data platform.</div>';
       return;
     }
 
-    // Group by platform: sum CurrentValueIDR for all assets (including cash)
     const platformMap = {};
     portfolio.forEach(item => {
       const platform = item.Platform || 'Unknown';
-      if (!platformMap[platform]) platformMap[platform] = 0;
-      platformMap[platform] += Number(item.CurrentValueIDR) || 0;
+      if (!platformMap[platform]) platformMap[platform] = { value: 0, cash: 0, pl: 0, capital: 0 };
+      const v = Number(item.CurrentValueIDR) || 0;
+      platformMap[platform].value += v;
+      if (item.Sector === 'Cash') platformMap[platform].cash += v;
+      else {
+        platformMap[platform].pl += Number(item.ProfitLossIDR) || 0;
+        platformMap[platform].capital += Number(item.TotalCapitalIDR) || 0;
+      }
     });
 
     const platforms = Object.entries(platformMap)
-      .map(([platform, valueIDR]) => ({ platform, valueIDR }))
-      .sort((a, b) => b.valueIDR - a.valueIDR);
+      .map(([platform, v]) => Object.assign({ platform }, v))
+      .sort((a, b) => b.value - a.value);
+    const total = platforms.reduce((s, i) => s + i.value, 0);
+    const max = Math.max(...platforms.map(p => p.value), 1);
 
-    const total = platforms.reduce((s, i) => s + i.valueIDR, 0);
-
-    container.innerHTML = platforms
-      .map(item => `
-        <div class="platform-cash-row">
-          <span>${escapeHtml(item.platform)}</span>
-          <strong>${formatIDR(item.valueIDR)}</strong>
-        </div>
-      `).join('') + `
-      <div class="platform-cash-total">
-        <span>Total Portfolio</span>
-        <strong>${formatIDR(total)}</strong>
-      </div>`;
+    container.innerHTML = platforms.map(p => {
+      const ret = p.capital > 0 ? p.pl / p.capital : null;
+      const cls = ret === null ? '' : ret > 0 ? 'positive' : ret < 0 ? 'negative' : '';
+      return `
+        <div class="iv-alloc-row">
+          <div class="iv-alloc-top">
+            <span class="iv-alloc-name">${escapeHtml(p.platform)}</span>
+            <span class="iv-alloc-pct"><strong>${total > 0 ? (p.value / total * 100).toFixed(1).replace('.', ',') : 0}%</strong></span>
+          </div>
+          <div class="iv-alloc-bar">
+            <span class="iv-alloc-fill" style="width:${p.value / max * 100}%;background:var(--accent)"></span>
+          </div>
+          <div class="iv-alloc-meta">
+            <span>${ivShort(p.value)}${ret !== null ? ` · <span class="${cls}">${ivPct(ret, true)}</span>` : ''}</span>
+            <span class="iv-status status-muted">cash ${ivShort(p.cash)}</span>
+          </div>
+        </div>`;
+    }).join('');
   }
 
   /* === DATA LOADING === */
@@ -809,45 +815,105 @@
   }
 
   /* === RENDER DASHBOARD === */
+  const IV_SECTOR_COLORS = ['#60a5fa','#22d3ee','#fbbf24','#818cf8','#f472b6','#34d399','#fb923c','#94a3b8'];
+  let IV_SECTOR_COLOR_MAP = {};
+  let IV_HOLDINGS_SORT = 'value';
+  let IV_HOLDINGS_EXPANDED = false;
+
+  // Compact rupiah ("Rp 2,6 jt") for dense rows; honours the hide toggle.
+  function ivShort(value) {
+    if (AMOUNTS_HIDDEN) return '••••';
+    const v = Number(value) || 0;
+    const abs = Math.abs(v);
+    const dec = (x) => x.toFixed(1).replace(/\.0$/, '').replace('.', ',');
+    let out;
+    if (abs >= 1e9) out = dec(abs / 1e9) + ' M';
+    else if (abs >= 1e6) out = dec(abs / 1e6) + ' jt';
+    else if (abs >= 1e3) out = Math.round(abs / 1e3) + ' rb';
+    else out = String(Math.round(abs));
+    return (v < 0 ? '-' : '') + 'Rp ' + out;
+  }
+
+  function ivPct(fraction, signed) {
+    const v = (Number(fraction) || 0) * 100;
+    const txt = Math.abs(v).toFixed(1).replace('.', ',') + '%';
+    if (!signed) return txt;
+    return (v > 0 ? '+' : v < 0 ? '-' : '') + txt;
+  }
+
+  function ivSectorColor(sector) {
+    if (!IV_SECTOR_COLOR_MAP[sector]) {
+      const n = Object.keys(IV_SECTOR_COLOR_MAP).length;
+      IV_SECTOR_COLOR_MAP[sector] = sector === 'Cash' ? '#94a3b8' : IV_SECTOR_COLORS[n % IV_SECTOR_COLORS.length];
+    }
+    return IV_SECTOR_COLOR_MAP[sector];
+  }
+
   function renderDashboard(data) {
     LATEST_DASHBOARD_DATA = data;
     const summary = data.summary;
     const target = data.target;
     fillTargetForm(target);
 
-    const progressRaw = summary.progressPercent || 0;
-    const progressPercent = Math.min(progressRaw, 1);
-    const progressDisplay = Math.round(progressPercent * 100);
+    // Stable colours: biggest sector first gets the first colour.
+    IV_SECTOR_COLOR_MAP = {};
+    [...(data.allocationBySector || [])].sort((a, b) => b.valueIDR - a.valueIDR).forEach(i => ivSectorColor(i.sector));
+
+    const total = summary.totalPortfolioValueIDR || 0;
+    const capital = summary.totalCapitalIDR || 0;
+    const pl = summary.totalProfitLossIDR || 0;
+    const plPct = capital > 0 ? pl / capital : 0;
 
     setText('mainTargetTitle', target.name || 'First 100 Million');
-    setText('progressMainValue', formatIDR(summary.totalPortfolioValueIDR));
-    setText('progressTargetText', `of ${formatIDR(target.amount)}`);
-    setText('mainProgressText', `${progressDisplay}%`);
+    setText('progressMainValue', formatIDR(total));
 
-    setStyle('mainProgressFill', 'width', `${progressDisplay}%`);
-    setStyle('mainRunner', 'left', `${progressDisplay}%`);
+    const badge = document.getElementById('ivPlBadge');
+    if (badge) {
+      badge.textContent = (pl >= 0 ? '↑ ' : '↓ ') + ivPct(Math.abs(plPct));
+      badge.className = 'mm-change-badge ' + (pl >= 0 ? 'up' : 'down');
+    }
+    const plEl = document.getElementById('ivPlAmount');
+    if (plEl) {
+      plEl.textContent = (pl > 0 ? '+' : pl < 0 ? '-' : '') + ivShort(Math.abs(pl));
+      plEl.className = 'iv-pl-amount ' + (pl > 0 ? 'positive' : pl < 0 ? 'negative' : '');
+    }
 
-    setText('heroNote', buildHeroNote(progressDisplay, summary.remainingAmountIDR));
+    const progress = Math.min(summary.progressPercent || 0, 1);
+    const progressDisplay = Math.round(progress * 1000) / 10;
+    setText('mainProgressText', String(progressDisplay).replace('.', ',') + '%');
+    setText('progressTargetText', `dari ${ivShort(target.amount)} · kurang ${ivShort(summary.remainingAmountIDR)}`);
+    setStyle('mainProgressFill', 'width', `${progress * 100}%`);
+    const bar = document.getElementById('ivGoalBar');
+    if (bar) bar.setAttribute('aria-valuenow', String(Math.round(progress * 100)));
+    setText('heroNote', buildHeroNote(progress * 100, summary));
 
-    colorProfit('simpleProfitLoss', summary.totalProfitLossIDR);
-    setText('allocationTotalText', `Total ${formatIDR(summary.totalPortfolioValueIDR)}`);
+    setText('ivStatCapital', ivShort(capital));
+    setText('ivStatAssets', ivShort(summary.totalInvestedAssetsIDR));
+    setText('ivStatCash', ivShort(summary.totalCashIDR));
 
-    renderAllocationFocus(data.allocationBySector || [], summary.totalPortfolioValueIDR || 0);
+    const sectors = (data.allocationBySector || []).length;
+    setText('allocationTotalText', `${sectors} sektor · ${ivShort(total)}`);
+
+    renderAllocationFocus(data.allocationBySector || [], total, data.portfolio || []);
     renderNextMove(data.allocationBySector || [], data.cashByPlatform || [], summary);
     renderDcaSuggestions(data.rebalanceSuggestions || [], summary.totalCashIDR || 0);
-    renderSectorPerformance(data.portfolio || []);
     renderPortfolio(data.portfolio || []);
     renderDcaPlanSimulator();
     renderPlatformCash(data.portfolio || []);
   }
 
-  function buildHeroNote(progress, remaining) {
-    if (progress <= 0) return 'Start the journey. Your first recorded investment is the spark.';
-    if (progress < 25) return 'Early stage. Keep building the habit.';
-    if (progress < 50) return 'Momentum is forming. Stay consistent.';
-    if (progress < 75) return 'Halfway into serious territory. Protect the rhythm.';
-    if (progress < 100) return `${formatIDR(remaining)} left. Almost there.`;
-    return 'Target unlocked. Time for the next mountain.';
+  function buildHeroNote(progress, summary) {
+    const months = summary.estimatedMonthsLeft;
+    const avg = summary.averageMonthlyInvestmentIDR || 0;
+    if (progress >= 100) return 'Target tercapai. Saatnya pasang target berikutnya.';
+    if (progress <= 0) return 'Mulai catat investasi pertamamu.';
+    if (months && avg > 0) {
+      const eta = new Date();
+      eta.setMonth(eta.getMonth() + months);
+      const when = new Intl.DateTimeFormat('id-ID', { month: 'short', year: 'numeric' }).format(eta);
+      return `Dengan setoran rata-rata ${ivShort(avg)}/bulan, target tercapai ± ${when} (${months} bulan).`;
+    }
+    return 'Setor rutin tiap bulan supaya perkiraan waktu tercapai bisa dihitung.';
   }
 
   function fillTargetForm(target) {
@@ -857,44 +923,51 @@
     if (amountInput) amountInput.value = target.amount || '';
   }
 
-  function renderAllocationFocus(items, total) {
+  /* Actual vs target per sector on one shared scale, with the target drawn
+     as a tick on the bar, plus the sector's own return. */
+  function renderAllocationFocus(items, total, portfolio) {
     const container = document.getElementById('allocationFocusList');
     if (!container) return;
     if (!items.length || total <= 0) {
-      container.innerHTML = '<div class="empty-state">No allocation data yet.</div>';
+      container.innerHTML = '<div class="empty-state">Belum ada data alokasi.</div>';
       return;
     }
-    const colors = ['#60a5fa','#22d3ee','#fbbf24','#818cf8','#a78bfa','#94a3b8'];
-    container.innerHTML = items
+
+    const perf = {};
+    (portfolio || []).forEach(p => {
+      if (p.Sector === 'Cash') return;
+      if (!perf[p.Sector]) perf[p.Sector] = { capital: 0, pl: 0 };
+      perf[p.Sector].capital += Number(p.TotalCapitalIDR) || 0;
+      perf[p.Sector].pl += Number(p.ProfitLossIDR) || 0;
+    });
+
+    const scale = Math.max(...items.map(i => Math.max(i.actualPercent || 0, i.targetPercent || 0)), 1) * 1.08;
+    const statusLabel = { Balanced: 'Seimbang', Overweight: 'Lebih', Underweight: 'Kurang', 'No Target': 'Tanpa target' };
+
+    container.innerHTML = [...items]
       .sort((a, b) => b.valueIDR - a.valueIDR)
-      .map((item, i) => {
-        const percent = item.actualPercent ?? (total > 0 ? (item.valueIDR / total) * 100 : 0);
-        // Progress toward target: how much of the target amount is fulfilled
-        const target = item.targetPercent || 0;
-        const targetValueIDR = total * (target / 100); // target amount in IDR
-        const progressToTarget = targetValueIDR > 0 ? Math.min((item.valueIDR / targetValueIDR) * 100, 150) : 0;
-        const isOver = item.valueIDR > targetValueIDR && targetValueIDR > 0;
-        const diff = item.difference || 0;
+      .map(item => {
+        const color = ivSectorColor(item.sector);
+        const actual = item.actualPercent || 0;
+        const targetPct = item.targetPercent || 0;
+        const p = perf[item.sector];
+        const ret = p && p.capital > 0 ? p.pl / p.capital : null;
+        const retCls = ret === null ? '' : ret > 0 ? 'positive' : ret < 0 ? 'negative' : '';
         const status = item.status || 'No Target';
-        const color = colors[i % colors.length];
+        const diffTxt = targetPct ? ` ${item.difference >= 0 ? '+' : ''}${item.difference.toFixed(1).replace('.', ',')}` : '';
         return `
-          <div class="allocation-item">
-            <div class="allocation-top">
-              <div class="allocation-name">
-                <span class="sector-dot" style="background:${color}"></span>
-                <span>${escapeHtml(item.sector)}</span>
-              </div>
-              <div class="allocation-percent">${percent.toFixed(1)}%</div>
+          <div class="iv-alloc-row">
+            <div class="iv-alloc-top">
+              <span class="iv-alloc-name"><span class="sector-dot" style="background:${color}"></span>${escapeHtml(item.sector)}</span>
+              <span class="iv-alloc-pct"><strong>${actual.toFixed(1).replace('.', ',')}%</strong>${targetPct ? `<small>/ ${targetPct.toFixed(0)}%</small>` : ''}</span>
             </div>
-            <div class="allocation-bar">
-              <div class="allocation-fill" style="width:${Math.min(progressToTarget, 100)}%;background:${isOver ? '#f59e0b' : color}"></div>
+            <div class="iv-alloc-bar">
+              <span class="iv-alloc-fill" style="width:${actual / scale * 100}%;background:${color}"></span>
+              ${targetPct ? `<span class="iv-alloc-target" style="left:${targetPct / scale * 100}%" title="Target ${targetPct}%"></span>` : ''}
             </div>
-            <div class="allocation-meta">
-              <span>${formatIDR(item.valueIDR)} ${targetValueIDR > 0 ? `/ ${formatIDR(targetValueIDR)}` : ''}</span>
-              <span>${progressToTarget > 0 ? Math.round(progressToTarget) + '% of target' : ''}</span>
-            </div>
-            <div class="allocation-status ${getStatusClass(status)}">
-              ${escapeHtml(status)}${target ? ` · ${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%` : ''}
+            <div class="iv-alloc-meta">
+              <span>${ivShort(item.valueIDR)}${ret !== null ? ` · <span class="${retCls}">${ivPct(ret, true)}</span>` : ''}</span>
+              <span class="iv-status ${getStatusClass(status)}">${statusLabel[status] || escapeHtml(status)}${diffTxt}</span>
             </div>
           </div>`;
       }).join('');
@@ -910,152 +983,121 @@
   function renderNextMove(allocationItems, cashItems, summary) {
     const titleEl = document.getElementById('nextMoveTitle');
     const textEl = document.getElementById('nextMoveText');
-    const mapEl = document.getElementById('balanceMap');
-    if (!titleEl || !textEl || !mapEl) return;
+    if (!titleEl || !textEl) return;
     const total = summary.totalPortfolioValueIDR || 0;
     if (!allocationItems.length || total <= 0) {
-      titleEl.textContent = 'Start with your first record.';
-      textEl.textContent = 'Add your holdings first. The tracker will suggest what needs balance.';
-      mapEl.innerHTML = 'No balance map yet.';
+      titleEl.textContent = 'Mulai dari catatan pertama.';
+      textEl.textContent = 'Tambahkan aset dulu, nanti tracker menyarankan sektor mana yang perlu ditambah.';
       return;
     }
-    const underweight = [...allocationItems].filter(i => i.status === 'Underweight').sort((a,b) => a.difference - b.difference);
-    const overweight = [...allocationItems].filter(i => i.status === 'Overweight').sort((a,b) => b.difference - a.difference);
-    const balanced = [...allocationItems].filter(i => i.status === 'Balanced');
+    const pctTxt = (v) => v.toFixed(1).replace('.', ',') + '%';
+    const underweight = allocationItems.filter(i => i.status === 'Underweight').sort((a, b) => a.difference - b.difference);
+    const overweight = allocationItems.filter(i => i.status === 'Overweight').sort((a, b) => b.difference - a.difference);
     const cashItem = allocationItems.find(i => i.sector === 'Cash');
     const cashPercent = cashItem ? cashItem.actualPercent : 0;
 
     if (underweight.length) {
       const next = underweight[0];
-      titleEl.textContent = `${next.sector} needs more weight.`;
-      textEl.textContent = `${next.sector} is at ${next.actualPercent.toFixed(1)}%, target is ${next.targetPercent.toFixed(1)}%. Next DCA candidate.`;
+      const gapIDR = total * (next.targetPercent - next.actualPercent) / 100;
+      titleEl.textContent = `Tambah ${next.sector}`;
+      textEl.textContent = `${pctTxt(next.actualPercent)} dari target ${pctTxt(next.targetPercent)} — kurang ± ${ivShort(gapIDR)} untuk seimbang.`;
     } else if (overweight.length) {
       const heavy = overweight[0];
-      titleEl.textContent = `${heavy.sector} is overweight.`;
-      textEl.textContent = `${heavy.sector} at ${heavy.actualPercent.toFixed(1)}%, above ${heavy.targetPercent.toFixed(1)}% target.`;
+      titleEl.textContent = `${heavy.sector} terlalu berat`;
+      textEl.textContent = `${pctTxt(heavy.actualPercent)}, di atas target ${pctTxt(heavy.targetPercent)}. Arahkan setoran berikutnya ke sektor lain.`;
     } else if (cashPercent > 10) {
-      titleEl.textContent = 'Cash ready to deploy.';
-      textEl.textContent = `Cash is ${cashPercent.toFixed(1)}% of portfolio. Consider deploying gradually.`;
+      titleEl.textContent = 'Cash siap diinvestasikan';
+      textEl.textContent = `Cash ${pctTxt(cashPercent)} dari portofolio. Masukkan bertahap.`;
     } else {
-      titleEl.textContent = 'Allocation is close to plan.';
-      textEl.textContent = `${balanced.length} sector(s) near target. Keep DCA steady.`;
+      titleEl.textContent = 'Alokasi sesuai rencana';
+      textEl.textContent = 'Semua sektor dekat target. Lanjutkan setoran rutin.';
     }
+  }
 
-    mapEl.innerHTML = allocationItems
-      .sort((a,b) => {
-        const order = {Underweight:1, Overweight:2, Balanced:3, 'No Target':4};
-        return (order[a.status]||9) - (order[b.status]||9);
-      })
-      .map(item => `<span class="balance-chip ${getStatusClass(item.status)}">${escapeHtml(item.sector)} · ${escapeHtml(item.status)}</span>`)
-      .join('');
+  function ivDcaRows(items, amountFor) {
+    return items.map(item => {
+      const portion = Number(item.portion) || 0;
+      return `
+        <div class="iv-dca-row">
+          <span class="sector-dot" style="background:${ivSectorColor(item.sector)}"></span>
+          <span class="iv-dca-name">${escapeHtml(item.sector)}</span>
+          <span class="iv-dca-bar"><span style="width:${Math.min(portion * 100, 100)}%;background:${ivSectorColor(item.sector)}"></span></span>
+          <strong>${ivShort(amountFor(item))}</strong>
+        </div>`;
+    }).join('');
   }
 
   function renderDcaSuggestions(items, totalCashIDR) {
     const totalEl = document.getElementById('dcaSuggestionTotal');
     const listEl = document.getElementById('dcaSuggestionList');
     if (!totalEl || !listEl) return;
-    totalEl.textContent = formatIDR(totalCashIDR);
+    totalEl.textContent = totalCashIDR > 0 ? `Cash siap: ${ivShort(totalCashIDR)}` : 'Belum ada cash menganggur';
     if (!items.length || totalCashIDR <= 0) {
-      listEl.innerHTML = '<div>No DCA suggestion yet.</div>';
+      listEl.innerHTML = '';
       return;
     }
-    listEl.innerHTML = items.map(item => {
-      const portionPercent = (item.portion || 0) * 100;
-      return `
-        <div class="dca-suggestion-row">
-          <strong>${escapeHtml(item.sector)}</strong>
-          <span>${formatIDR(item.suggestedAmountIDR)}</span>
-          <div class="dca-mini-bar"><div class="dca-mini-fill" style="width:${Math.min(portionPercent,100)}%"></div></div>
-        </div>`;
-    }).join('');
+    listEl.innerHTML = '<p class="iv-dca-head">Bagi cash ke:</p>' + ivDcaRows(items, i => i.suggestedAmountIDR);
   }
 
-  function renderSectorPerformance(portfolio) {
-    const container = document.getElementById('sectorPerformanceCards');
-    if (!container) return;
-    const activeAssets = portfolio.filter(i => i.Sector !== 'Cash');
-    if (!activeAssets.length) {
-      container.innerHTML = '<div class="empty-state">No sector performance yet.</div>';
-      return;
-    }
-    const map = {};
-    activeAssets.forEach(item => {
-      if (!map[item.Sector]) map[item.Sector] = { sector: item.Sector, capital: 0, currentValue: 0, profitLoss: 0 };
-      map[item.Sector].capital += Number(item.TotalCapitalIDR) || 0;
-      map[item.Sector].currentValue += Number(item.CurrentValueIDR) || 0;
-      map[item.Sector].profitLoss += Number(item.ProfitLossIDR) || 0;
-    });
-    const sectors = Object.values(map)
-      .map(i => { i.growth = i.capital > 0 ? i.profitLoss / i.capital : 0; return i; })
-      .sort((a,b) => b.growth - a.growth);
-    container.innerHTML = sectors.map(item => {
-      const gp = item.growth * 100;
-      const cls = gp > 0 ? 'positive' : gp < 0 ? 'negative' : 'neutral';
-      return `
-        <div class="sector-card">
-          <h3>${escapeHtml(item.sector)}</h3>
-          <div class="sector-growth ${cls}">${gp >= 0 ? '+' : ''}${gp.toFixed(1)}%</div>
-          <p>${formatIDR(item.profitLoss)} P/L</p>
-          <p>${formatIDR(item.currentValue)} value</p>
-        </div>`;
-    }).join('');
-  }
-
+  /* Holdings as a list rather than a six-column table that never fit a
+     phone: name, sector · platform, value, and return. */
   function renderPortfolio(items) {
-    const tbody = document.getElementById('portfolioTable');
-    if (!tbody) return;
-    if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-table">No portfolio data yet.</td></tr>';
+    const list = document.getElementById('ivHoldingsList');
+    const sub = document.getElementById('ivHoldingsSub');
+    if (!list) return;
+    const assets = (items || []).filter(i => i.Sector !== 'Cash' && (Number(i.CurrentValueIDR) || 0) !== 0);
+    if (!assets.length) {
+      if (sub) sub.innerHTML = '&nbsp;';
+      list.innerHTML = '<div class="empty-state">Belum ada aset.</div>';
       return;
     }
 
-    // Group by platform
-    const platformMap = {};
-    items.forEach(item => {
-      const platform = item.Platform || 'Unknown';
-      if (!platformMap[platform]) platformMap[platform] = [];
-      platformMap[platform].push(item);
-    });
+    const sorted = [...assets].sort((a, b) => IV_HOLDINGS_SORT === 'pl'
+      ? (Number(b.GrowthPercent) || 0) - (Number(a.GrowthPercent) || 0)
+      : (Number(b.CurrentValueIDR) || 0) - (Number(a.CurrentValueIDR) || 0));
+    const byGrowth = [...assets].sort((a, b) => (Number(b.GrowthPercent) || 0) - (Number(a.GrowthPercent) || 0));
+    const best = byGrowth[0], worst = byGrowth[byGrowth.length - 1];
+    if (sub) {
+      sub.innerHTML = `${assets.length} aset · terbaik <span class="positive">${escapeHtml(best.Asset)} ${ivPct(best.GrowthPercent, true)}</span>`
+        + (worst !== best && (Number(worst.GrowthPercent) || 0) < 0 ? ` · terlemah <span class="negative">${escapeHtml(worst.Asset)} ${ivPct(worst.GrowthPercent, true)}</span>` : '');
+    }
 
-    // Sort platforms by total value descending
-    const platforms = Object.entries(platformMap)
-      .map(([platform, assets]) => {
-        const totalValue = assets.reduce((s, a) => s + (Number(a.CurrentValueIDR) || 0), 0);
-        const totalCapital = assets.reduce((s, a) => s + (Number(a.TotalCapitalIDR) || 0), 0);
-        const totalPL = assets.reduce((s, a) => s + (Number(a.ProfitLossIDR) || 0), 0);
-        return { platform, assets, totalValue, totalCapital, totalPL };
-      })
-      .sort((a, b) => b.totalValue - a.totalValue);
+    const total = assets.reduce((s, a) => s + (Number(a.CurrentValueIDR) || 0), 0);
+    const LIMIT = 6;
+    const shown = IV_HOLDINGS_EXPANDED ? sorted : sorted.slice(0, LIMIT);
+    list.innerHTML = shown.map(item => {
+      const value = Number(item.CurrentValueIDR) || 0;
+      const pl = Number(item.ProfitLossIDR) || 0;
+      const g = Number(item.GrowthPercent) || 0;
+      const cls = pl > 0 ? 'positive' : pl < 0 ? 'negative' : '';
+      const color = ivSectorColor(item.Sector);
+      const weight = total > 0 ? value / total : 0;
+      return `
+        <div class="iv-holding">
+          <span class="iv-holding-badge" style="background:${color}22;color:${color}">${escapeHtml(String(item.Asset || '?').substring(0, 3).toUpperCase())}</span>
+          <span class="iv-holding-info">
+            <span class="iv-holding-name">${escapeHtml(item.Asset)}</span>
+            <span class="iv-holding-meta">${escapeHtml(item.Sector)} · ${escapeHtml(item.Platform)} · porsi ${ivPct(weight)}</span>
+          </span>
+          <span class="iv-holding-nums">
+            <strong>${ivShort(value)}</strong>
+            <span class="${cls}">${ivPct(g, true)} · ${pl >= 0 ? '+' : '-'}${ivShort(Math.abs(pl)).replace('Rp ', '')}</span>
+          </span>
+        </div>`;
+    }).join('') + (sorted.length > LIMIT
+      ? `<button type="button" class="iv-more" onclick="ivToggleHoldings()">${IV_HOLDINGS_EXPANDED ? 'Ringkas' : `Lihat semua (${sorted.length})`}</button>`
+      : '');
+  }
 
-    let html = '';
-    platforms.forEach(group => {
-      const plCls = group.totalPL > 0 ? 'positive' : group.totalPL < 0 ? 'negative' : 'neutral';
-      // Platform header row
-      html += `<tr class="platform-header-row">
-        <td colspan="3"><strong>${escapeHtml(group.platform)}</strong></td>
-        <td><strong>${formatIDR(group.totalCapital)}</strong></td>
-        <td><strong>${formatIDR(group.totalValue)}</strong></td>
-        <td class="${plCls}"><strong>${formatIDR(group.totalPL)}</strong></td>
-      </tr>`;
+  function ivSortHoldings(mode) {
+    IV_HOLDINGS_SORT = mode;
+    document.querySelectorAll('.iv-sort-tab').forEach(b => b.classList.toggle('active', b.dataset.sort === mode));
+    if (LATEST_DASHBOARD_DATA) renderPortfolio(LATEST_DASHBOARD_DATA.portfolio || []);
+  }
 
-      // Asset rows sorted by value
-      group.assets
-        .sort((a, b) => b.CurrentValueIDR - a.CurrentValueIDR)
-        .forEach(item => {
-          const cls = item.ProfitLossIDR > 0 ? 'positive' : item.ProfitLossIDR < 0 ? 'negative' : 'neutral';
-          const growth = (item.GrowthPercent || 0) * 100;
-          html += `<tr class="asset-row">
-            <td class="indent-cell"><span class="pill">${escapeHtml(item.Sector)}</span></td>
-            <td>${escapeHtml(item.Asset)}</td>
-            <td>${growth.toFixed(1)}%</td>
-            <td>${formatIDR(item.TotalCapitalIDR)}</td>
-            <td>${formatIDR(item.CurrentValueIDR)}</td>
-            <td class="${cls}">${formatIDR(item.ProfitLossIDR)}</td>
-          </tr>`;
-        });
-    });
-
-    tbody.innerHTML = html;
+  function ivToggleHoldings() {
+    IV_HOLDINGS_EXPANDED = !IV_HOLDINGS_EXPANDED;
+    if (LATEST_DASHBOARD_DATA) renderPortfolio(LATEST_DASHBOARD_DATA.portfolio || []);
   }
 
   function renderDcaPlanSimulator() {
@@ -1064,25 +1106,15 @@
     if (!amountInput || !resultEl) return;
     const amount = Number(amountInput.value) || 0;
     if (amount <= 0) {
-      resultEl.innerHTML = 'Enter an amount to simulate your DCA plan.';
+      resultEl.innerHTML = '<p class="iv-dca-head">Masukkan nominal untuk melihat pembagiannya.</p>';
       return;
     }
     const suggestions = LATEST_DASHBOARD_DATA?.rebalanceSuggestions || [];
     if (!suggestions.length) {
-      resultEl.innerHTML = '<div>No underweight sector. Allocation is near target or not set.</div>';
+      resultEl.innerHTML = '<p class="iv-dca-head">Tidak ada sektor yang kurang — ikuti persentase target di Settings.</p>';
       return;
     }
-    resultEl.innerHTML = suggestions.map(item => {
-      const portion = Number(item.portion) || 0;
-      const suggestedAmount = amount * portion;
-      const portionPercent = portion * 100;
-      return `
-        <div class="dca-suggestion-row">
-          <strong>${escapeHtml(item.sector)}</strong>
-          <span>${formatIDR(suggestedAmount)}</span>
-          <div class="dca-mini-bar"><div class="dca-mini-fill" style="width:${Math.min(portionPercent,100)}%"></div></div>
-        </div>`;
-    }).join('');
+    resultEl.innerHTML = ivDcaRows(suggestions, i => amount * (Number(i.portion) || 0));
   }
 
   /* === HISTORY === */
@@ -1293,19 +1325,6 @@
       opt.textContent = `${item.asset} · ${formatIDR(item.currentValueIDR)}`;
       select.appendChild(opt);
     });
-  }
-
-  /* === TOGGLE DETAILS === */
-  function toggleAssetDetails() {
-    const details = document.getElementById('assetDetails');
-    const chevron = document.getElementById('detailsChevron');
-    if (!details) return;
-    const isHidden = details.classList.contains('hidden');
-    details.classList.toggle('hidden');
-    if (chevron) {
-      chevron.textContent = isHidden ? '↑' : '↓';
-      chevron.classList.toggle('is-open', isHidden);
-    }
   }
 
   /* === UTILITY === */

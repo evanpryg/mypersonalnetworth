@@ -370,43 +370,277 @@ function mmRenderDashboard(data) {
   // Net worth
   mmCountUp('mmNetWorthValue', data.netWorth);
 
-  // Change badge
+  // Change vs the close of last month — percentage in the badge, the rupiah
+  // amount next to it, since "+2%" alone does not say how much.
   const badge = document.getElementById('mmChangeBadge');
+  const changeText = document.getElementById('mmChangeText');
+  const diff = (data.netWorth || 0) - (data.prevNetWorth || 0);
   if (badge) {
+    const isUp = diff >= 0;
     if (data.prevNetWorth && data.prevNetWorth > 0) {
-      const changePct = ((data.netWorth - data.prevNetWorth) / data.prevNetWorth * 100).toFixed(1);
-      const isUp = data.netWorth >= data.prevNetWorth;
-      badge.textContent = (isUp ? '↑ ' : '↓ ') + Math.abs(changePct) + '%';
-      badge.className = 'mm-change-badge ' + (isUp ? 'up' : 'down');
+      const changePct = Math.abs(diff / data.prevNetWorth * 100).toFixed(1).replace('.', ',');
+      badge.textContent = (isUp ? '↑ ' : '↓ ') + changePct + '%';
     } else {
-      badge.textContent = '↑ 0%';
-      badge.className = 'mm-change-badge up';
+      badge.textContent = isUp ? '↑' : '↓';
+    }
+    badge.className = 'mm-change-badge ' + (isUp ? 'up' : 'down');
+  }
+  if (changeText) {
+    changeText.textContent = (diff >= 0 ? '+' : '-') + mmFormatIDRShort(Math.abs(diff)) + ' vs akhir bulan lalu';
+  }
+
+  mmRenderSparkline(data);
+  mmRenderCashflow(data);
+  mmRenderPulse(data);
+  mmRenderDaily(data);
+  mmRenderAccountCards(data.accounts || [], data.netWorth || 0);
+  mmRenderBudgetCard(data.allocationCards || [], data.totalIncome || 0);
+  mmRenderChart(mmCurrentChartType || 'expense');
+  mmRenderDashboardTransactions();
+}
+
+/* === MONTH CONTEXT ===
+   Where today sits in the month; every pace figure is derived from it. */
+function mmMonthContext() {
+  const now = new Date();
+  const day = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthName = new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(now);
+  // Today still counts as a day that can be spent in.
+  return { now, day, daysInMonth, daysLeft: daysInMonth - day + 1, monthName };
+}
+
+// Allocation posts that are money set aside rather than money to spend.
+const MM_NON_SPEND_RE = /invest|saving|tabung|darurat|emergency/i;
+
+function mmInvestThisMonth(txs) {
+  return (txs || []).reduce((s, tx) =>
+    s + (tx.type === 'Transfer' && (tx.category === 'Invest' || /invest/i.test(tx.accountTo || '')) ? tx.amount : 0), 0);
+}
+
+/* === CASH FLOW (inside the hero) === */
+function mmRenderCashflow(data) {
+  const ctx = mmMonthContext();
+  const income = data.totalIncome || 0;
+  const expense = data.totalExpense || 0;
+  const saving = data.saving || 0;
+
+  setText('mmCashflowTitle', 'Arus kas ' + ctx.monthName);
+  setText('mmTotalIncome', mmFormatIDRShort(income));
+  setText('mmTotalExpense', mmFormatIDRShort(expense));
+  setText('mmTotalSaving', mmFormatIDRShort(saving));
+  const savingEl = document.getElementById('mmTotalSaving');
+  if (savingEl) savingEl.style.color = saving >= 0 ? 'var(--success)' : 'var(--error)';
+
+  const chip = document.getElementById('mmSavingRate');
+  const fill = document.getElementById('mmCashflowFill');
+  const bar = document.getElementById('mmCashflowBar');
+  const used = income > 0 ? expense / income : (expense > 0 ? 1 : 0);
+  if (fill) {
+    fill.style.width = Math.min(used * 100, 100) + '%';
+    fill.classList.toggle('is-over', used > 1);
+    fill.classList.toggle('is-warn', used > 0.85 && used <= 1);
+  }
+  if (bar) bar.setAttribute('aria-label', income > 0
+    ? Math.round(used * 100) + '% pemasukan sudah terpakai'
+    : 'Belum ada pemasukan bulan ini');
+  if (chip) {
+    if (income <= 0) {
+      chip.textContent = 'Belum ada pemasukan';
+      chip.className = 'mm-rate-chip';
+    } else if (saving < 0) {
+      chip.textContent = 'Defisit';
+      chip.className = 'mm-rate-chip bad';
+    } else {
+      chip.textContent = Math.round(used * 100) + '% terpakai';
+      chip.className = 'mm-rate-chip ' + (used > 0.85 ? 'warn' : 'good');
     }
   }
+}
 
-  // Sparkline
-  mmRenderSparkline(data);
+/* === PULSE TILES + ALERTS === */
+function mmRenderPulse(data) {
+  const grid = document.getElementById('mmPulseGrid');
+  const alertsEl = document.getElementById('mmAlerts');
+  if (!grid) return;
+  const ctx = mmMonthContext();
+  const income = data.totalIncome || 0;
+  const expense = data.totalExpense || 0;
+  const prev = data.prevMonth || { income: 0, expense: 0, expenseToDate: 0, days: 30 };
 
-  // Summary values
-  setText('mmTotalIncome', mmFormatIDRShort(data.totalIncome));
-  setText('mmTotalExpense', mmFormatIDRShort(data.totalExpense));
-  setText('mmTotalSaving', mmFormatIDRShort(data.saving));
+  setText('mmPulseSub', `Hari ke-${ctx.day} dari ${ctx.daysInMonth} · sisa ${ctx.daysLeft - 1} hari`);
 
-  // Color saving
-  const savingEl = document.getElementById('mmTotalSaving');
-  if (savingEl) {
-    savingEl.style.color = data.saving >= 0 ? 'var(--success)' : 'var(--error)';
+  // 1. Safe to spend per day: what is left in the spending posts, spread over
+  // the days that remain. Falls back to income minus expense with no split.
+  const spendCards = (data.allocationCards || []).filter(c => (c.target || 0) > 0 && !MM_NON_SPEND_RE.test(c.category || ''));
+  const remaining = spendCards.length
+    ? spendCards.reduce((s, c) => s + Math.max((c.target || 0) - (c.spent || 0), 0), 0)
+    : Math.max(income - expense, 0);
+  const perDay = remaining / Math.max(ctx.daysLeft, 1);
+
+  // 2. Average per day, against last month over the same number of days.
+  const avg = expense / Math.max(ctx.day, 1);
+  const prevDaysSoFar = Math.min(ctx.day, prev.days || ctx.day);
+  const prevAvg = prev.expenseToDate / Math.max(prevDaysSoFar, 1);
+  const pace = prevAvg > 0 ? (avg - prevAvg) / prevAvg : null;
+
+  // 3. Where the month lands if the pace holds.
+  const projected = expense + avg * (ctx.daysInMonth - ctx.day);
+  const projGap = income - projected;
+
+  // 4. Savings rate, with what went to investments beside it.
+  const rate = income > 0 ? (income - expense) / income : null;
+  const invest = mmInvestThisMonth(data.monthTransactions);
+
+  const pct = (v) => Math.abs(Math.round(v * 100)) + '%';
+  const tiles = [
+    {
+      icon: 'wallet', label: 'Aman dipakai',
+      value: mmFormatIDRShort(perDay) + '<small>/hari</small>',
+      sub: remaining > 0 ? `sisa ${mmFormatIDRShort(remaining)} · ${ctx.daysLeft} hari` : 'budget belanja habis',
+      tone: remaining <= 0 ? 'bad' : (perDay < avg * 0.6 ? 'warn' : 'good')
+    },
+    {
+      icon: 'activity', label: 'Rata-rata harian',
+      value: mmFormatIDRShort(avg),
+      sub: pace === null ? 'belum ada pembanding' : `${pace > 0 ? '↑' : '↓'} ${pct(pace)} vs bulan lalu`,
+      tone: pace === null ? '' : (pace > 0.1 ? 'bad' : pace < -0.05 ? 'good' : '')
+    },
+    {
+      icon: 'trending-up', label: 'Proyeksi keluar',
+      value: mmFormatIDRShort(projected),
+      sub: income > 0
+        ? (projGap >= 0 ? `surplus ± ${mmFormatIDRShort(projGap)}` : `defisit ± ${mmFormatIDRShort(-projGap)}`)
+        : `bulan lalu ${mmFormatIDRShort(prev.expense)}`,
+      tone: income > 0 ? (projGap >= 0 ? 'good' : 'bad') : ''
+    },
+    {
+      icon: 'piggy-bank', label: 'Rasio hemat',
+      value: rate === null ? '–' : (rate < 0 ? '-' : '') + pct(rate),
+      sub: invest > 0 ? `invest ${mmFormatIDRShort(invest)}` : (rate === null ? 'belum ada pemasukan' : 'dari pemasukan'),
+      tone: rate === null ? '' : (rate >= 0.2 ? 'good' : rate < 0 ? 'bad' : 'warn')
+    }
+  ];
+
+  grid.innerHTML = tiles.map(t => `
+    <div class="mm-pulse-tile ${t.tone ? 'is-' + t.tone : ''}">
+      <span class="mm-pulse-label">${lucideIconSvg(t.icon, 14)}${t.label}</span>
+      <strong class="mm-pulse-value">${t.value}</strong>
+      <span class="mm-pulse-sub">${escapeHtml(t.sub)}</span>
+    </div>`).join('');
+
+  if (!alertsEl) return;
+
+  // Things worth acting on, worst first, at most three.
+  const alerts = [];
+  (data.allocationCards || []).forEach(c => {
+    const target = c.target || 0, spent = c.spent || 0;
+    if (target <= 0 || MM_NON_SPEND_RE.test(c.category || '')) return;
+    if (spent > target) {
+      alerts.push({ rank: 0, tone: 'bad', icon: 'alert-triangle', cat: c.category,
+        text: `<strong>${escapeHtml(c.category)}</strong> lewat budget ${mmFormatIDRShort(spent - target)}` });
+    } else if (spent / target >= 0.85) {
+      alerts.push({ rank: 1, tone: 'warn', icon: 'alert-circle', cat: c.category,
+        text: `<strong>${escapeHtml(c.category)}</strong> sudah ${Math.round(spent / target * 100)}%, sisa ${mmFormatIDRShort(target - spent)}` });
+    }
+  });
+  if (pace !== null && pace > 0.2) {
+    alerts.push({ rank: 2, tone: 'warn', icon: 'gauge',
+      text: `Belanja ${pct(pace)} lebih cepat dari bulan lalu di tanggal yang sama` });
+  }
+  const expenses = (data.monthTransactions || []).filter(tx => tx.type === 'Expense');
+  if (expenses.length >= 3 && expense > 0) {
+    const top = expenses.reduce((a, b) => (b.amount > a.amount ? b : a));
+    const share = top.amount / expense;
+    if (share >= 0.25) {
+      alerts.push({ rank: 3, tone: 'info', icon: 'receipt', cat: top.category,
+        text: `<strong>${escapeHtml(top.notes || top.category || 'Satu transaksi')}</strong> = ${pct(share)} pengeluaran bulan ini` });
+    }
+  }
+  if (income <= 0) {
+    alerts.push({ rank: 4, tone: 'info', icon: 'info', text: 'Belum ada pemasukan tercatat bulan ini — budget belum terbentuk' });
   }
 
-  // Render accounts
-  mmRenderAccountCards(data.accounts || []);
+  alertsEl.innerHTML = alerts.sort((a, b) => a.rank - b.rank).slice(0, 3).map(a => {
+    const attrs = a.cat
+      ? `role="button" tabindex="0" onclick="mmShowCategoryDetail('${jsStr(a.cat)}')" onkeydown="if(event.key==='Enter'){this.click();}"`
+      : '';
+    return `<div class="mm-alert is-${a.tone}" ${attrs}>${lucideIconSvg(a.icon, 16)}<span>${a.text}</span></div>`;
+  }).join('');
+}
 
-  // Render budget
-  mmRenderBudgetCard(data.allocationCards || [], data.totalIncome || 0);
+/* === DAILY SPENDING CHART ===
+   One bar per day of the month; days still to come stay as empty slots so
+   the month's shape is visible. A dashed line marks the average. Tap a bar
+   to read its day. */
+let MM_DAILY = [];
 
-  // Render chart and transactions
-  mmRenderChart('expense');
-  mmRenderDashboardTransactions();
+function mmRenderDaily(data) {
+  const chart = document.getElementById('mmDailyChart');
+  if (!chart) return;
+  const ctx = mmMonthContext();
+  const prev = data.prevMonth || { expenseToDate: 0 };
+
+  const days = Array.from({ length: ctx.daysInMonth }, () => ({ amount: 0, count: 0 }));
+  (data.monthTransactions || []).forEach(tx => {
+    if (tx.type !== 'Expense') return;
+    const d = Number(String(tx.date || '').slice(8, 10));
+    if (d >= 1 && d <= ctx.daysInMonth) { days[d - 1].amount += tx.amount; days[d - 1].count++; }
+  });
+  MM_DAILY = days;
+
+  const spent = days.reduce((s, d) => s + d.amount, 0);
+  const avg = spent / Math.max(ctx.day, 1);
+  const max = Math.max(...days.map(d => d.amount), 1);
+  const diffPrev = prev.expenseToDate > 0 ? (spent - prev.expenseToDate) / prev.expenseToDate : null;
+
+  setText('mmDailySub', `Rata-rata ${mmFormatIDRShort(avg)}/hari` + (diffPrev === null ? '' :
+    ` · ${diffPrev > 0 ? '↑' : '↓'} ${Math.abs(Math.round(diffPrev * 100))}% vs bulan lalu`));
+
+  if (spent <= 0) {
+    chart.innerHTML = mmEmpty('bar-chart-3', 'Belum ada pengeluaran bulan ini', '');
+    setText('mmDailyFoot', '');
+    return;
+  }
+
+  const avgPct = Math.min(avg / max * 100, 100);
+  const bars = days.map((d, i) => {
+    const day = i + 1;
+    const cls = day > ctx.day ? 'is-future' : (day === ctx.day ? 'is-today' : '') + (d.amount > avg * 1.5 ? ' is-high' : '');
+    const h = d.amount > 0 ? Math.max(d.amount / max * 100, 4) : 0;
+    const label = `${day} ${ctx.monthName}: ${d.amount > 0 ? mmFormatIDR(d.amount) : 'tidak ada pengeluaran'}`;
+    return `<button type="button" class="mm-daily-bar ${cls}" style="--h:${h}%" aria-label="${escapeHtml(label)}" ${day > ctx.day ? 'disabled' : ''} onclick="mmSelectDailyBar(${i})"><span></span></button>`;
+  }).join('');
+  const ticks = [1, 8, 15, 22, ctx.daysInMonth].map(d =>
+    `<span style="left:${(d - 0.5) / ctx.daysInMonth * 100}%">${d}</span>`).join('');
+
+  chart.innerHTML = `
+    <div class="mm-daily-plot">
+      <div class="mm-daily-avg" style="bottom:${avgPct}%"><span>rata-rata</span></div>
+      ${bars}
+    </div>
+    <div class="mm-daily-ticks">${ticks}</div>`;
+
+  // Default caption: the heaviest day.
+  let peak = 0;
+  days.forEach((d, i) => { if (d.amount > days[peak].amount) peak = i; });
+  mmDailyCaption(peak, 'Tertinggi');
+}
+
+function mmDailyCaption(i, prefix) {
+  const d = MM_DAILY[i];
+  const foot = document.getElementById('mmDailyFoot');
+  if (!d || !foot) return;
+  const ctx = mmMonthContext();
+  const date = localISODate(new Date(ctx.now.getFullYear(), ctx.now.getMonth(), i + 1));
+  foot.innerHTML = `<span>${prefix ? prefix + ' · ' : ''}${escapeHtml(mmDayLabel(date))}</span>`
+    + `<strong>${d.amount > 0 ? mmFormatIDR(d.amount) : '–'}</strong>`
+    + `<span class="mm-daily-count">${d.count} transaksi</span>`;
+}
+
+function mmSelectDailyBar(i) {
+  document.querySelectorAll('.mm-daily-bar').forEach((b, j) => b.classList.toggle('is-selected', j === i));
+  mmDailyCaption(i, '');
 }
 
 /* === SPARKLINE === */
@@ -462,39 +696,55 @@ function mmRenderSparkline(data) {
   ctx.fill();
 }
 
-/* === ACCOUNT CARDS === */
-function mmRenderAccountCards(accounts) {
+/* === ACCOUNT CARDS ===
+   A two-column grid instead of a sideways scroller: every account visible at
+   once, each with its share of the total so concentration is obvious. */
+function mmRenderAccountCards(accounts, netWorth) {
   const container = document.getElementById('mmAccountsScroll');
   if (!container) return;
 
-  const visible = accounts.filter(a => a.showOnDashboard);
+  const visible = accounts.filter(a => a.showOnDashboard).sort((a, b) => (b.balance || 0) - (a.balance || 0));
+  const sub = document.getElementById('mmAccountsSub');
   if (!visible.length) {
+    if (sub) sub.innerHTML = '&nbsp;';
     container.innerHTML = mmEmpty('wallet', 'Belum ada akun', 'Tambahkan rekening atau dompet di Settings supaya saldonya ikut terhitung.');
     return;
   }
 
   const typeColors = {
     'Bank': '#60a5fa', 'E-Wallet': '#22d3ee', 'Cash': '#fbbf24',
-    'Credit Card': '#f472b6', 'Investment': '#818cf8', 'Other': '#6b7280'
+    'Credit Card': '#f472b6', 'Investment': '#818cf8', 'Other': '#94a3b8'
   };
+  // Shares of what is actually held: an overdrawn account would otherwise
+  // push the others past 100%.
+  const total = visible.reduce((s, a) => s + Math.max(a.balance || 0, 0), 0);
+  if (sub) {
+    const top = visible[0];
+    const share = total > 0 ? Math.round((top.balance || 0) / total * 100) : 0;
+    sub.textContent = `${visible.length} akun · ${top.name} ${share}% dari total`;
+  }
 
-  container.innerHTML = visible.map(a => {
+  // Empty accounts collapse into one line instead of a tile each.
+  const empty = visible.filter(a => !(a.balance || 0));
+  const shown = visible.filter(a => a.balance || 0);
+
+  container.innerHTML = shown.map(a => {
     const color = typeColors[a.type] || typeColors['Other'];
     const initials = (a.name || '').substring(0, 2).toUpperCase();
+    const share = total > 0 ? Math.max(Math.min((a.balance || 0) / total * 100, 100), 0) : 0;
     return `
-      <div class="mm-account-card" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
-        <div class="mm-account-top">
-          <div class="mm-account-logo" style="background:${color}22;color:${color}">
-            ${a.icon ? mmAccountIconSvg(a.icon, 18) : initials}
-          </div>
-          <div class="mm-account-info-col">
-            <span class="mm-account-name">${escapeHtml(a.name)}</span>
-            <span class="mm-account-type">${escapeHtml(a.type || 'Account')}</span>
-          </div>
-        </div>
-        <div class="mm-account-balance">${mmFormatIDR(a.balance)}</div>
-      </div>`;
-  }).join('');
+      <button type="button" class="mm-acc-tile" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
+        <span class="mm-acc-top">
+          <span class="mm-acc-logo" style="background:${color}22;color:${color}">${a.icon ? mmAccountIconSvg(a.icon, 15) : initials}</span>
+          <span class="mm-acc-name">${escapeHtml(a.name)}</span>
+          <span class="mm-acc-share">${Math.round(share)}%</span>
+        </span>
+        <strong class="mm-acc-balance${(a.balance || 0) < 0 ? ' is-neg' : ''}">${mmFormatIDR(a.balance)}</strong>
+        <span class="mm-acc-bar"><span style="width:${share}%;background:${color}"></span></span>
+      </button>`;
+  }).join('') + (empty.length
+    ? `<p class="mm-acc-empty">Saldo 0: ${empty.map(a => escapeHtml(a.name)).join(', ')}</p>`
+    : '');
 }
 
 /* === BUDGET CARD === */
@@ -1931,6 +2181,14 @@ function lucideIconSvg(name, size) {
   size = size || 16;
   // Predefined SVG paths for the icons we use
   const paths = {
+    'activity': '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+    'piggy-bank': '<path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><path d="M16 11h.01"/>',
+    'alert-triangle': '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    'alert-circle': '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+    'gauge': '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
+    'receipt': '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/>',
+    'info': '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+    'bar-chart-3': '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
     'home': '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
     'gamepad-2': '<line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/>',
     'heart-handshake': '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66"/><path d="m18 15-2-2"/><path d="m15 18-2-2"/>',
