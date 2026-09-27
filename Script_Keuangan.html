@@ -643,57 +643,46 @@ function mmSelectDailyBar(i) {
   mmDailyCaption(i, '');
 }
 
-/* === SPARKLINE === */
+/* === SPARKLINE ===
+   Inline SVG, not <canvas>: an accelerated canvas is its own GPU layer and
+   drags the text above it into layers too, and Android dropped those tiles
+   (white rectangles) at the end of a fast scroll. SVG is ordinary paint. */
 function mmRenderSparkline(data) {
-  const canvas = document.getElementById('mmNetworthSparkline');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width = canvas.offsetWidth * 2;
-  const h = canvas.height = canvas.offsetHeight * 2;
-  ctx.clearRect(0, 0, w, h);
+  const svg = document.getElementById('mmNetworthSparkline');
+  if (!svg) return;
 
   // Month-end net worth for the last 6 months, computed in mmGetDashboard.
   // Never fabricate a shape: if there is not enough history to draw a real
   // line, draw nothing rather than an invented upward slope.
   const points = ((data && data.netWorthTrend) || []).map(p => p.netWorth);
   if (points.length < 2) {
-    canvas.style.display = 'none';
+    svg.innerHTML = '';
+    svg.style.display = 'none';
     return;
   }
-  canvas.style.display = '';
+  svg.style.display = '';
 
+  const w = 200, h = 80;
   const min = Math.min(...points);
   const max = Math.max(...points);
   const range = max - min || 1;
   const padTop = h * 0.15;
   const padBot = h * 0.05;
   const usableH = h - padTop - padBot;
+  const xy = points.map((val, i) => [
+    (i / (points.length - 1)) * w,
+    padTop + usableH - ((val - min) / range) * usableH
+  ]);
+  const line = xy.map(([x, y], i) => (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1)).join(' ');
 
-  ctx.beginPath();
-  points.forEach((val, i) => {
-    const x = (i / (points.length - 1)) * w;
-    const y = padTop + usableH - ((val - min) / range) * usableH;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-
-  ctx.strokeStyle = '#93c5fd';
-  ctx.lineWidth = 2.5;
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  ctx.stroke();
-
-  // Fill gradient under the line
-  const lastX = w;
-  const lastY = padTop + usableH - ((points[points.length - 1] - min) / range) * usableH;
-  ctx.lineTo(lastX, h);
-  ctx.lineTo(0, h);
-  ctx.closePath();
-  const grad = ctx.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0, 'rgba(96,165,250,0.30)');
-  grad.addColorStop(1, 'rgba(96,165,250,0)');
-  ctx.fillStyle = grad;
-  ctx.fill();
+  svg.innerHTML =
+    '<defs><linearGradient id="mmSparkFill" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="rgba(96,165,250,0.30)"/>' +
+      '<stop offset="1" stop-color="rgba(96,165,250,0)"/>' +
+    '</linearGradient></defs>' +
+    '<path d="' + line + ' L' + w + ' ' + h + ' L0 ' + h + ' Z" fill="url(#mmSparkFill)"/>' +
+    '<path d="' + line + '" fill="none" stroke="#93c5fd" stroke-width="2" ' +
+      'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
 }
 
 /* === ACCOUNT CARDS ===
