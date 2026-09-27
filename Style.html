@@ -5984,5 +5984,79 @@ html, body { overscroll-behavior: none; }
   .mm-networth-amount, .iv-hero-value { font-size: 26px; }
 }
 
+/* ============================================================
+   INPUT SHEETS — fixed header, scrolling form, pinned Save
+   The whole sheet used to be one scroller, so the amount scrolled out of
+   sight and a drag on it could fall through to the page. Now the handle,
+   type tabs and amount never move; only the form between them scrolls,
+   and Save is always reachable. Chip groups are single swipeable rows so
+   the form is short enough to rarely need vertical scrolling at all.
+   ============================================================ */
+.action-sheet-content.tx-input-sheet {
+  --sheet-pad: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 10px 0 0;
+}
+.tx-input-sheet > .action-sheet-handle { flex: none; margin: 0 auto 12px; }
+.tx-input-sheet > .tx-type-tabs {
+  flex: none;
+  margin: 0 var(--sheet-pad) 4px;
+}
+.tx-input-sheet > .tx-amount-hero {
+  flex: none;
+  margin: 0 var(--sheet-pad);
+  padding: 8px 0 12px;
+}
+.tx-sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px var(--sheet-pad) 4px;
+  scroll-padding-block: 12px;
+}
+.tx-sheet-footer {
+  flex: none;
+  padding: 10px var(--sheet-pad) calc(14px + var(--safe-bottom, 0px));
+  border-top: 1px solid var(--border);
+}
+.tx-sheet-footer .tx-save-btn { margin-top: 0; }
+
+/* Chip groups: one row, swipe sideways. The row runs to the sheet edges so
+   a cut-off chip at the right hints there is more. */
+.tx-input-sheet .tx-chips,
+.tx-input-sheet .tx-recent-chips {
+  position: relative;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: var(--sheet-pad);
+  scrollbar-width: none;
+  margin-inline: calc(-1 * var(--sheet-pad));
+  padding: 3px var(--sheet-pad) 5px;
+  touch-action: pan-x pan-y;
+}
+.tx-input-sheet .tx-chips::-webkit-scrollbar,
+.tx-input-sheet .tx-recent-chips::-webkit-scrollbar { display: none; }
+.tx-input-sheet .tx-chip,
+.tx-input-sheet .tx-recent-chip {
+  flex: none;
+  white-space: nowrap;
+  scroll-snap-align: start;
+}
+.tx-input-sheet .tx-recent-chip { min-height: 36px; }
+.tx-input-sheet .tx-section { margin-bottom: 12px; }
+.tx-input-sheet .tx-section-label { margin-bottom: 4px; }
+
+@media (max-width: 480px) {
+  .action-sheet-content.tx-input-sheet { --sheet-pad: 16px; padding: 10px 0 0; }
+  .tx-input-sheet .tx-amount-field { font-size: 32px; }
+}
+
 </style>
 

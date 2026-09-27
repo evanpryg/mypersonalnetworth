@@ -761,6 +761,9 @@
         <input type="text" id="ivAmountInput" class="tx-amount-field" inputmode="decimal" placeholder="0" autocomplete="off">
       </div>
 
+      <!-- Only the form scrolls: tabs + amount stay on top, Save stays at the bottom -->
+      <div class="tx-sheet-body">
+
       <!-- Date -->
       <div class="tx-section" id="ivDateSection">
         <label class="tx-section-label">Date</label>
@@ -804,10 +807,14 @@
         <input type="text" id="ivNotesInput" class="tx-notes-input" placeholder="Optional note...">
       </div>
 
+      </div>
+
       <!-- Save Button -->
+      <div class="tx-sheet-footer">
       <button class="btn-primary btn-full tx-save-btn" id="ivSaveBtn" onclick="ivSubmit()">
         Save Transaction
       </button>
+      </div>
     </div>
   </div>
 
@@ -829,6 +836,9 @@
         <span class="tx-amount-prefix">Rp</span>
         <input type="text" id="txAmountInput" class="tx-amount-field" inputmode="decimal" placeholder="0" autocomplete="off">
       </div>
+
+      <!-- Only the form scrolls: tabs + amount stay on top, Save stays at the bottom -->
+      <div class="tx-sheet-body">
 
       <!-- Recently Used -->
       <div class="tx-section" id="txRecentlyUsed" style="display:none;">
@@ -893,10 +903,14 @@
         <input type="text" id="txNotesInput" class="tx-notes-input" placeholder="Optional note...">
       </div>
 
+      </div>
+
       <!-- Save Button -->
+      <div class="tx-sheet-footer">
       <button class="btn-primary btn-full tx-save-btn" id="txSaveBtn" onclick="txSubmit()">
         Save Transaction
       </button>
+      </div>
     </div>
   </div>
 

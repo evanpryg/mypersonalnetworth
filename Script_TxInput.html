@@ -530,24 +530,30 @@ function txSaveRecent(payload) {
     return null;
   }
 
-  let startX = 0, startY = 0, lockedAxis = null;
+  let startX = 0, startY = 0, lastY = 0, lockedAxis = null;
   document.addEventListener('touchstart', function (e) {
     if (e.touches.length !== 1) return;
     startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
+    startY = lastY = e.touches[0].clientY;
     lockedAxis = null;
   }, { passive: true });
 
   document.addEventListener('touchmove', function (e) {
-    if (e.touches.length !== 1 || !e.cancelable) return;
-    const dx = e.touches[0].clientX - startX;
-    const dy = e.touches[0].clientY - startY;
+    if (e.touches.length !== 1) return;
+    const y = e.touches[0].clientY;
+    // Direction of THIS move, not of the whole gesture: a drag that first
+    // went up at the bottom of a sheet and then turned back down is a
+    // scroll-up and must not be cancelled.
+    const dy = y - lastY;
+    lastY = y;
+    if (!e.cancelable) return;
     if (!lockedAxis) {
-      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
-      lockedAxis = Math.abs(dy) >= Math.abs(dx) ? 'y' : 'x';
+      const tx = e.touches[0].clientX - startX, ty = y - startY;
+      if (Math.abs(tx) < 4 && Math.abs(ty) < 4) return;
+      lockedAxis = Math.abs(ty) >= Math.abs(tx) ? 'y' : 'x';
     }
     // Sideways drags (chip rows, charts) are never ours to stop.
-    if (lockedAxis !== 'y') return;
+    if (lockedAxis !== 'y' || dy === 0) return;
 
     const overlay = document.querySelector(OVERLAYS);
     if (overlay) {
@@ -567,6 +573,30 @@ function txSaveRecent(payload) {
       if (!inner || inner.scrollTop <= 0) e.preventDefault();
     }
   }, { passive: false });
+
+  /* Input sheets: every open starts at the top of the form, and a chip row
+     that is re-rendered (selecting a chip rebuilds the row, which resets its
+     sideways scroll) brings the selected chip back into view. */
+  function revealActive(row) {
+    const chip = row.querySelector('.active');
+    if (!chip || row.scrollWidth <= row.clientWidth) return;
+    const left = chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2;
+    row.scrollLeft = Math.max(0, left);
+  }
+  document.querySelectorAll('.tx-input-sheet').forEach(function (sheet) {
+    const backdrop = sheet.parentElement;
+    const body = sheet.querySelector('.tx-sheet-body');
+    new MutationObserver(function () {
+      if (backdrop.classList.contains('hidden')) return;
+      if (body) body.scrollTop = 0;
+      sheet.querySelectorAll('.tx-chips').forEach(revealActive);
+    }).observe(backdrop, { attributes: true, attributeFilter: ['class'] });
+
+    sheet.querySelectorAll('.tx-chips').forEach(function (row) {
+      new MutationObserver(function () { revealActive(row); })
+        .observe(row, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    });
+  });
 })();
 
 </script>
