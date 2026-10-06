@@ -6083,6 +6083,236 @@ html, body { overscroll-behavior: none; }
   .tx-input-sheet .tx-amount-field { font-size: 32px; }
 }
 
+/* ============================================================
+   ALLOCATION — full amounts, platform rows open their breakdown
+   ============================================================ */
+.iv-alloc-amount { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #CBD5E1; }
+.iv-alloc-meta { font-size: 12.5px; }
+.iv-alloc-link {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast), transform var(--dur-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+.iv-alloc-link:active { transform: scale(0.985); }
+.iv-alloc-link:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+@media (hover: hover) { .iv-alloc-link:hover { background: rgba(255,255,255,0.03); } }
+.iv-alloc-chev { width: 14px; height: 14px; flex-shrink: 0; color: var(--text-muted); }
+
+/* ============================================================
+   PLATFORM PAGE — one card per account, full rupiah everywhere
+   ============================================================ */
+.iv-pf-head { padding: 8px 20px 12px; }
+.iv-pf-overview {
+  display: grid;
+  gap: 12px;
+  margin: 0 16px 16px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(147,197,253,0.22);
+  background:
+    radial-gradient(120% 110% at 100% 0%, rgba(59,130,246,0.28) 0%, transparent 55%),
+    #1A2540;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+}
+.iv-pf-overview:empty { display: none; }
+.iv-pf-ov-total span,
+.iv-pf-ov-split span {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #CBD5E1;
+}
+.iv-pf-ov-total strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.iv-pf-ov-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+}
+.iv-pf-ov-split > div { min-width: 0; }
+.iv-pf-ov-split > div + div { padding-left: 12px; border-left: 1px solid rgba(255,255,255,0.10); }
+.iv-pf-ov-split strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.iv-pf-list { display: grid; gap: 12px; padding: 0 16px; }
+.iv-pf-list > .empty-state { padding: 24px 8px; text-align: center; }
+.iv-pf-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.045);
+  min-width: 0;
+  scroll-margin-top: calc(76px + env(safe-area-inset-top, 0px));
+  animation: fadeInUp 0.3s var(--ease-out) backwards;
+}
+.iv-pf-card.is-flash { animation: ivPfFlash 1.2s var(--ease-out); }
+@keyframes ivPfFlash {
+  0%, 30% { border-color: rgba(96,165,250,0.7); box-shadow: 0 0 0 3px rgba(96,165,250,0.18); }
+  100% { border-color: var(--border); box-shadow: inset 0 1px 0 rgba(255,255,255,0.045); }
+}
+.iv-pf-summary {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  list-style: none;
+  cursor: pointer;
+  border-radius: 18px;
+  -webkit-tap-highlight-color: transparent;
+}
+.iv-pf-summary::-webkit-details-marker { display: none; }
+.iv-pf-summary:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.iv-pf-head-row { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.iv-pf-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(var(--accent-rgb),0.16);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.iv-pf-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.iv-pf-title strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.iv-pf-title small { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.iv-pf-chev {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform var(--dur);
+}
+.iv-pf-card[open] .iv-pf-chev { transform: rotate(180deg); }
+.iv-pf-total {
+  margin-top: 4px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.iv-pf-pl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.iv-muted-2 { font-weight: 500; color: var(--text-muted); }
+.iv-pf-bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 99px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.07);
+}
+.iv-pf-bar span { display: block; height: 100%; min-width: 3px; }
+
+.iv-pf-rows { padding: 0 14px 4px; border-top: 1px solid var(--border); }
+.iv-pf-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; }
+.iv-pf-row + .iv-pf-row { border-top: 1px solid var(--border); }
+.iv-pf-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.iv-pf-icon-cash { background: rgba(148,163,184,0.16); color: #CBD5E1; }
+.iv-pf-icon-cash svg { width: 17px; height: 17px; }
+.iv-pf-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.iv-pf-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.iv-pf-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+.iv-pf-nums {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: 58%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.iv-pf-nums strong { font-size: 14px; font-weight: 700; color: var(--text); }
+.iv-pf-nums strong.negative { color: var(--error); }
+.iv-pf-nums span { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.iv-pf-nums small { font-size: 11.5px; color: var(--text-muted); }
+.iv-pf-nums .positive { color: var(--success); }
+.iv-pf-nums .negative { color: var(--error); }
+
+@media (min-width: 769px) {
+  .iv-pf-overview { margin-left: 32px; margin-right: 32px; }
+  .iv-pf-list { padding: 0 32px; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .iv-pf-head { padding-left: 36px; padding-right: 36px; }
+}
+@media (max-width: 480px) {
+  .iv-pf-overview { margin-left: 12px; margin-right: 12px; }
+  .iv-pf-list { padding: 0 12px; }
+  .iv-pf-head { padding-left: 16px; padding-right: 16px; }
+}
+@media (max-width: 360px) {
+  .iv-pf-total { font-size: 22px; }
+  .iv-pf-ov-total strong { font-size: 23px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iv-pf-card, .iv-pf-card.is-flash { animation: none; }
+}
+
 </style>
 
 
@@ -6211,6 +6441,25 @@ html, body { overscroll-behavior: none; }
               <div class="mm-dash-card mm-transaction-list" id="ivHoldingsList"></div>
             </section>
 
+          </section>
+        </div>
+
+        <!-- ===== PLATFORM PAGE =====
+             One card per account (Pluang, Bibit, …): its total, then exactly
+             where that money sits — idle cash first, then every holding —
+             with full rupiah amounts, never rounded to "jt". -->
+        <div id="platformPage" class="page">
+          <section class="dashboard-wrap">
+            <header class="ins-page-head iv-pf-head">
+              <div>
+                <h2 class="page-title">Platform</h2>
+                <p class="ins-page-sub" id="ivPfSub">&nbsp;</p>
+              </div>
+            </header>
+            <div class="iv-pf-overview" id="ivPfOverview"></div>
+            <div class="iv-pf-list" id="ivPfList">
+              <div class="empty-state">Memuat data platform…</div>
+            </div>
           </section>
         </div>
 
@@ -6771,6 +7020,10 @@ html, body { overscroll-behavior: none; }
       <button class="tab-item active" data-page="dashboardPage" onclick="showPage('dashboardPage')">
         <i data-lucide="layout-dashboard" class="tab-icon"></i>
         <small>Dashboard</small>
+      </button>
+      <button class="tab-item" data-page="platformPage" onclick="showPage('platformPage')">
+        <i data-lucide="wallet" class="tab-icon"></i>
+        <small>Platform</small>
       </button>
       <button class="tab-item" data-page="historyPage" onclick="showPage('historyPage')">
         <i data-lucide="clock" class="tab-icon"></i>
@@ -8853,55 +9106,215 @@ function injectAuthSettingsCard() {
     platformList.style.display = isSector ? 'none' : '';
     document.getElementById('ivAllocTabSector')?.classList.toggle('active', isSector);
     document.getElementById('ivAllocTabPlatform')?.classList.toggle('active', !isSector);
+    IV_ALLOC_TAB = isSector ? 'balance' : 'platform';
+    ivAllocSubtitle();
   }
 
-  /* === PLATFORM BREAKDOWN ===
-     Value per platform with how much of it is uninvested cash. */
+  let IV_ALLOC_TAB = 'balance';
+  function ivAllocSubtitle() {
+    const data = LATEST_DASHBOARD_DATA;
+    if (!data) return;
+    const count = IV_ALLOC_TAB === 'platform'
+      ? `${ivGroupPlatforms(data.portfolio).length} platform`
+      : `${(data.allocationBySector || []).length} sektor`;
+    setText('allocationTotalText', `${count} · ${ivFull(data.summary.totalPortfolioValueIDR || 0)}`);
+  }
+
+  /* === PLATFORM GROUPING ===
+     Portfolio rows folded into one entry per account: total, idle cash,
+     open holdings (biggest first) and the return on what is invested.
+     Fully sold positions (value 0) are left out. */
+  function ivGroupPlatforms(portfolio) {
+    const map = {};
+    (portfolio || []).forEach(item => {
+      const name = item.Platform || 'Lainnya';
+      const p = map[name] || (map[name] = { platform: name, value: 0, cash: 0, invested: 0, capital: 0, pl: 0, holdings: [] });
+      const v = Number(item.CurrentValueIDR) || 0;
+      if (item.Sector === 'Cash') {
+        p.cash += v;
+        p.value += v;
+        return;
+      }
+      if (v === 0) return;
+      p.value += v;
+      p.invested += v;
+      p.capital += Number(item.TotalCapitalIDR) || 0;
+      p.pl += Number(item.ProfitLossIDR) || 0;
+      p.holdings.push(item);
+    });
+    return Object.values(map)
+      .filter(p => p.value !== 0 || p.holdings.length)
+      .map(p => {
+        p.holdings.sort((a, b) => (Number(b.CurrentValueIDR) || 0) - (Number(a.CurrentValueIDR) || 0));
+        p.ret = p.capital > 0 ? p.pl / p.capital : null;
+        return p;
+      })
+      .sort((a, b) => b.value - a.value);
+  }
+
+  /* === PLATFORM BREAKDOWN (dashboard tab) ===
+     Value per platform with how much of it is uninvested cash. Each row
+     opens that platform's full breakdown on the Platform page. */
   function renderPlatformCash(portfolio) {
     const container = document.getElementById('platformCashList');
     if (!container) return;
-    if (!portfolio || !portfolio.length) {
+    const platforms = ivGroupPlatforms(portfolio);
+    if (!platforms.length) {
       container.innerHTML = '<div class="empty-state">Belum ada data platform.</div>';
       return;
     }
-
-    const platformMap = {};
-    portfolio.forEach(item => {
-      const platform = item.Platform || 'Unknown';
-      if (!platformMap[platform]) platformMap[platform] = { value: 0, cash: 0, pl: 0, capital: 0 };
-      const v = Number(item.CurrentValueIDR) || 0;
-      platformMap[platform].value += v;
-      if (item.Sector === 'Cash') platformMap[platform].cash += v;
-      else {
-        platformMap[platform].pl += Number(item.ProfitLossIDR) || 0;
-        platformMap[platform].capital += Number(item.TotalCapitalIDR) || 0;
-      }
-    });
-
-    const platforms = Object.entries(platformMap)
-      .map(([platform, v]) => Object.assign({ platform }, v))
-      .sort((a, b) => b.value - a.value);
     const total = platforms.reduce((s, i) => s + i.value, 0);
     const max = Math.max(...platforms.map(p => p.value), 1);
 
     container.innerHTML = platforms.map(p => {
-      const ret = p.capital > 0 ? p.pl / p.capital : null;
-      const cls = ret === null ? '' : ret > 0 ? 'positive' : ret < 0 ? 'negative' : '';
+      const cls = p.ret === null ? '' : p.ret > 0 ? 'positive' : p.ret < 0 ? 'negative' : '';
       return `
-        <div class="iv-alloc-row">
+        <button type="button" class="iv-alloc-row iv-alloc-link" onclick="ivOpenPlatform('${jsStr(p.platform)}')" aria-label="Lihat rincian ${escapeHtml(p.platform)}">
           <div class="iv-alloc-top">
-            <span class="iv-alloc-name">${escapeHtml(p.platform)}</span>
-            <span class="iv-alloc-pct"><strong>${total > 0 ? (p.value / total * 100).toFixed(1).replace('.', ',') : 0}%</strong></span>
+            <span class="iv-alloc-name">${escapeHtml(p.platform)}<i data-lucide="chevron-right" class="iv-alloc-chev" aria-hidden="true"></i></span>
+            <span class="iv-alloc-pct"><strong>${total > 0 ? ivPct(p.value / total) : '0%'}</strong></span>
           </div>
           <div class="iv-alloc-bar">
-            <span class="iv-alloc-fill" style="width:${p.value / max * 100}%;background:var(--accent)"></span>
+            <span class="iv-alloc-fill" style="width:${Math.max(p.value, 0) / max * 100}%;background:var(--accent)"></span>
           </div>
           <div class="iv-alloc-meta">
-            <span>${ivShort(p.value)}${ret !== null ? ` · <span class="${cls}">${ivPct(ret, true)}</span>` : ''}</span>
-            <span class="iv-status status-muted">cash ${ivShort(p.cash)}</span>
+            <span class="iv-alloc-amount">${ivFull(p.value)}${p.ret !== null ? ` · <span class="${cls}">${ivPct(p.ret, true)}</span>` : ''}</span>
+            <span class="iv-status status-muted">Saldo ${ivFull(p.cash)}</span>
           </div>
-        </div>`;
+        </button>`;
     }).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
+  /* === PLATFORM PAGE ===
+     Every account as an open card: total and return up top, a stacked bar
+     of where the money sits, then saldo + each holding in full rupiah. */
+  const IV_PF_COLLAPSED = new Set();
+
+  function ivPlatformInitials(name) {
+    const words = String(name || '?').trim().split(/\s+/);
+    const txt = words.length > 1 ? words[0][0] + words[1][0] : words[0].substring(0, 2);
+    return txt.toUpperCase();
+  }
+
+  function renderPlatformAccounts(portfolio) {
+    const list = document.getElementById('ivPfList');
+    const sub = document.getElementById('ivPfSub');
+    const overview = document.getElementById('ivPfOverview');
+    if (!list) return;
+    const platforms = ivGroupPlatforms(portfolio);
+    if (!platforms.length) {
+      if (sub) sub.innerHTML = '&nbsp;';
+      if (overview) overview.innerHTML = '';
+      list.innerHTML = '<div class="empty-state">Belum ada platform. Catat deposit atau pembelian pertama lewat tombol +.</div>';
+      return;
+    }
+
+    const total = platforms.reduce((s, p) => s + p.value, 0);
+    const totalCash = platforms.reduce((s, p) => s + p.cash, 0);
+    const totalInvested = platforms.reduce((s, p) => s + p.invested, 0);
+    if (sub) sub.textContent = `${platforms.length} platform · ${platforms.reduce((s, p) => s + p.holdings.length, 0)} aset`;
+    if (overview) {
+      overview.innerHTML = `
+        <div class="iv-pf-ov-total">
+          <span>Total semua platform</span>
+          <strong>${ivFull(total)}</strong>
+        </div>
+        <div class="iv-pf-ov-split">
+          <div><span>Diinvestasikan</span><strong>${ivFull(totalInvested)}</strong></div>
+          <div><span>Saldo cash</span><strong>${ivFull(totalCash)}</strong></div>
+        </div>`;
+    }
+
+    list.innerHTML = platforms.map(p => {
+      const share = total > 0 ? p.value / total : 0;
+      const retCls = p.ret === null ? '' : p.ret > 0 ? 'positive' : p.ret < 0 ? 'negative' : '';
+      const plLine = p.ret === null
+        ? '<span class="iv-muted-2">Belum ada aset</span>'
+        : `<span class="${retCls}">${ivFull(p.pl, true)} (${ivPct(p.ret, true)})</span><span class="iv-muted-2">belum direalisasi</span>`;
+
+      // Stacked bar: cash in slate, holdings in their sector colour.
+      const barBase = Math.max(p.value, 1);
+      const segs = (p.cash > 0 ? [{ v: p.cash, c: ivSectorColor('Cash'), t: 'Saldo' }] : [])
+        .concat(p.holdings.map(h => ({ v: Number(h.CurrentValueIDR) || 0, c: ivSectorColor(h.Sector), t: h.Asset })))
+        .filter(s => s.v > 0)
+        .map(s => `<span style="width:${s.v / barBase * 100}%;background:${s.c}" title="${escapeHtml(s.t)}"></span>`)
+        .join('');
+
+      const cashShare = p.value > 0 ? p.cash / p.value : 0;
+      const cashRow = `
+        <div class="iv-pf-row">
+          <span class="iv-pf-icon iv-pf-icon-cash" aria-hidden="true"><i data-lucide="wallet"></i></span>
+          <span class="iv-pf-info">
+            <span class="iv-pf-name">Saldo</span>
+            <span class="iv-pf-meta">Cash · ${ivPct(cashShare)}</span>
+          </span>
+          <span class="iv-pf-nums">
+            <strong class="${p.cash < 0 ? 'negative' : ''}">${ivFull(p.cash)}</strong>
+          </span>
+        </div>`;
+
+      const holdingRows = p.holdings.map(h => {
+        const value = Number(h.CurrentValueIDR) || 0;
+        const capital = Number(h.TotalCapitalIDR) || 0;
+        const pl = Number(h.ProfitLossIDR) || 0;
+        const cls = pl > 0 ? 'positive' : pl < 0 ? 'negative' : '';
+        const color = ivSectorColor(h.Sector);
+        return `
+          <div class="iv-pf-row">
+            <span class="iv-pf-icon" style="background:${color}22;color:${color}" aria-hidden="true">${escapeHtml(String(h.Asset || '?').substring(0, 3).toUpperCase())}</span>
+            <span class="iv-pf-info">
+              <span class="iv-pf-name">${escapeHtml(h.Asset)}</span>
+              <span class="iv-pf-meta">${escapeHtml(h.Sector)} · ${ivPct(p.value > 0 ? value / p.value : 0)}</span>
+            </span>
+            <span class="iv-pf-nums">
+              <strong>${ivFull(value)}</strong>
+              <span class="${cls}">${ivPct(h.GrowthPercent, true)} · ${ivFull(pl, true)}</span>
+              <small>modal ${ivFull(capital)}</small>
+            </span>
+          </div>`;
+      }).join('');
+
+      const open = !IV_PF_COLLAPSED.has(p.platform);
+      return `
+        <details class="iv-pf-card" data-platform="${escapeHtml(p.platform)}" ${open ? 'open' : ''} ontoggle="ivPfToggle(this)">
+          <summary class="iv-pf-summary">
+            <span class="iv-pf-head-row">
+              <span class="iv-pf-avatar" aria-hidden="true">${escapeHtml(ivPlatformInitials(p.platform))}</span>
+              <span class="iv-pf-title">
+                <strong>${escapeHtml(p.platform)}</strong>
+                <small>${p.holdings.length} aset · ${ivPct(share)} portofolio</small>
+              </span>
+              <i data-lucide="chevron-down" class="iv-pf-chev" aria-hidden="true"></i>
+            </span>
+            <span class="iv-pf-total">${ivFull(p.value)}</span>
+            <span class="iv-pf-pl">${plLine}</span>
+            <span class="iv-pf-bar" aria-hidden="true">${segs}</span>
+          </summary>
+          <div class="iv-pf-rows">${cashRow}${holdingRows}</div>
+        </details>`;
+    }).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
+  function ivPfToggle(el) {
+    const name = el.dataset.platform;
+    if (el.open) IV_PF_COLLAPSED.delete(name);
+    else IV_PF_COLLAPSED.add(name);
+  }
+
+  // From the dashboard: jump to one platform's card, opened.
+  function ivOpenPlatform(name) {
+    IV_PF_COLLAPSED.delete(name);
+    showPage('platformPage');
+    const card = [...document.querySelectorAll('#ivPfList .iv-pf-card')].find(c => c.dataset.platform === name);
+    if (!card) return;
+    card.open = true;
+    card.classList.remove('is-flash');
+    void card.offsetWidth;
+    card.classList.add('is-flash');
+    // Instant: it is a page change, the flash marks which card was asked for.
+    card.scrollIntoView({ block: 'start' });
   }
 
   /* === DATA LOADING === */
@@ -9209,6 +9622,16 @@ function injectAuthSettingsCard() {
     return (v < 0 ? '-' : '') + 'Rp ' + out;
   }
 
+  // Full rupiah ("Rp 5.986.173") wherever the exact figure matters;
+  // signed adds +/- in front. Honours the hide toggle.
+  function ivFull(value, signed) {
+    if (AMOUNTS_HIDDEN) return '••••••';
+    const v = Math.round(Number(value) || 0);
+    const body = 'Rp ' + Math.abs(v).toLocaleString('id-ID');
+    if (signed) return (v > 0 ? '+' : v < 0 ? '-' : '') + body;
+    return (v < 0 ? '-' : '') + body;
+  }
+
   function ivPct(fraction, signed) {
     const v = (Number(fraction) || 0) * 100;
     const txt = Math.abs(v).toFixed(1).replace('.', ',') + '%';
@@ -9249,7 +9672,7 @@ function injectAuthSettingsCard() {
     }
     const plEl = document.getElementById('ivPlAmount');
     if (plEl) {
-      plEl.textContent = (pl > 0 ? '+' : pl < 0 ? '-' : '') + ivShort(Math.abs(pl));
+      plEl.textContent = ivFull(pl, true);
       plEl.className = 'iv-pl-amount ' + (pl > 0 ? 'positive' : pl < 0 ? 'negative' : '');
     }
 
@@ -9266,8 +9689,7 @@ function injectAuthSettingsCard() {
     setText('ivStatAssets', ivShort(summary.totalInvestedAssetsIDR));
     setText('ivStatCash', ivShort(summary.totalCashIDR));
 
-    const sectors = (data.allocationBySector || []).length;
-    setText('allocationTotalText', `${sectors} sektor · ${ivShort(total)}`);
+    ivAllocSubtitle();
 
     renderAllocationFocus(data.allocationBySector || [], total, data.portfolio || []);
     renderNextMove(data.allocationBySector || [], data.cashByPlatform || [], summary);
@@ -9275,6 +9697,7 @@ function injectAuthSettingsCard() {
     renderPortfolio(data.portfolio || []);
     renderDcaPlanSimulator();
     renderPlatformCash(data.portfolio || []);
+    renderPlatformAccounts(data.portfolio || []);
   }
 
   function buildHeroNote(progress, summary) {
@@ -9341,7 +9764,7 @@ function injectAuthSettingsCard() {
               ${targetPct ? `<span class="iv-alloc-target" style="left:${targetPct / scale * 100}%" title="Target ${targetPct}%"></span>` : ''}
             </div>
             <div class="iv-alloc-meta">
-              <span>${ivShort(item.valueIDR)}${ret !== null ? ` · <span class="${retCls}">${ivPct(ret, true)}</span>` : ''}</span>
+              <span class="iv-alloc-amount">${ivFull(item.valueIDR)}${ret !== null ? ` · <span class="${retCls}">${ivPct(ret, true)}</span>` : ''}</span>
               <span class="iv-status ${getStatusClass(status)}">${statusLabel[status] || escapeHtml(status)}${diffTxt}</span>
             </div>
           </div>`;
@@ -9397,7 +9820,7 @@ function injectAuthSettingsCard() {
           <span class="sector-dot" style="background:${ivSectorColor(item.sector)}"></span>
           <span class="iv-dca-name">${escapeHtml(item.sector)}</span>
           <span class="iv-dca-bar"><span style="width:${Math.min(portion * 100, 100)}%;background:${ivSectorColor(item.sector)}"></span></span>
-          <strong>${ivShort(amountFor(item))}</strong>
+          <strong>${ivFull(amountFor(item))}</strong>
         </div>`;
     }).join('');
   }
@@ -9406,7 +9829,7 @@ function injectAuthSettingsCard() {
     const totalEl = document.getElementById('dcaSuggestionTotal');
     const listEl = document.getElementById('dcaSuggestionList');
     if (!totalEl || !listEl) return;
-    totalEl.textContent = totalCashIDR > 0 ? `Cash siap: ${ivShort(totalCashIDR)}` : 'Belum ada cash menganggur';
+    totalEl.textContent = totalCashIDR > 0 ? `Cash siap: ${ivFull(totalCashIDR)}` : 'Belum ada cash menganggur';
     if (!items.length || totalCashIDR <= 0) {
       listEl.innerHTML = '';
       return;
@@ -9455,8 +9878,8 @@ function injectAuthSettingsCard() {
             <span class="iv-holding-meta">${escapeHtml(item.Sector)} · ${escapeHtml(item.Platform)} · porsi ${ivPct(weight)}</span>
           </span>
           <span class="iv-holding-nums">
-            <strong>${ivShort(value)}</strong>
-            <span class="${cls}">${ivPct(g, true)} · ${pl >= 0 ? '+' : '-'}${ivShort(Math.abs(pl)).replace('Rp ', '')}</span>
+            <strong>${ivFull(value)}</strong>
+            <span class="${cls}">${ivPct(g, true)} · ${ivFull(pl, true)}</span>
           </span>
         </div>`;
     }).join('') + (sorted.length > LIMIT
