@@ -152,6 +152,25 @@
           </section>
         </div>
 
+        <!-- ===== PLATFORM PAGE =====
+             One card per account (Pluang, Bibit, …): its total, then exactly
+             where that money sits — idle cash first, then every holding —
+             with full rupiah amounts, never rounded to "jt". -->
+        <div id="platformPage" class="page">
+          <section class="dashboard-wrap">
+            <header class="ins-page-head iv-pf-head">
+              <div>
+                <h2 class="page-title">Platform</h2>
+                <p class="ins-page-sub" id="ivPfSub">&nbsp;</p>
+              </div>
+            </header>
+            <div class="iv-pf-overview" id="ivPfOverview"></div>
+            <div class="iv-pf-list" id="ivPfList">
+              <div class="empty-state">Memuat data platform…</div>
+            </div>
+          </section>
+        </div>
+
         <!-- ===== HISTORY PAGE ===== -->
         <div id="historyPage" class="page">
           <section class="page-header-card">
@@ -709,6 +728,10 @@
       <button class="tab-item active" data-page="dashboardPage" onclick="showPage('dashboardPage')">
         <i data-lucide="layout-dashboard" class="tab-icon"></i>
         <small>Dashboard</small>
+      </button>
+      <button class="tab-item" data-page="platformPage" onclick="showPage('platformPage')">
+        <i data-lucide="wallet" class="tab-icon"></i>
+        <small>Platform</small>
       </button>
       <button class="tab-item" data-page="historyPage" onclick="showPage('historyPage')">
         <i data-lucide="clock" class="tab-icon"></i>

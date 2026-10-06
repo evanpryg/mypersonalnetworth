@@ -6058,5 +6058,235 @@ html, body { overscroll-behavior: none; }
   .tx-input-sheet .tx-amount-field { font-size: 32px; }
 }
 
+/* ============================================================
+   ALLOCATION — full amounts, platform rows open their breakdown
+   ============================================================ */
+.iv-alloc-amount { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #CBD5E1; }
+.iv-alloc-meta { font-size: 12.5px; }
+.iv-alloc-link {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast), transform var(--dur-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+.iv-alloc-link:active { transform: scale(0.985); }
+.iv-alloc-link:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+@media (hover: hover) { .iv-alloc-link:hover { background: rgba(255,255,255,0.03); } }
+.iv-alloc-chev { width: 14px; height: 14px; flex-shrink: 0; color: var(--text-muted); }
+
+/* ============================================================
+   PLATFORM PAGE — one card per account, full rupiah everywhere
+   ============================================================ */
+.iv-pf-head { padding: 8px 20px 12px; }
+.iv-pf-overview {
+  display: grid;
+  gap: 12px;
+  margin: 0 16px 16px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(147,197,253,0.22);
+  background:
+    radial-gradient(120% 110% at 100% 0%, rgba(59,130,246,0.28) 0%, transparent 55%),
+    #1A2540;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+}
+.iv-pf-overview:empty { display: none; }
+.iv-pf-ov-total span,
+.iv-pf-ov-split span {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #CBD5E1;
+}
+.iv-pf-ov-total strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.iv-pf-ov-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+}
+.iv-pf-ov-split > div { min-width: 0; }
+.iv-pf-ov-split > div + div { padding-left: 12px; border-left: 1px solid rgba(255,255,255,0.10); }
+.iv-pf-ov-split strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.iv-pf-list { display: grid; gap: 12px; padding: 0 16px; }
+.iv-pf-list > .empty-state { padding: 24px 8px; text-align: center; }
+.iv-pf-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.045);
+  min-width: 0;
+  scroll-margin-top: calc(76px + env(safe-area-inset-top, 0px));
+  animation: fadeInUp 0.3s var(--ease-out) backwards;
+}
+.iv-pf-card.is-flash { animation: ivPfFlash 1.2s var(--ease-out); }
+@keyframes ivPfFlash {
+  0%, 30% { border-color: rgba(96,165,250,0.7); box-shadow: 0 0 0 3px rgba(96,165,250,0.18); }
+  100% { border-color: var(--border); box-shadow: inset 0 1px 0 rgba(255,255,255,0.045); }
+}
+.iv-pf-summary {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  list-style: none;
+  cursor: pointer;
+  border-radius: 18px;
+  -webkit-tap-highlight-color: transparent;
+}
+.iv-pf-summary::-webkit-details-marker { display: none; }
+.iv-pf-summary:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.iv-pf-head-row { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.iv-pf-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(var(--accent-rgb),0.16);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.iv-pf-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.iv-pf-title strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.iv-pf-title small { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.iv-pf-chev {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform var(--dur);
+}
+.iv-pf-card[open] .iv-pf-chev { transform: rotate(180deg); }
+.iv-pf-total {
+  margin-top: 4px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.iv-pf-pl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.iv-muted-2 { font-weight: 500; color: var(--text-muted); }
+.iv-pf-bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 99px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.07);
+}
+.iv-pf-bar span { display: block; height: 100%; min-width: 3px; }
+
+.iv-pf-rows { padding: 0 14px 4px; border-top: 1px solid var(--border); }
+.iv-pf-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; }
+.iv-pf-row + .iv-pf-row { border-top: 1px solid var(--border); }
+.iv-pf-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.iv-pf-icon-cash { background: rgba(148,163,184,0.16); color: #CBD5E1; }
+.iv-pf-icon-cash svg { width: 17px; height: 17px; }
+.iv-pf-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.iv-pf-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.iv-pf-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+.iv-pf-nums {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: 58%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.iv-pf-nums strong { font-size: 14px; font-weight: 700; color: var(--text); }
+.iv-pf-nums strong.negative { color: var(--error); }
+.iv-pf-nums span { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.iv-pf-nums small { font-size: 11.5px; color: var(--text-muted); }
+.iv-pf-nums .positive { color: var(--success); }
+.iv-pf-nums .negative { color: var(--error); }
+
+@media (min-width: 769px) {
+  .iv-pf-overview { margin-left: 32px; margin-right: 32px; }
+  .iv-pf-list { padding: 0 32px; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .iv-pf-head { padding-left: 36px; padding-right: 36px; }
+}
+@media (max-width: 480px) {
+  .iv-pf-overview { margin-left: 12px; margin-right: 12px; }
+  .iv-pf-list { padding: 0 12px; }
+  .iv-pf-head { padding-left: 16px; padding-right: 16px; }
+}
+@media (max-width: 360px) {
+  .iv-pf-total { font-size: 22px; }
+  .iv-pf-ov-total strong { font-size: 23px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iv-pf-card, .iv-pf-card.is-flash { animation: none; }
+}
+
 </style>
 
