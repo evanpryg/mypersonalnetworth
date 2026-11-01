@@ -805,11 +805,80 @@ var DB_API = {
   },
 
   async mmGetCalendarData(year,month) {
-    var startDate=year+'-'+String(month).padStart(2,'0')+'-01',endDay=new Date(year,month,0).getDate(),endDate=year+'-'+String(month).padStart(2,'0')+'-'+String(endDay).padStart(2,'0');
+    var y = Number(year), m = Number(month);
+    var startDate=y+'-'+String(m).padStart(2,'0')+'-01',endDay=new Date(y,m,0).getDate(),endDate=y+'-'+String(m).padStart(2,'0')+'-'+String(endDay).padStart(2,'0');
     var transactions=await this.mmGetTransactions({startDate:startDate,endDate:endDate});
     var days={}; for(var d=1;d<=endDay;d++) days[d]={income:0,expense:0,transactions:[]};
-    transactions.forEach(function(tx){var d=new Date(tx.date);if(isNaN(d.getTime()))return;var day=d.getDate();if(days[day]){if(tx.type==='Income')days[day].income+=tx.amount;if(tx.type==='Expense')days[day].expense+=tx.amount;days[day].transactions.push(tx);}});
-    return {year:year,month:month,endDay:endDay,days:days};
+    var totalIncome=0, totalExpense=0, catMap={};
+
+    transactions.forEach(function(tx){
+      var d=new Date(tx.date);
+      if(!isNaN(d.getTime())){
+        var day=d.getDate();
+        if(days[day]){
+          if(tx.type==='Income') days[day].income+=tx.amount;
+          if(tx.type==='Expense') days[day].expense+=tx.amount;
+          days[day].transactions.push(tx);
+        }
+      }
+      if(tx.type==='Income') totalIncome += tx.amount;
+      if(tx.type==='Expense') {
+        totalExpense += tx.amount;
+        var cat = tx.category || 'Other';
+        var sub = tx.subcategory || '';
+        if(!catMap[cat]) catMap[cat] = { total: 0, subs: {} };
+        catMap[cat].total += tx.amount;
+        if(sub) {
+          catMap[cat].subs[sub] = (catMap[cat].subs[sub] || 0) + tx.amount;
+        }
+      }
+    });
+
+    var isArchived = false;
+    if(transactions.length === 0){
+      var summaryRows = (await this.mmGetSummaryRows()).filter(function(r){ return r.year === y && r.month === m; });
+      if(summaryRows.length > 0){
+        isArchived = true;
+        summaryRows.forEach(function(r){
+          if(r.type==='Income') totalIncome += r.amount;
+          if(r.type==='Expense') {
+            totalExpense += r.amount;
+            var cat = r.category || 'Other';
+            var sub = r.subcategory || '';
+            if(!catMap[cat]) catMap[cat] = { total: 0, subs: {} };
+            catMap[cat].total += r.amount;
+            if(sub) {
+              catMap[cat].subs[sub] = (catMap[cat].subs[sub] || 0) + r.amount;
+            }
+          }
+        });
+      }
+    }
+
+    var categoryBreakdown = Object.entries(catMap).map(function(entry){
+      var catName = entry[0], catData = entry[1];
+      var subsList = Object.entries(catData.subs).map(function(s){
+        return { subcategory: s[0], amount: s[1], percent: catData.total > 0 ? (s[1]/catData.total)*100 : 0 };
+      }).sort(function(a,b){ return b.amount - a.amount; });
+      return {
+        category: catName,
+        amount: catData.total,
+        percent: totalExpense > 0 ? (catData.total / totalExpense) * 100 : 0,
+        subcategories: subsList
+      };
+    }).sort(function(a,b){ return b.amount - a.amount; });
+
+    return {
+      year: y,
+      month: m,
+      endDay: endDay,
+      days: days,
+      totalIncome: totalIncome,
+      totalExpense: totalExpense,
+      saving: totalIncome - totalExpense,
+      categoryBreakdown: categoryBreakdown,
+      isArchived: isArchived
+    };
   },
 
   async mmGetSubcategories(category) {
@@ -817,16 +886,39 @@ var DB_API = {
     return categories.filter(function(c){return c.type==='Expense'&&c.category===category&&c.subcategory;}).map(function(c){return c.subcategory;});
   },
 
-  async mmGetCategoryExpenseDetail(category) {
-    var now=new Date(),startDate=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01';
-    var transactions=await this.mmGetTransactions({startDate:startDate});
-    var subs={}; transactions.forEach(function(tx){if(tx.type==='Expense'&&tx.category===category){var sub=tx.subcategory||'General';if(!subs[sub])subs[sub]=0;subs[sub]+=tx.amount;}});
+  async mmGetCategoryExpenseDetail(category, optYear, optMonth) {
+    var now=new Date(), y = optYear ? Number(optYear) : now.getFullYear(), m = optMonth ? Number(optMonth) : (now.getMonth()+1);
+    var endDay = new Date(y, m, 0).getDate();
+    var startDate = y + '-' + String(m).padStart(2,'0') + '-01';
+    var endDate = y + '-' + String(m).padStart(2,'0') + '-' + String(endDay).padStart(2,'0');
+    var transactions = await this.mmGetTransactions({startDate:startDate, endDate:endDate});
+    var subs = {};
+    transactions.forEach(function(tx){
+      if(tx.type==='Expense' && tx.category===category){
+        var sub = tx.subcategory || 'General';
+        if(!subs[sub]) subs[sub] = 0;
+        subs[sub] += tx.amount;
+      }
+    });
+    if(transactions.length === 0){
+      var summaryRows = (await this.mmGetSummaryRows()).filter(function(r){ return r.year === y && r.month === m && r.type === 'Expense' && r.category === category; });
+      summaryRows.forEach(function(r){
+        var sub = r.subcategory || 'General';
+        if(!subs[sub]) subs[sub] = 0;
+        subs[sub] += r.amount;
+      });
+    }
     return Object.entries(subs).map(function(e){return{subcategory:e[0],amount:e[1]};}).sort(function(a,b){return b.amount-a.amount;});
   },
 
-  async mmGetFinancialInsight() {
+  async mmGetFinancialInsight(targetYear, targetMonth) {
     var accounts=await this.mmGetAccounts(),allTransactions=await this.mmGetTransactions({}),allocation=await this.mmGetAllocation();
-    var now=new Date(),currentYear=now.getFullYear(),currentMonth=now.getMonth()+1;
+    var now=new Date(), currentYear=now.getFullYear(), currentMonth=now.getMonth()+1;
+    var isCurrentMonth = (!targetYear && !targetMonth) || 
+      (Number(targetYear) === currentYear && Number(targetMonth) === currentMonth);
+    var year = targetYear ? Number(targetYear) : currentYear;
+    var month = targetMonth ? Number(targetMonth) : currentMonth;
+
     var balances={}; accounts.forEach(function(acc){balances[acc.name]=acc.initialBalance;});
     function findExactAccountName(name) {
       if (!name) return null;
@@ -850,30 +942,7 @@ var DB_API = {
         if (accToName) balances[accToName]=(balances[accToName]||0)+tx.amount;
       }
     });
-    var netWorth=0; accounts.forEach(function(acc){if(acc.showOnDashboard) netWorth+=balances[acc.name]||0;});
-    var monthStartStr=currentYear+'-'+String(currentMonth).padStart(2,'0')+'-01';
-    var monthTxs=allTransactions.filter(function(tx){return tx.date>=monthStartStr;});
-    var totalIncome=0,totalExpense=0,categoryExpenses={};
-    allocation.forEach(function(a){categoryExpenses[a.category]=0;});
-    monthTxs.forEach(function(tx){if(tx.type==='Income')totalIncome+=tx.amount;if(tx.type==='Expense'){totalExpense+=tx.amount;if(categoryExpenses[tx.category]!==undefined)categoryExpenses[tx.category]+=tx.amount;}if(tx.type==='Transfer'&&tx.category==='Invest'){if(categoryExpenses['Invest']!==undefined)categoryExpenses['Invest']+=tx.amount;}});
-    var saving=totalIncome-totalExpense,savingRate=totalIncome>0?(saving/totalIncome)*100:0;
-    var prevMonth=currentMonth===1?12:currentMonth-1,prevYear=currentMonth===1?currentYear-1:currentYear;
-    var prevStartStr=prevYear+'-'+String(prevMonth).padStart(2,'0')+'-01',prevEndDay=new Date(prevYear,prevMonth,0).getDate(),prevEndStr=prevYear+'-'+String(prevMonth).padStart(2,'0')+'-'+String(prevEndDay).padStart(2,'0');
-    var prevTxs=allTransactions.filter(function(tx){return tx.date>=prevStartStr&&tx.date<=prevEndStr;});
-    var prevIncome=0,prevExpense=0,prevCategoryExpenses={}; allocation.forEach(function(a){prevCategoryExpenses[a.category]=0;});
-    prevTxs.forEach(function(tx){if(tx.type==='Income')prevIncome+=tx.amount;if(tx.type==='Expense'){prevExpense+=tx.amount;if(prevCategoryExpenses[tx.category]!==undefined)prevCategoryExpenses[tx.category]+=tx.amount;}if(tx.type==='Transfer'&&tx.category==='Invest'){if(prevCategoryExpenses['Invest']!==undefined)prevCategoryExpenses['Invest']+=tx.amount;}});
-    var prevSaving=prevIncome-prevExpense,prevSavingRate=prevIncome>0?(prevSaving/prevIncome)*100:0;
-    var budgetAnalysis=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?spent/target:0,prevSpent=prevCategoryExpenses[a.category]||0;var isSaving=(['invest','saving','tabungan'].indexOf(a.category.toLowerCase())>=0);return{category:a.category,percent:a.percent,spent:spent,target:target,progress:progress,prevSpent:prevSpent,isSaving:isSaving};});
-    var spendingByCategory=Object.entries(categoryExpenses).filter(function(e){return e[1]>0&&['invest','saving','tabungan'].indexOf(e[0].toLowerCase())<0;}).sort(function(a,b){return b[1]-a[1];}).map(function(e){return{category:e[0],amount:e[1],percent:totalExpense>0?(e[1]/totalExpense)*100:0};});
-    var monthlyHistory=[];
-    for(var i=5;i>=0;i--){var m=new Date(currentYear,currentMonth-1-i,1);var y=m.getFullYear(),mo=m.getMonth()+1;var sStr=y+'-'+String(mo).padStart(2,'0')+'-01',eDay=new Date(y,mo,0).getDate(),eStr=y+'-'+String(mo).padStart(2,'0')+'-'+String(eDay).padStart(2,'0');var inc=0,exp=0;allTransactions.forEach(function(tx){if(tx.date>=sStr&&tx.date<=eStr){if(tx.type==='Income')inc+=tx.amount;if(tx.type==='Expense')exp+=tx.amount;}});monthlyHistory.push({month:y+'-'+String(mo).padStart(2,'0'),label:new Date(y,mo-1).toLocaleString('default',{month:'short',year:'2-digit'}),income:inc,expense:exp,saving:inc-exp});}
-    var investmentData=null;
-    try{var dashData=await this.getDashboardData();investmentData={totalValue:dashData.summary.totalPortfolioValueIDR,totalCapital:dashData.summary.totalCapitalIDR,totalCash:dashData.summary.totalCashIDR,profitLoss:dashData.summary.totalProfitLossIDR,returnPercent:dashData.summary.totalCapitalIDR>0?(dashData.summary.totalProfitLossIDR/dashData.summary.totalCapitalIDR)*100:0,allocationBySector:dashData.allocationBySector||[],rebalanceSuggestions:dashData.rebalanceSuggestions||[],portfolio:(dashData.portfolio||[]).filter(function(p){return p.Sector!=='Cash'&&p.TotalCapitalIDR>0;})};}catch(e){console.warn("Investment data could not be computed:",e);}
-    var dayOfMonth=now.getDate(),daysInMonth=new Date(currentYear,currentMonth,0).getDate(),remainingDays=daysInMonth-dayOfMonth;
-    var dailyIncomeAvg=dayOfMonth>0?totalIncome/dayOfMonth:0,dailyExpenseAvg=dayOfMonth>0?totalExpense/dayOfMonth:0;
-    var predictedIncome=totalIncome+(dailyIncomeAvg*remainingDays),predictedExpense=totalExpense+(dailyExpenseAvg*remainingDays),predictedSaving=predictedIncome-predictedExpense,predictedNetWorth=netWorth+predictedSaving-saving;
-    var uniqueDates=[...new Set(allTransactions.map(function(tx){return tx.date;}))].sort().reverse();
-    var streak=0,checkDate=new Date(now);for(var i=0;i<uniqueDates.length&&i<365;i++){var dateStr=localISODate(checkDate);if(uniqueDates.includes(dateStr)){streak++;checkDate.setDate(checkDate.getDate()-1);}else break;}
+
     var runningBalances={}; accounts.forEach(function(acc){runningBalances[acc.name]=acc.initialBalance;});
     var sortedTxs=allTransactions.slice().reverse(),monthlyNW={};
     sortedTxs.forEach(function(tx){
@@ -894,10 +963,126 @@ var DB_API = {
         monthlyNW[mKey]=nw;
       }
     });
-    var nwValues=Object.values(monthlyNW),isNetWorthHighest=nwValues.length>0&&netWorth>=Math.max.apply(null,nwValues);
-    var budgetMetMonths=0;for(var i=1;i<=6;i++){var m=new Date(currentYear,currentMonth-1-i,1);var h=monthlyHistory.find(function(mh){return mh.month===m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0');});if(h&&h.saving>=0)budgetMetMonths++;}
+
+    var netWorth=0; accounts.forEach(function(acc){if(acc.showOnDashboard) netWorth+=balances[acc.name]||0;});
+    var monthKey = year + '-' + String(month).padStart(2, '0');
+    var monthNetWorth = isCurrentMonth ? netWorth : (monthlyNW[monthKey] || netWorth);
+
+    var daysInMonth = new Date(year, month, 0).getDate();
+    var dayOfMonth = isCurrentMonth ? now.getDate() : daysInMonth;
+    var remainingDays = isCurrentMonth ? Math.max(0, daysInMonth - dayOfMonth) : 0;
+
+    var monthStartStr = year + '-' + String(month).padStart(2, '0') + '-01';
+    var monthEndStr = year + '-' + String(month).padStart(2, '0') + '-' + String(daysInMonth).padStart(2, '0');
+    var monthTxs = allTransactions.filter(function(tx){
+      return tx.date >= monthStartStr && tx.date <= monthEndStr;
+    });
+
+    var totalIncome=0,totalExpense=0,categoryExpenses={};
+    allocation.forEach(function(a){categoryExpenses[a.category]=0;});
+    monthTxs.forEach(function(tx){
+      if(tx.type==='Income')totalIncome+=tx.amount;
+      if(tx.type==='Expense'){
+        totalExpense+=tx.amount;
+        var cat = tx.category || 'Other';
+        categoryExpenses[cat] = (categoryExpenses[cat] || 0) + tx.amount;
+      }
+      if(tx.type==='Transfer'&&tx.category==='Invest'){
+        categoryExpenses['Invest'] = (categoryExpenses['Invest'] || 0) + tx.amount;
+      }
+    });
+
+    var summaryRowsAll = await this.mmGetSummaryRows();
+    var isArchivedMonth = false;
+    if(monthTxs.length === 0){
+      var summaryRows = summaryRowsAll.filter(function(r){ return r.year === year && r.month === month; });
+      if(summaryRows.length > 0){
+        isArchivedMonth = true;
+        summaryRows.forEach(function(r){
+          if(r.type==='Income') totalIncome += r.amount;
+          if(r.type==='Expense'){
+            totalExpense += r.amount;
+            var cat = r.category || 'Other';
+            categoryExpenses[cat] = (categoryExpenses[cat] || 0) + r.amount;
+          }
+        });
+      }
+    }
+
+    var saving=totalIncome-totalExpense,savingRate=totalIncome>0?(saving/totalIncome)*100:0;
+    var prevMonth=month===1?12:month-1,prevYear=month===1?year-1:year;
+    var prevEndDay=new Date(prevYear,prevMonth,0).getDate();
+    var prevStartStr=prevYear+'-'+String(prevMonth).padStart(2,'0')+'-01';
+    var prevEndStr=prevYear+'-'+String(prevMonth).padStart(2,'0')+'-'+String(prevEndDay).padStart(2,'0');
+    var prevTxs=allTransactions.filter(function(tx){return tx.date>=prevStartStr&&tx.date<=prevEndStr;});
+    var prevIncome=0,prevExpense=0,prevCategoryExpenses={};
+    allocation.forEach(function(a){prevCategoryExpenses[a.category]=0;});
+    prevTxs.forEach(function(tx){
+      if(tx.type==='Income')prevIncome+=tx.amount;
+      if(tx.type==='Expense'){
+        prevExpense+=tx.amount;
+        var cat = tx.category || 'Other';
+        prevCategoryExpenses[cat] = (prevCategoryExpenses[cat] || 0) + tx.amount;
+      }
+      if(tx.type==='Transfer'&&tx.category==='Invest'){
+        prevCategoryExpenses['Invest'] = (prevCategoryExpenses['Invest'] || 0) + tx.amount;
+      }
+    });
+
+    if(prevTxs.length === 0){
+      var prevSummary = summaryRowsAll.filter(function(r){ return r.year === prevYear && r.month === prevMonth; });
+      prevSummary.forEach(function(r){
+        if(r.type==='Income') prevIncome += r.amount;
+        if(r.type==='Expense'){
+          prevExpense += r.amount;
+          var cat = r.category || 'Other';
+          prevCategoryExpenses[cat] = (prevCategoryExpenses[cat] || 0) + r.amount;
+        }
+      });
+    }
+
+    var prevSaving=prevIncome-prevExpense,prevSavingRate=prevIncome>0?(prevSaving/prevIncome)*100:0;
+    var budgetAnalysis=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?spent/target:0,prevSpent=prevCategoryExpenses[a.category]||0;var isSaving=(['invest','saving','tabungan'].indexOf(a.category.toLowerCase())>=0);return{category:a.category,percent:a.percent,spent:spent,target:target,progress:progress,prevSpent:prevSpent,isSaving:isSaving};});
+    var spendingByCategory=Object.entries(categoryExpenses).filter(function(e){return e[1]>0&&['invest','saving','tabungan'].indexOf(e[0].toLowerCase())<0;}).sort(function(a,b){return b[1]-a[1];}).map(function(e){return{category:e[0],amount:e[1],percent:totalExpense>0?(e[1]/totalExpense)*100:0};});
+    var monthlyHistory=[];
+    for(var i=5;i>=0;i--){
+      var m=new Date(year,month-1-i,1);
+      var y=m.getFullYear(),mo=m.getMonth()+1;
+      var sStr=y+'-'+String(mo).padStart(2,'0')+'-01',eDay=new Date(y,mo,0).getDate(),eStr=y+'-'+String(mo).padStart(2,'0')+'-'+String(eDay).padStart(2,'0');
+      var inc=0,exp=0;
+      var matchedTxs=allTransactions.filter(function(tx){return tx.date>=sStr&&tx.date<=eStr;});
+      if(matchedTxs.length > 0){
+        matchedTxs.forEach(function(tx){
+          if(tx.type==='Income')inc+=tx.amount;
+          if(tx.type==='Expense')exp+=tx.amount;
+        });
+      } else {
+        summaryRowsAll.forEach(function(r){
+          if(r.year === y && r.month === mo){
+            if(r.type==='Income') inc += r.amount;
+            if(r.type==='Expense') exp += r.amount;
+          }
+        });
+      }
+      monthlyHistory.push({month:y+'-'+String(mo).padStart(2,'0'),label:new Date(y,mo-1).toLocaleString('default',{month:'short',year:'2-digit'}),income:inc,expense:exp,saving:inc-exp});
+    }
+
+    var investmentData=null;
+    try{var dashData=await this.getDashboardData();investmentData={totalValue:dashData.summary.totalPortfolioValueIDR,totalCapital:dashData.summary.totalCapitalIDR,totalCash:dashData.summary.totalCashIDR,profitLoss:dashData.summary.totalProfitLossIDR,returnPercent:dashData.summary.totalCapitalIDR>0?(dashData.summary.totalProfitLossIDR/dashData.summary.totalCapitalIDR)*100:0,allocationBySector:dashData.allocationBySector||[],rebalanceSuggestions:dashData.rebalanceSuggestions||[],portfolio:(dashData.portfolio||[]).filter(function(p){return p.Sector!=='Cash'&&p.TotalCapitalIDR>0;})};}catch(e){console.warn("Investment data could not be computed:",e);}
+
+    var dailyIncomeAvg=dayOfMonth>0?totalIncome/dayOfMonth:0,dailyExpenseAvg=dayOfMonth>0?totalExpense/dayOfMonth:0;
+    var predictedIncome=isCurrentMonth ? totalIncome+(dailyIncomeAvg*remainingDays) : totalIncome;
+    var predictedExpense=isCurrentMonth ? totalExpense+(dailyExpenseAvg*remainingDays) : totalExpense;
+    var predictedSaving=predictedIncome-predictedExpense;
+    var predictedNetWorth=isCurrentMonth ? (netWorth+predictedSaving-saving) : monthNetWorth;
+
+    var uniqueDates=[...new Set(allTransactions.map(function(tx){return tx.date;}))].sort().reverse();
+    var streak=0,checkDate=new Date(now);for(var i=0;i<uniqueDates.length&&i<365;i++){var dateStr=localISODate(checkDate);if(uniqueDates.includes(dateStr)){streak++;checkDate.setDate(checkDate.getDate()-1);}else break;}
+    var nwValues=Object.values(monthlyNW),isNetWorthHighest=nwValues.length>0&&monthNetWorth>=Math.max.apply(null,nwValues);
+    var budgetMetMonths=0;for(var i=1;i<=6;i++){var m=new Date(year,month-1-i,1);var h=monthlyHistory.find(function(mh){return mh.month===m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0');});if(h&&h.saving>=0)budgetMetMonths++;}
     var yearlySummary=await this.mmGetYearlySummary();
-    return{yearlySummary:yearlySummary,currentMonth:currentMonth,currentYear:currentYear,dayOfMonth:dayOfMonth,daysInMonth:daysInMonth,netWorth:netWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,savingRate:savingRate,prevIncome:prevIncome,prevExpense:prevExpense,prevSaving:prevSaving,prevSavingRate:prevSavingRate,budgetAnalysis:budgetAnalysis,spendingByCategory:spendingByCategory,monthlyHistory:monthlyHistory,investmentData:investmentData,prediction:{income:predictedIncome,expense:predictedExpense,saving:predictedSaving,netWorth:predictedNetWorth},streak:streak,isNetWorthHighest:isNetWorthHighest,budgetMetMonths:budgetMetMonths};
+
+    return{yearlySummary:yearlySummary,currentMonth:month,currentYear:year,isCurrentMonth:isCurrentMonth,dayOfMonth:dayOfMonth,daysInMonth:daysInMonth,netWorth:monthNetWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,savingRate:savingRate,prevIncome:prevIncome,prevExpense:prevExpense,prevSaving:prevSaving,prevSavingRate:prevSavingRate,budgetAnalysis:budgetAnalysis,spendingByCategory:spendingByCategory,monthlyHistory:monthlyHistory,investmentData:investmentData,prediction:{income:predictedIncome,expense:predictedExpense,saving:predictedSaving,netWorth:predictedNetWorth,isPastMonth:!isCurrentMonth},streak:streak,isNetWorthHighest:isNetWorthHighest,budgetMetMonths:budgetMetMonths,isArchived:isArchivedMonth};
   },
 
   // EXPORT / IMPORT / DELETE

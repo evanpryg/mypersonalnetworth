@@ -25,7 +25,12 @@ function mmShowPage(pageId) {
   if (pageId === 'mmDashboardPage') mmLoadDashboard(true);
   if (pageId === 'mmHistoryPage' && !document.getElementById('mmHistoryAllTime').innerHTML.trim()) mmLoadHistory();
   if (pageId === 'mmSettingsPage' && !document.getElementById('mmSettingsAccountsList').innerHTML.includes('mm-settings-acc-row')) mmLoadSettings();
-  if (pageId === 'mmInsightPage') loadFinancialInsight();
+  if (pageId === 'mmInsightPage') {
+    // Only auto-load for current month on first open; never override a
+    // month the user already navigated to from History.
+    if (!INSIGHT_YEAR || !INSIGHT_MONTH) loadFinancialInsight();
+    else loadFinancialInsight(INSIGHT_YEAR, INSIGHT_MONTH);
+  }
 }
 
 /* === TRANSACTION SEARCH ===
@@ -1320,7 +1325,7 @@ function mmRenderAllTime(data, container) {
   html += `<div class="mm-alltime-table"><div class="mm-alltime-header"><span>Month</span><span>Income</span><span>Expense</span></div>`;
   html += [...data].reverse().map(item => {
     const monthLabel = mmFormatMonthLabel(item.month);
-    return `<div class="mm-alltime-row"><span>${monthLabel}</span><span class="positive">${mmFormatIDR(item.income)}</span><span class="negative">${mmFormatIDR(item.expense)}</span></div>`;
+    return `<div class="mm-alltime-row clickable" onclick="mmSelectMonthFromAllTime('${item.month}')" title="Buka detail ${monthLabel}"><span>${monthLabel} <i data-lucide="chevron-right" class="alltime-arrow"></i></span><span class="positive">${mmFormatIDR(item.income)}</span><span class="negative">${mmFormatIDR(item.expense)}</span></div>`;
   }).join('');
   html += '</div>';
   container.innerHTML = html;
@@ -1397,17 +1402,129 @@ function mmRenderMonthView(data) {
     return;
   }
 
-  // Totals aggregated from per-day data
-  let totalIncome = 0, totalExpense = 0;
-  Object.keys(data.days).forEach(d => {
-    totalIncome += data.days[d].income || 0;
-    totalExpense += data.days[d].expense || 0;
-  });
+  // Totals aggregated from per-day data or server summary
+  let totalIncome = data.totalIncome !== undefined ? data.totalIncome : 0;
+  let totalExpense = data.totalExpense !== undefined ? data.totalExpense : 0;
+  if (data.totalIncome === undefined) {
+    Object.keys(data.days).forEach(d => {
+      totalIncome += data.days[d].income || 0;
+      totalExpense += data.days[d].expense || 0;
+    });
+  }
+  const saving = totalIncome - totalExpense;
   setText('mmHistIncome', mmFormatIDR(totalIncome));
   setText('mmHistExpense', mmFormatIDR(totalExpense));
+  const savingEl = document.getElementById('mmHistSaving');
+  if (savingEl) {
+    savingEl.textContent = (saving >= 0 ? '+' : '') + mmFormatIDR(saving);
+    savingEl.className = saving >= 0 ? 'positive' : 'negative';
+  }
+
+  // Render category breakdown ("pengeluaran kategori ini berapa-berapanya")
+  mmRenderHistCategoryBreakdown(data);
 
   mmRenderMonthCalendar(data);
   mmHistShowAll();
+  if (window.lucide) lucide.createIcons();
+}
+
+function mmRenderHistCategoryBreakdown(data) {
+  const wrap = document.getElementById('mmHistoryCategoryBreakdown');
+  if (!wrap) return;
+
+  const categories = data.categoryBreakdown || [];
+  const totalExpense = data.totalExpense || 0;
+
+  if (!categories || categories.length === 0) {
+    if (data.isArchived) {
+      wrap.innerHTML = '<div class="mm-hist-archived-banner"><i data-lucide="archive"></i> Data bulan ini diarsipkan dan tidak ada rincian pengeluaran.</div>';
+    } else {
+      wrap.innerHTML = '';
+    }
+    return;
+  }
+
+  const colors = ['#22d3ee', '#fbbf24', '#f472b6', '#818cf8', '#fb923c', '#a78bfa', '#2dd4bf', '#60a5fa', '#e879f9', '#94a3b8'];
+  
+  let html = `
+    <div class="mm-hist-cat-card">
+      <div class="mm-hist-cat-head">
+        <div>
+          <h4>Rekap Pengeluaran Kategori</h4>
+          <span class="mm-hist-cat-sub">${categories.length} kategori · Total ${mmFormatIDR(totalExpense)}</span>
+        </div>
+        ${data.isArchived ? '<span class="mm-hist-archived-tag">Arsip</span>' : ''}
+      </div>
+      <div class="mm-hist-cat-list">`;
+
+  categories.forEach((cat, idx) => {
+    const color = (typeof mmCategoryColor === 'function' ? mmCategoryColor(cat.category) : null) || colors[idx % colors.length];
+    const pct = cat.percent ? Number(cat.percent).toFixed(1) : (totalExpense > 0 ? ((cat.amount / totalExpense) * 100).toFixed(1) : '0');
+    const hasSubs = cat.subcategories && cat.subcategories.length > 0;
+    const catId = `hist-cat-${idx}-${data.year}-${data.month}`;
+
+    html += `
+      <div class="mm-hist-cat-item ${hasSubs ? 'has-subs' : ''}" ${hasSubs ? `onclick="mmToggleHistSubcat('${catId}')" title="Klik untuk rincian subkategori"` : ''}>
+        <div class="mm-hist-cat-row">
+          <div class="mm-hist-cat-name-col">
+            <span class="mm-hist-cat-dot" style="background-color: ${color};"></span>
+            <span class="mm-hist-cat-title">${escapeHtml(cat.category)}</span>
+            ${hasSubs ? `<span class="mm-hist-sub-count">(${cat.subcategories.length} sub)</span>` : ''}
+          </div>
+          <div class="mm-hist-cat-amount-col">
+            <strong>${mmFormatIDR(cat.amount)}</strong>
+            <small>${pct}%</small>
+          </div>
+        </div>
+        <div class="mm-hist-cat-bar">
+          <div class="mm-hist-cat-fill" style="width: ${Math.min(pct, 100)}%; background-color: ${color};"></div>
+        </div>`;
+
+    if (hasSubs) {
+      html += `
+        <div id="${catId}" class="mm-hist-subcat-list" style="display: none;">
+          ${cat.subcategories.map(sub => `
+            <div class="mm-hist-subcat-row">
+              <span>${escapeHtml(sub.subcategory || 'General')}</span>
+              <span><strong>${mmFormatIDR(sub.amount)}</strong> <small>(${sub.percent ? Number(sub.percent).toFixed(0) : 0}%)</small></span>
+            </div>
+          `).join('')}
+        </div>`;
+    }
+
+    html += `</div>`;
+  });
+
+  html += `
+      </div>
+    </div>`;
+
+  wrap.innerHTML = html;
+}
+
+function mmToggleHistSubcat(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const isHidden = el.style.display === 'none';
+  el.style.display = isHidden ? 'flex' : 'none';
+}
+
+function mmHistOpenInsight() {
+  if (typeof mmOpenInsightForMonth === 'function') {
+    mmOpenInsightForMonth(MM_HIST_YEAR, MM_HIST_MONTH);
+  } else if (typeof mmShowPage === 'function') {
+    mmShowPage('mmInsightPage');
+  }
+}
+
+function mmSelectMonthFromAllTime(monthStr) {
+  if (!monthStr) return;
+  const parts = monthStr.split('-');
+  if (parts.length >= 2) {
+    MM_HIST_YEAR = parseInt(parts[0], 10);
+    MM_HIST_MONTH = parseInt(parts[1], 10);
+    mmSwitchHistoryTab('month');
+  }
 }
 
 function mmRenderMonthCalendar(data) {
@@ -1454,7 +1571,13 @@ function mmHistShowAll() {
   if (btn) btn.style.display = 'none';
 
   let all = [];
-  Object.keys(data.days).forEach(d => { all = all.concat(data.days[d].transactions || []); });
+  if (data.days) {
+    Object.keys(data.days).forEach(d => { all = all.concat(data.days[d].transactions || []); });
+  }
+  if (all.length === 0 && data.isArchived) {
+    container.innerHTML = '<div class="empty-state" style="padding:16px 8px;font-size:13px;color:var(--text-muted);">Transaksi detail bulan ini sudah diarsipkan. Rekap pengeluaran per kategori dapat dilihat pada kartu di atas.</div>';
+    return;
+  }
   all.sort((a, b) => new Date(b.date) - new Date(a.date));
   container.innerHTML = mmRenderTransactionList(all);
 }

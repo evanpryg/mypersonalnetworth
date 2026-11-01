@@ -526,7 +526,14 @@
               <div class="mm-month-summary">
                 <div class="item"><span>Income</span><strong class="positive" id="mmHistIncome">Rp 0</strong></div>
                 <div class="item"><span>Expense</span><strong class="negative" id="mmHistExpense">Rp 0</strong></div>
+                <div class="item"><span>Sisa</span><strong id="mmHistSaving">Rp 0</strong></div>
               </div>
+              <div class="mm-month-insight-btn-wrap">
+                <button type="button" class="btn-ghost mm-btn-open-insight" onclick="mmHistOpenInsight()">
+                  <i data-lucide="brain"></i> Lihat Insight Bulan Ini &rarr;
+                </button>
+              </div>
+              <div id="mmHistoryCategoryBreakdown" class="mm-hist-category-wrap"></div>
               <div id="mmHistoryCalendarGrid" class="mm-calendar-grid"></div>
               <div class="mm-month-list-head">
                 <strong id="mmHistoryListLabel">Transactions this month</strong>

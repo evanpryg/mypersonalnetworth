@@ -9,38 +9,101 @@
 
 let INSIGHT_DATA = null;
 let INSIGHT_LOADED = false;
+let INSIGHT_YEAR = null;
+let INSIGHT_MONTH = null;
+let INSIGHT_CACHE = {};
 
-function loadFinancialInsight() {
+function loadFinancialInsight(year, month) {
   if (!window.supabaseConnected) {
     const container = document.getElementById('insightContent');
     if (container) container.innerHTML = '<div class="insight-error"><p>Database is not connected. Configure connection in Settings.</p></div>';
     return;
   }
-  if (INSIGHT_LOADED && INSIGHT_DATA) {
+
+  const now = new Date();
+  if (year && month) {
+    INSIGHT_YEAR = Number(year);
+    INSIGHT_MONTH = Number(month);
+  } else if (!INSIGHT_YEAR || !INSIGHT_MONTH) {
+    INSIGHT_YEAR = now.getFullYear();
+    INSIGHT_MONTH = now.getMonth() + 1;
+  }
+
+  const cacheKey = `${INSIGHT_YEAR}-${INSIGHT_MONTH}`;
+  if (INSIGHT_CACHE[cacheKey]) {
+    INSIGHT_DATA = INSIGHT_CACHE[cacheKey];
+    INSIGHT_LOADED = true;
     renderFinancialInsight(INSIGHT_DATA);
     return;
   }
 
   const container = document.getElementById('insightContent');
-  container.innerHTML = '<div class="insight-loading"><div class="mm-spinner"></div><p>Menganalisis keuangan…</p></div>';
+  if (container) {
+    container.innerHTML = '<div class="insight-loading"><div class="mm-spinner"></div><p>Menganalisis keuangan…</p></div>';
+  }
 
   google.script.run
     .withSuccessHandler(data => {
+      INSIGHT_CACHE[cacheKey] = data;
       INSIGHT_DATA = data;
       INSIGHT_LOADED = true;
       renderFinancialInsight(data);
     })
     .withFailureHandler(err => {
-      container.innerHTML = `<div class="insight-error"><p>Gagal memuat data insight.</p><button class="btn-primary" onclick="loadFinancialInsight()">Coba lagi</button></div>`;
+      if (container) {
+        container.innerHTML = `<div class="insight-error"><p>Gagal memuat data insight.</p><button class="btn-primary" onclick="loadFinancialInsight(INSIGHT_YEAR, INSIGHT_MONTH)">Coba lagi</button></div>`;
+      }
     })
-    .mmGetFinancialInsight();
+    .mmGetFinancialInsight(INSIGHT_YEAR, INSIGHT_MONTH);
+}
+
+function insPrevMonth() {
+  if (!INSIGHT_MONTH) {
+    const now = new Date();
+    INSIGHT_YEAR = now.getFullYear();
+    INSIGHT_MONTH = now.getMonth() + 1;
+  }
+  INSIGHT_MONTH--;
+  if (INSIGHT_MONTH < 1) {
+    INSIGHT_MONTH = 12;
+    INSIGHT_YEAR--;
+  }
+  loadFinancialInsight(INSIGHT_YEAR, INSIGHT_MONTH);
+}
+
+function insNextMonth() {
+  const now = new Date();
+  if (INSIGHT_YEAR === now.getFullYear() && INSIGHT_MONTH >= (now.getMonth() + 1)) return;
+  INSIGHT_MONTH++;
+  if (INSIGHT_MONTH > 12) {
+    INSIGHT_MONTH = 1;
+    INSIGHT_YEAR++;
+  }
+  loadFinancialInsight(INSIGHT_YEAR, INSIGHT_MONTH);
+}
+
+function insCurrentMonth() {
+  const now = new Date();
+  loadFinancialInsight(now.getFullYear(), now.getMonth() + 1);
 }
 
 function refreshInsight() {
+  if (INSIGHT_YEAR && INSIGHT_MONTH) {
+    delete INSIGHT_CACHE[`${INSIGHT_YEAR}-${INSIGHT_MONTH}`];
+  } else {
+    INSIGHT_CACHE = {};
+  }
   INSIGHT_LOADED = false;
   INSIGHT_DATA = null;
-  loadFinancialInsight();
+  loadFinancialInsight(INSIGHT_YEAR, INSIGHT_MONTH);
 }
+
+window.mmOpenInsightForMonth = function(year, month) {
+  if (typeof mmShowPage === 'function') {
+    mmShowPage('mmInsightPage');
+  }
+  loadFinancialInsight(Number(year), Number(month));
+};
 
 // Formatting helpers — both honour the hide-amounts toggle.
 function insightIDR(value) { return mmFormatIDR(value); }
@@ -61,14 +124,28 @@ function insightSection(title, sub, body, extraClass) {
 
 function renderFinancialInsight(data) {
   const container = document.getElementById('insightContent');
+  if (!container || !data) return;
+
   const monthNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   const now = new Date();
+  const isCurrentMonth = data.isCurrentMonth;
+  const isLatestMonth = data.currentYear === now.getFullYear() && data.currentMonth >= (now.getMonth() + 1);
+
+  const subText = isCurrentMonth
+    ? `${monthNames[data.currentMonth - 1]} ${data.currentYear} · hari ke-${data.dayOfMonth} dari ${data.daysInMonth}`
+    : `${monthNames[data.currentMonth - 1]} ${data.currentYear} · Rekap bulan selesai (${data.daysInMonth} hari)${data.isArchived ? ' · Ringkasan Arsip' : ''}`;
 
   let html = `
     <header class="ins-page-head">
-      <div>
+      <div class="ins-head-left">
         <h2 class="page-title">Insight</h2>
-        <p class="ins-page-sub">${monthNames[now.getMonth()]} ${now.getFullYear()} · hari ke-${data.dayOfMonth} dari ${data.daysInMonth}</p>
+        <div class="ins-month-nav">
+          <button class="ins-nav-btn" onclick="insPrevMonth()" aria-label="Bulan sebelumnya">${insIcon('chevron-left')}</button>
+          <strong class="ins-month-title">${monthNames[data.currentMonth - 1]} ${data.currentYear}</strong>
+          <button class="ins-nav-btn" onclick="insNextMonth()" aria-label="Bulan berikutnya" ${isLatestMonth ? 'disabled style="opacity:0.35;cursor:not-allowed;"' : ''}>${insIcon('chevron-right')}</button>
+          ${!isCurrentMonth ? `<button class="ins-today-chip" onclick="insCurrentMonth()">Bulan ini</button>` : ''}
+        </div>
+        <p class="ins-page-sub">${subText}</p>
       </div>
       <button class="ins-refresh" onclick="refreshInsight()" aria-label="Muat ulang analisis">${insIcon('refresh-cw')}</button>
     </header>`;
@@ -150,12 +227,18 @@ function renderInsightHero(data) {
   const rateSub = rateDelta === null ? 'target ≥20%'
     : `${rateDelta >= 0 ? '↑' : '↓'} ${Math.abs(rateDelta).toFixed(1)} poin`;
   const pred = data.prediction || {};
-  const hasPred = data.dayOfMonth >= 5 && pred.saving !== undefined;
+  const isCurrent = data.isCurrentMonth;
+  const hasPred = isCurrent ? (data.dayOfMonth >= 5 && pred.saving !== undefined) : true;
+  const kpi3Label = isCurrent ? 'Proyeksi sisa' : 'Status akhir';
+  const kpi3Val = isCurrent
+    ? (hasPred ? insightShort(pred.saving) : '—')
+    : (data.saving >= 0 ? 'Surplus' : 'Defisit');
+  const kpi3Sub = isCurrent ? (hasPred ? 'akhir bulan' : 'min. hari ke-5') : `${insightShort(Math.abs(data.saving))}`;
 
   const expenseShare = data.totalIncome > 0 ? Math.round(data.totalExpense / data.totalIncome * 100) : null;
-  const line = expenseShare === null
-    ? 'Belum ada pemasukan tercatat bulan ini.'
-    : `Pengeluaran ${expenseShare}% dari pemasukan bulan ini.`;
+  const line = isCurrent
+    ? (expenseShare === null ? 'Belum ada pemasukan tercatat bulan ini.' : `Pengeluaran ${expenseShare}% dari pemasukan bulan ini.`)
+    : (expenseShare === null ? 'Tidak ada pemasukan tercatat pada bulan ini.' : `Pengeluaran ${expenseShare}% dari total pemasukan.`);
 
   return `
     <section class="ins-hero">
@@ -183,14 +266,14 @@ function renderInsightHero(data) {
           <small class="${rateDelta === null ? '' : rateDelta >= 0 ? 'pos' : 'neg'}">${rateSub}</small>
         </div>
         <div class="ins-kpi">
-          <span>Sisa bulan ini</span>
+          <span>${isCurrent ? 'Sisa bulan ini' : 'Sisa akhir'}</span>
           <strong class="${data.saving >= 0 ? 'pos' : 'neg'}">${insightShort(data.saving)}</strong>
           <small>masuk − keluar</small>
         </div>
         <div class="ins-kpi">
-          <span>Proyeksi sisa</span>
-          <strong class="${!hasPred ? '' : pred.saving >= 0 ? 'pos' : 'neg'}">${hasPred ? insightShort(pred.saving) : '—'}</strong>
-          <small>${hasPred ? 'akhir bulan' : 'min. hari ke-5'}</small>
+          <span>${kpi3Label}</span>
+          <strong class="${!hasPred ? '' : (isCurrent ? (pred.saving >= 0 ? 'pos' : 'neg') : (data.saving >= 0 ? 'pos' : 'neg'))}">${kpi3Val}</strong>
+          <small>${kpi3Sub}</small>
         </div>
       </div>
 
@@ -209,12 +292,13 @@ function renderInsightHero(data) {
 function renderAttention(data) {
   const items = [];   // { rank, tone, icon, title, detail }
   const good = [];    // { icon, text }
+  const isCurrent = data.isCurrentMonth;
   const daysLeft = Math.max(data.daysInMonth - data.dayOfMonth, 0);
   const timePct = data.dayOfMonth / data.daysInMonth;
 
   if (data.saving < 0) {
     items.push({ rank: 0, tone: 'bad', icon: 'trending-down', title: 'Pengeluaran melebihi pemasukan',
-      detail: `Defisit ${insightIDR(-data.saving)} bulan ini.` });
+      detail: `Defisit ${insightIDR(-data.saving)} ${isCurrent ? 'bulan ini' : 'di bulan tersebut'}.` });
   }
 
   data.budgetAnalysis.forEach(b => {
@@ -224,19 +308,21 @@ function renderAttention(data) {
       if (b.progress >= 1) good.push({ icon: 'piggy-bank', text: `${cat} melebihi target` });
       else if (b.progress < 0.5) {
         items.push({ rank: 3, tone: 'info', icon: 'piggy-bank', title: `${cat} baru ${(b.progress * 100).toFixed(0)}% dari target`,
-          detail: `Kurang ${insightIDR(b.target - b.spent)} · ${daysLeft} hari lagi.` });
+          detail: isCurrent ? `Kurang ${insightIDR(b.target - b.spent)} · ${daysLeft} hari lagi.` : `Realisasi ${insightIDR(b.spent)} dari target ${insightIDR(b.target)}.` });
       }
       return;
     }
     if (b.progress >= 1) {
       items.push({ rank: 0, tone: 'bad', icon: 'octagon-alert', title: `Budget ${cat} terlampaui`,
-        detail: `Lebih ${insightIDR(b.spent - b.target)}. Tahan pengeluaran ${cat} sampai akhir bulan.` });
-    } else if (b.progress >= 0.9) {
+        detail: isCurrent ? `Lebih ${insightIDR(b.spent - b.target)}. Tahan pengeluaran ${cat} sampai akhir bulan.` : `Melebihi target sebesar ${insightIDR(b.spent - b.target)} (${(b.progress * 100).toFixed(0)}% terpakai).` });
+    } else if (b.progress >= 0.9 && isCurrent) {
       items.push({ rank: 1, tone: 'warn', icon: 'triangle-alert', title: `Budget ${cat} hampir habis`,
         detail: `Sisa ${insightIDR(b.target - b.spent)} ≈ ${insightIDR((b.target - b.spent) / Math.max(daysLeft, 1))}/hari untuk ${daysLeft} hari.` });
-    } else if (b.progress > timePct + 0.15 && data.dayOfMonth >= 5) {
+    } else if (isCurrent && b.progress > timePct + 0.15 && data.dayOfMonth >= 5) {
       items.push({ rank: 2, tone: 'warn', icon: 'gauge', title: `${cat} lebih cepat dari jadwal`,
         detail: `Terpakai ${(b.progress * 100).toFixed(0)}% di hari ke-${data.dayOfMonth} (idealnya ≤${(timePct * 100).toFixed(0)}%).` });
+    } else if (!isCurrent && b.progress < 1) {
+      good.push({ icon: 'circle-check', text: `Budget ${cat} terkendali (${(b.progress * 100).toFixed(0)}%)` });
     }
 
     if (b.prevSpent > 0 && b.spent > 0) {
@@ -253,7 +339,7 @@ function renderAttention(data) {
   if (data.savingRate >= 0 && data.savingRate < 20 && data.totalIncome > 0) {
     const needed = data.totalIncome * 0.2 - data.saving;
     if (needed > 0) items.push({ rank: 2, tone: 'warn', icon: 'percent', title: `Saving rate ${data.savingRate.toFixed(1)}% — di bawah 20%`,
-      detail: `Kurangi pengeluaran ${insightIDR(needed)} untuk mencapai 20%.` });
+      detail: isCurrent ? `Kurangi pengeluaran ${insightIDR(needed)} untuk mencapai 20%.` : `Selisih ${insightIDR(needed)} untuk mencapai target ideal 20%.` });
   }
 
   const avgExpense = data.monthlyHistory.length
@@ -281,7 +367,7 @@ function renderAttention(data) {
   if (data.saving > 0) good.push({ icon: 'circle-check', text: 'Cash flow positif' });
   if (data.savingRate >= 20) good.push({ icon: 'target', text: `Saving rate ${data.savingRate.toFixed(0)}%` });
   if (data.isNetWorthHighest && data.netWorth > 0) good.push({ icon: 'trophy', text: 'Net worth tertinggi' });
-  if (data.streak >= 7) good.push({ icon: 'flame', text: `${data.streak} hari mencatat` });
+  if (isCurrent && data.streak >= 7) good.push({ icon: 'flame', text: `${data.streak} hari mencatat` });
   if (data.budgetMetMonths >= 3) good.push({ icon: 'shield-check', text: `${data.budgetMetMonths} bulan cash flow positif` });
 
   items.sort((a, b) => a.rank - b.rank);
@@ -296,7 +382,7 @@ function renderAttention(data) {
   const list = items.length
     ? `<ul class="ins-list">${shown.map(row).join('')}</ul>
        ${rest.length ? `<details class="ins-more"><summary>${rest.length} lainnya ${insIcon('chevron-down')}</summary><ul class="ins-list">${rest.map(row).join('')}</ul></details>` : ''}`
-    : `<div class="ins-allgood">${insIcon('circle-check')}<span>Tidak ada yang perlu dikhawatirkan bulan ini.</span></div>`;
+    : `<div class="ins-allgood">${insIcon('circle-check')}<span>Tidak ada yang perlu dikhawatirkan di bulan ini.</span></div>`;
 
   const chips = good.length
     ? `<div class="ins-chips" aria-label="Kabar baik">${good.map(g => `<span class="ins-chip">${insIcon(g.icon)}${g.text}</span>`).join('')}</div>`
@@ -308,7 +394,8 @@ function renderAttention(data) {
 
 /* === THIS MONTH VS LAST, WITH PROJECTION === */
 function renderMonthCompare(data) {
-  const hasPred = data.dayOfMonth >= 5 && data.prediction;
+  const isCurrent = data.isCurrentMonth;
+  const hasPred = isCurrent && data.dayOfMonth >= 5 && data.prediction;
   const pred = data.prediction || {};
   const delta = (cur, prev, upIsGood) => {
     if (!prev) return '<span class="ins-delta">—</span>';
@@ -317,27 +404,34 @@ function renderMonthCompare(data) {
     const good = upIsGood ? pct >= 0 : pct <= 0;
     return `<span class="ins-delta ${good ? 'pos' : 'neg'}">${pct >= 0 ? '↑' : '↓'}${Math.abs(pct).toFixed(0)}%</span>`;
   };
+  const fourthCol = (predVal, pastText, isPositive) => {
+    if (isCurrent) return `<span role="cell" class="ins-proj">${hasPred ? insightShort(predVal) : '—'}</span>`;
+    return `<span role="cell" class="${isPositive === undefined ? '' : (isPositive ? 'pos' : 'neg')}"><strong>${pastText}</strong></span>`;
+  };
   const rows = [
-    { label: 'Pemasukan', now: insightShort(data.totalIncome), d: delta(data.totalIncome, data.prevIncome, true), p: hasPred ? insightShort(pred.income) : '—' },
-    { label: 'Pengeluaran', now: insightShort(data.totalExpense), d: delta(data.totalExpense, data.prevExpense, false), p: hasPred ? insightShort(pred.expense) : '—' },
-    { label: 'Sisa', now: insightShort(data.saving), d: delta(data.saving, data.prevSaving, true), p: hasPred ? insightShort(pred.saving) : '—', cls: data.saving >= 0 ? 'pos' : 'neg' },
-    { label: 'Net worth', now: insightShort(data.netWorth), d: '<span class="ins-delta">—</span>', p: hasPred ? insightShort(pred.netWorth) : '—' }
+    { label: 'Pemasukan', now: insightShort(data.totalIncome), d: delta(data.totalIncome, data.prevIncome, true), col4: fourthCol(pred.income, 'Tercatat') },
+    { label: 'Pengeluaran', now: insightShort(data.totalExpense), d: delta(data.totalExpense, data.prevExpense, false), col4: fourthCol(pred.expense, 'Selesai') },
+    { label: 'Sisa', now: insightShort(data.saving), d: delta(data.saving, data.prevSaving, true), col4: fourthCol(pred.saving, data.saving >= 0 ? 'Surplus' : 'Defisit', data.saving >= 0), cls: data.saving >= 0 ? 'pos' : 'neg' },
+    { label: 'Net worth', now: insightShort(data.netWorth), d: '<span class="ins-delta">—</span>', col4: fourthCol(pred.netWorth, 'Akhir bln') }
   ];
+  const col4Header = isCurrent ? 'Proyeksi' : 'Status';
   const body = `
     <div class="ins-card ins-table" role="table" aria-label="Bulan ini dibanding bulan lalu">
       <div class="ins-tr ins-th" role="row">
-        <span role="columnheader"></span><span role="columnheader">Sekarang</span><span role="columnheader">vs lalu</span><span role="columnheader">Proyeksi</span>
+        <span role="columnheader"></span><span role="columnheader">${isCurrent ? 'Sekarang' : 'Realisasi'}</span><span role="columnheader">vs lalu</span><span role="columnheader">${col4Header}</span>
       </div>
       ${rows.map(r => `
         <div class="ins-tr" role="row">
           <span role="rowheader">${r.label}</span>
           <strong role="cell" class="${r.cls || ''}">${r.now}</strong>
           <span role="cell">${r.d}</span>
-          <span role="cell" class="ins-proj">${r.p}</span>
+          ${r.col4}
         </div>`).join('')}
     </div>`;
-  const sub = hasPred ? `Proyeksi dari rata-rata ${data.dayOfMonth} hari berjalan` : 'Proyeksi muncul mulai hari ke-5';
-  return insightSection('Bulan ini', sub, body);
+  const sub = isCurrent
+    ? (hasPred ? `Proyeksi dari rata-rata ${data.dayOfMonth} hari berjalan` : 'Proyeksi muncul mulai hari ke-5')
+    : 'Dibandingkan dengan bulan sebelumnya';
+  return insightSection(isCurrent ? 'Bulan ini' : 'Ringkasan bulan', sub, body);
 }
 
 /* === BUDGET PACE ===
@@ -346,7 +440,8 @@ function renderMonthCompare(data) {
 function renderBudgetPace(data) {
   const items = data.budgetAnalysis.filter(b => b.target > 0);
   if (!items.length) return '';
-  const timePct = Math.min(data.dayOfMonth / data.daysInMonth, 1) * 100;
+  const isCurrent = data.isCurrentMonth;
+  const timePct = isCurrent ? (Math.min(data.dayOfMonth / data.daysInMonth, 1) * 100) : 100;
   const daysLeft = Math.max(data.daysInMonth - data.dayOfMonth, 0);
 
   const rows = items.map(b => {
@@ -354,11 +449,15 @@ function renderBudgetPace(data) {
     let state = 'ok';
     if (b.isSaving) state = b.progress >= 1 ? 'done' : 'saving';
     else if (b.progress >= 1) state = 'over';
-    else if (b.progress >= 0.9 || pct > timePct + 15) state = 'warn';
+    else if (b.progress >= 0.9 || (isCurrent && pct > timePct + 15)) state = 'warn';
     const left = b.target - b.spent;
-    const foot = b.isSaving
-      ? (left > 0 ? `kurang ${insightShort(left)}` : `lebih ${insightShort(-left)}`)
-      : (left >= 0 ? `${insightShort(left / Math.max(daysLeft, 1))}/hari` : `lebih ${insightShort(-left)}`);
+    const foot = isCurrent
+      ? (b.isSaving
+        ? (left > 0 ? `kurang ${insightShort(left)}` : `lebih ${insightShort(-left)}`)
+        : (left >= 0 ? `${insightShort(left / Math.max(daysLeft, 1))}/hari` : `lebih ${insightShort(-left)}`))
+      : (b.isSaving
+        ? (left > 0 ? `kurang ${insightShort(left)}` : `tercapai +${insightShort(-left)}`)
+        : (left >= 0 ? `sisa hemat ${insightShort(left)}` : `overbudget +${insightShort(-left)}`));
     return `
       <div class="ins-pace is-${state}">
         <div class="ins-pace-top">
@@ -367,18 +466,25 @@ function renderBudgetPace(data) {
         </div>
         <div class="ins-pace-bar">
           <span class="ins-pace-fill" style="width:${Math.min(pct, 100)}%"></span>
-          ${b.isSaving ? '' : `<span class="ins-pace-mark" style="left:${timePct}%" aria-hidden="true"></span>`}
+          ${b.isSaving || !isCurrent ? '' : `<span class="ins-pace-mark" style="left:${timePct}%" aria-hidden="true"></span>`}
         </div>
         <div class="ins-pace-foot"><span>${insightShort(b.spent)} / ${insightShort(b.target).replace('Rp ', '')}${!b.isSaving && left > 0 ? ' · sisa ' + insightShort(left).replace('Rp ', '') : ''}</span><span class="ins-pace-note">${foot}</span></div>
       </div>`;
   }).join('');
 
-  return insightSection('Laju budget', `Garis putih = batas ideal hari ini (${timePct.toFixed(0)}%)`, `<div class="ins-card">${rows}</div>`);
+  const sub = isCurrent
+    ? `Garis putih = batas ideal hari ini (${timePct.toFixed(0)}%)`
+    : 'Realisasi akhir pengeluaran vs target budget';
+  return insightSection(isCurrent ? 'Laju budget' : 'Realisasi budget', sub, `<div class="ins-card">${rows}</div>`);
 }
 
 /* === TOP SPENDING === */
 function renderSpendingAnalysis(data) {
-  if (!data.spendingByCategory.length) return '';
+  const monthNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const monthLabel = monthNames[data.currentMonth - 1] || 'Bulan ini';
+  if (!data.spendingByCategory.length) {
+    return insightSection('Pengeluaran terbesar', `${monthLabel} ${data.currentYear}, per kategori`, '<div class="ins-card"><div class="empty-state" style="padding:12px;font-size:13px;color:var(--text-muted);">Tidak ada pengeluaran tercatat di bulan ini.</div></div>');
+  }
   const top = data.spendingByCategory.slice(0, 5);
   const colors = ['#22d3ee', '#fbbf24', '#f472b6', '#818cf8', '#fb923c'];
   const max = top[0] ? top[0].amount : 1;
@@ -391,7 +497,7 @@ function renderSpendingAnalysis(data) {
       <span class="ins-bar-track"><span style="width:${(c.amount / max * 100).toFixed(0)}%;background:${colors[i]}"></span></span>
       <span class="ins-bar-val"><strong>${insightShort(c.amount)}</strong><small>${c.percent.toFixed(0)}%</small></span>
     </div>`).join('');
-  return insightSection('Pengeluaran terbesar', 'Bulan ini, per kategori', `<div class="ins-card">${rows}${note}</div>`);
+  return insightSection('Pengeluaran terbesar', `${monthLabel} ${data.currentYear}, per kategori`, `<div class="ins-card">${rows}${note}</div>`);
 }
 
 /* === CASH FLOW TREND === */
