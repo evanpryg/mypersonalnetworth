@@ -5666,6 +5666,23 @@ html, body { overscroll-behavior: none; }
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
+.mm-pulse-grid.is-single { grid-template-columns: 1fr; }
+/* One wide actionable strip: value and context on a single card, tappable
+   through to Insight for the full breakdown. */
+.mm-pulse-tile.mm-pulse-wide {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: 10px;
+  padding: 12px 14px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.mm-pulse-wide .mm-pulse-value { font-size: 20px; margin-left: auto; }
+.mm-pulse-wide .mm-pulse-sub { flex-basis: 100%; }
 .mm-pulse-tile {
   display: flex;
   flex-direction: column;
@@ -6855,16 +6872,23 @@ html, body { overscroll-behavior: none; }
               </div>
             </div>
 
-            <!-- Month pulse: safe daily spend, pace, projection, alerts -->
+            <!-- Month pulse: one actionable number (safe daily spend) + alerts.
+                 The deeper stats (pace, projection, savings ratio) live in Insight. -->
             <section class="mm-dash-section" id="mmPulseSection">
+              <div class="mm-pulse-grid is-single" id="mmPulseGrid"></div>
+              <div class="mm-alerts" id="mmAlerts"></div>
+            </section>
+
+            <!-- Budget: every pos, not just one -->
+            <section class="mm-dash-section" id="mmBudgetSection">
               <div class="mm-section-header">
                 <div>
-                  <h3>Ringkasan bulan ini</h3>
-                  <p class="mm-section-sub" id="mmPulseSub">&nbsp;</p>
+                  <h3>Budget</h3>
+                  <p class="mm-section-sub" id="mmBudgetSummary">&nbsp;</p>
                 </div>
+                <button class="mm-view-all" id="mmBudgetDetailBtn" onclick="mmShowBudgetDetail()">Detail <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
               </div>
-              <div class="mm-pulse-grid" id="mmPulseGrid"></div>
-              <div class="mm-alerts" id="mmAlerts"></div>
+              <div class="mm-dash-card mm-budget-list" id="mmBudgetList"></div>
             </section>
 
             <!-- Daily spending -->
@@ -6881,18 +6905,6 @@ html, body { overscroll-behavior: none; }
               </div>
             </section>
 
-            <!-- Budget: every pos, not just one -->
-            <section class="mm-dash-section" id="mmBudgetSection">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Budget</h3>
-                  <p class="mm-section-sub" id="mmBudgetSummary">&nbsp;</p>
-                </div>
-                <button class="mm-view-all" id="mmBudgetDetailBtn" onclick="mmShowBudgetDetail()">Detail <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
-              </div>
-              <div class="mm-dash-card mm-budget-list" id="mmBudgetList"></div>
-            </section>
-
             <!-- Accounts -->
             <section class="mm-dash-section" id="mmAccountsSection">
               <div class="mm-section-header">
@@ -6907,24 +6919,8 @@ html, body { overscroll-behavior: none; }
               </div>
             </section>
 
-            <!-- Breakdown -->
-            <section class="mm-dash-section" id="mmExpenseSection">
-              <div class="mm-section-header">
-                <h3>Rincian kategori</h3>
-                <div class="mm-expense-tabs" role="tablist">
-                  <button class="mm-expense-tab active" role="tab" data-tab="expense" onclick="mmSwitchChartTab(this,'expense')">Keluar</button>
-                  <button class="mm-expense-tab" role="tab" data-tab="income" onclick="mmSwitchChartTab(this,'income')">Masuk</button>
-                </div>
-              </div>
-              <div class="mm-dash-card">
-                <div class="mm-expense-content">
-                  <div class="mm-donut-wrapper">
-                    <div id="mmChartDonut" class="chart-donut-wrap"></div>
-                  </div>
-                  <div id="mmChartCategoryList" class="mm-category-list"></div>
-                </div>
-              </div>
-            </section>
+            <!-- Rincian kategori (donut) pindah ke Insight — dashboard cukup
+                 budget + daily; breakdown lengkap ada di Insight & History. -->
 
             <!-- This month's transactions, grouped by day -->
             <section class="mm-dash-section" id="mmTransactionsSection">
@@ -7640,6 +7636,15 @@ function makeAssetKey_(platform, sector, asset) {
   return [normalizeUpper_(platform), normalizeUpper_(sector), normalizeUpper_(asset)].join('|');
 }
 function getCashAssetName_(platform) { return normalize_(platform) + ' Cash'; }
+// How much an MM transfer moves into (+) or out of (−) the investment side.
+// Old rows only carry category='Invest' on the way in; direction is read from
+// the Invest: prefix so withdrawals reduce the month's invest total too.
+function investFlowAmount_(tx) {
+  if (normalize_(tx.type) !== 'Transfer') return 0;
+  if (String(tx.accountTo || '').indexOf('Invest:') === 0) return toNumber_(tx.amount);
+  if (String(tx.account || '').indexOf('Invest:') === 0) return -toNumber_(tx.amount);
+  return normalize_(tx.category) === 'Invest' ? toNumber_(tx.amount) : 0;
+}
 function formatDateForClient_(value) {
   if (!value) return '';
   var d = new Date(value);
@@ -7904,6 +7909,21 @@ var DB_API = {
       error = retry.error;
     }
     if (error) throw error;
+
+    // A Buy/Sell moves money in or out of the asset, so a persisted market
+    // value (from "Update Value") must move with it. Without this, buying an
+    // existing asset left its CurrentValue frozen at the old persisted number
+    // and the user had to re-enter the value by hand after every buy.
+    if ((transactionType === 'Buy' || transactionType === 'Sell') && sector && sector !== 'Cash' && asset) {
+      var pf = await _sb.from('portfolio').select('platform,sector,asset,currentvalueidr')
+        .ilike('platform', platform).ilike('sector', sector).ilike('asset', asset).maybeSingle();
+      if (pf.data) {
+        var newVal = toNumber_(pf.data.currentvalueidr) + (transactionType === 'Buy' ? amountIDR : -amountIDR);
+        var upd = await _sb.from('portfolio').update({ currentvalueidr: Math.max(newVal, 0) })
+          .eq('platform', pf.data.platform).eq('sector', pf.data.sector).eq('asset', pf.data.asset);
+        if (upd.error) console.warn('Persisted asset value not adjusted:', upd.error.message);
+      }
+    }
     return { success:true, message:'Transaction added successfully.' };
   },
 
@@ -8069,7 +8089,7 @@ var DB_API = {
 
   async mmAddTransaction(payload) {
     var type=normalize_(payload.type),account=normalize_(payload.account),accountTo=normalize_(payload.accountTo)||'',amount=toNumber_(payload.amount);
-    var category=(type==='Transfer'&&accountTo.startsWith('Invest:'))?'Invest':normalize_(payload.category)||'';
+    var category=(type==='Transfer'&&(accountTo.startsWith('Invest:')||account.startsWith('Invest:')))?'Invest':normalize_(payload.category)||'';
     // Need the new id back so the paired investment row can point at it.
     var { data, error } = await _sb.from('mm_transactions').insert(mapRowToDb({Date:payload.date,Type:type,Account:account,AccountTo:accountTo,Category:category,Subcategory:normalize_(payload.subcategory)||'',Amount:amount,Notes:normalize_(payload.notes)||'',Status:'Active'})).select('id');
     if (error) throw error;
@@ -8207,7 +8227,8 @@ var DB_API = {
     monthTransactions.forEach(function(tx){
       if(tx.type==='Income') totalIncome+=tx.amount;
       if(tx.type==='Expense'){totalExpense+=tx.amount;if(categoryExpenses[tx.category]!==undefined) categoryExpenses[tx.category]+=tx.amount;}
-      if(tx.type==='Transfer'&&tx.category==='Invest'){if(categoryExpenses['Invest']!==undefined) categoryExpenses['Invest']+=tx.amount;}
+      var iv=investFlowAmount_(tx);
+      if(iv!==0&&categoryExpenses['Invest']!==undefined) categoryExpenses['Invest']+=iv;
     });
     var saving=totalIncome-totalExpense;
 
@@ -8224,7 +8245,7 @@ var DB_API = {
       if(tx.type==='Expense'){ prevMonth.expense+=tx.amount; if(tx.date<=pmSameDay) prevMonth.expenseToDate+=tx.amount; }
     });
 
-    var allocationCards=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.min(spent/target,1):0;return{category:a.category,percent:a.percent,icon:a.icon,color:a.color,spent:spent,target:target,progress:progress};});
+    var allocationCards=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.max(Math.min(spent/target,1),0):0;return{category:a.category,percent:a.percent,icon:a.icon,color:a.color,spent:spent,target:target,progress:progress};});
     return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,prevNetWorth:prevNetWorth,netWorthTrend:netWorthTrend,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,prevMonth:prevMonth,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
   },
 
@@ -8527,9 +8548,8 @@ var DB_API = {
         var cat = tx.category || 'Other';
         categoryExpenses[cat] = (categoryExpenses[cat] || 0) + tx.amount;
       }
-      if(tx.type==='Transfer'&&tx.category==='Invest'){
-        categoryExpenses['Invest'] = (categoryExpenses['Invest'] || 0) + tx.amount;
-      }
+      var iv=investFlowAmount_(tx);
+      if(iv!==0) categoryExpenses['Invest'] = (categoryExpenses['Invest'] || 0) + iv;
     });
 
     var summaryRowsAll = await this.mmGetSummaryRows();
@@ -8564,9 +8584,8 @@ var DB_API = {
         var cat = tx.category || 'Other';
         prevCategoryExpenses[cat] = (prevCategoryExpenses[cat] || 0) + tx.amount;
       }
-      if(tx.type==='Transfer'&&tx.category==='Invest'){
-        prevCategoryExpenses['Invest'] = (prevCategoryExpenses['Invest'] || 0) + tx.amount;
-      }
+      var iv=investFlowAmount_(tx);
+      if(iv!==0) prevCategoryExpenses['Invest'] = (prevCategoryExpenses['Invest'] || 0) + iv;
     });
 
     if(prevTxs.length === 0){
@@ -9263,36 +9282,59 @@ function injectAuthSettingsCard() {
     const customInput = document.getElementById('ivAssetCustom');
     if (!container) return;
 
-    // For sell/value, show existing assets from portfolio
-    if ((IV_TYPE === 'sell' || IV_TYPE === 'value') && ASSET_OPTIONS.length) {
-      let filtered = ASSET_OPTIONS;
-      if (IV_SELECTED_PLATFORM) filtered = filtered.filter(a => a.platform === IV_SELECTED_PLATFORM);
-      if (IV_SELECTED_SECTOR) filtered = filtered.filter(a => a.sector === IV_SELECTED_SECTOR);
-
-      container.innerHTML = filtered.slice(0, 8).map(a => {
-        const isActive = IV_SELECTED_ASSET === a.asset;
-        return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${jsStr(a.asset)}')">${escapeHtml(a.asset)}</button>`;
-      }).join('');
-      if (customInput) customInput.style.display = 'none';
-    } else if (IV_TYPE === 'buy') {
-      // Buy: show recent assets + text input for new
-      const recent = ASSET_OPTIONS.slice(0, 6);
-      container.innerHTML = recent.map(a => {
-        const isActive = IV_SELECTED_ASSET === a.asset;
-        return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${jsStr(a.asset)}')">${escapeHtml(a.asset)}</button>`;
-      }).join('');
-      if (customInput) customInput.style.display = 'block';
-    } else {
+    if (IV_TYPE !== 'buy' && IV_TYPE !== 'sell' && IV_TYPE !== 'value') {
       container.innerHTML = '';
       if (customInput) customInput.style.display = 'none';
+      return;
     }
+
+    let list = ASSET_OPTIONS;
+    if (IV_SELECTED_PLATFORM) list = list.filter(a => a.platform === IV_SELECTED_PLATFORM);
+    if (IV_SELECTED_SECTOR) list = list.filter(a => a.sector === IV_SELECTED_SECTOR);
+
+    // The same coin held on two platforms used to render as identical chips
+    // ("BTC BTC BTC"). Each holding keeps its own chip, but a name that
+    // appears more than once is labelled with its platform.
+    const nameCount = {};
+    list.forEach(a => { const k = a.asset.toUpperCase(); nameCount[k] = (nameCount[k] || 0) + 1; });
+
+    const max = IV_TYPE === 'buy' ? 6 : 10;
+    container.innerHTML = list.slice(0, max).map(a => {
+      const isActive = IV_SELECTED_ASSET === a.asset
+        && (!IV_SELECTED_PLATFORM || IV_SELECTED_PLATFORM === a.platform)
+        && (!IV_SELECTED_SECTOR || IV_SELECTED_SECTOR === a.sector);
+      const label = nameCount[a.asset.toUpperCase()] > 1 ? a.asset + ' · ' + a.platform : a.asset;
+      return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${jsStr(a.asset)}','${jsStr(a.platform)}','${jsStr(a.sector)}')">${escapeHtml(label)}</button>`;
+    }).join('');
+    if (customInput) customInput.style.display = IV_TYPE === 'buy' ? 'block' : 'none';
   }
 
-  function ivSelectAsset(name) {
-    IV_SELECTED_ASSET = IV_SELECTED_ASSET === name ? '' : name;
+  function ivSelectAsset(name, platform, sector) {
+    if (IV_SELECTED_ASSET === name && (!platform || IV_SELECTED_PLATFORM === platform)) {
+      IV_SELECTED_ASSET = '';
+    } else {
+      IV_SELECTED_ASSET = name;
+      // Picking a holding answers platform and sector too — fill them in
+      // instead of making the user tap three separate rows for one asset.
+      if (platform) IV_SELECTED_PLATFORM = platform;
+      if (sector) IV_SELECTED_SECTOR = sector;
+    }
     const customInput = document.getElementById('ivAssetCustom');
-    if (customInput && IV_SELECTED_ASSET) customInput.value = IV_SELECTED_ASSET;
+    if (customInput) customInput.value = IV_SELECTED_ASSET;
+
+    // Update Value: start from the value on record, so the user edits a
+    // number instead of retyping it from memory.
+    if (IV_TYPE === 'value' && IV_SELECTED_ASSET) {
+      const opt = ASSET_OPTIONS.find(a => a.asset === IV_SELECTED_ASSET
+        && a.platform === IV_SELECTED_PLATFORM && a.sector === IV_SELECTED_SECTOR);
+      const amt = document.getElementById('ivAmountInput');
+      if (opt && amt && !amt.value) amt.value = Number(opt.currentValueIDR || 0).toLocaleString('id-ID');
+    }
+
+    ivRenderPlatforms();
+    ivRenderSectors();
     ivRenderAssets();
+    ivUpdateCashInfo();
   }
 
   function ivSubmit() {
@@ -11293,8 +11335,14 @@ function mmMonthContext() {
 const MM_NON_SPEND_RE = /invest|saving|tabung|darurat|emergency/i;
 
 function mmInvestThisMonth(txs) {
-  return (txs || []).reduce((s, tx) =>
-    s + (tx.type === 'Transfer' && (tx.category === 'Invest' || /invest/i.test(tx.accountTo || '')) ? tx.amount : 0), 0);
+  // Net flow: transfers into Invest add, withdrawals back to an account
+  // (account prefixed "Invest:") subtract.
+  return (txs || []).reduce((s, tx) => {
+    if (tx.type !== 'Transfer') return s;
+    if (String(tx.account || '').startsWith('Invest:')) return s - tx.amount;
+    if (String(tx.accountTo || '').startsWith('Invest:') || tx.category === 'Invest' || /invest/i.test(tx.accountTo || '')) return s + tx.amount;
+    return s;
+  }, 0);
 }
 
 /* === CASH FLOW (inside the hero) === */
@@ -11347,8 +11395,6 @@ function mmRenderPulse(data) {
   const expense = data.totalExpense || 0;
   const prev = data.prevMonth || { income: 0, expense: 0, expenseToDate: 0, days: 30 };
 
-  setText('mmPulseSub', `Hari ke-${ctx.day} dari ${ctx.daysInMonth} · sisa ${ctx.daysLeft - 1} hari`);
-
   // 1. Safe to spend per day: what is left in the spending posts, spread over
   // the days that remain. Falls back to income minus expense with no split.
   const spendCards = (data.allocationCards || []).filter(c => (c.target || 0) > 0 && !MM_NON_SPEND_RE.test(c.category || ''));
@@ -11372,41 +11418,19 @@ function mmRenderPulse(data) {
   const invest = mmInvestThisMonth(data.monthTransactions);
 
   const pct = (v) => Math.abs(Math.round(v * 100)) + '%';
-  const tiles = [
-    {
-      icon: 'wallet', label: 'Aman dipakai',
-      value: mmFormatIDRShort(perDay) + '<small>/hari</small>',
-      sub: remaining > 0 ? `sisa ${mmFormatIDRShort(remaining)} · ${ctx.daysLeft} hari` : 'budget belanja habis',
-      tone: remaining <= 0 ? 'bad' : (perDay < avg * 0.6 ? 'warn' : 'good')
-    },
-    {
-      icon: 'activity', label: 'Rata-rata harian',
-      value: mmFormatIDRShort(avg),
-      sub: pace === null ? 'belum ada pembanding' : `${pace > 0 ? '↑' : '↓'} ${pct(pace)} vs bulan lalu`,
-      tone: pace === null ? '' : (pace > 0.1 ? 'bad' : pace < -0.05 ? 'good' : '')
-    },
-    {
-      icon: 'trending-up', label: 'Proyeksi keluar',
-      value: mmFormatIDRShort(projected),
-      sub: income > 0
-        ? (projGap >= 0 ? `surplus ± ${mmFormatIDRShort(projGap)}` : `defisit ± ${mmFormatIDRShort(-projGap)}`)
-        : `bulan lalu ${mmFormatIDRShort(prev.expense)}`,
-      tone: income > 0 ? (projGap >= 0 ? 'good' : 'bad') : ''
-    },
-    {
-      icon: 'piggy-bank', label: 'Rasio hemat',
-      value: rate === null ? '–' : (rate < 0 ? '-' : '') + pct(rate),
-      sub: invest > 0 ? `invest ${mmFormatIDRShort(invest)}` : (rate === null ? 'belum ada pemasukan' : 'dari pemasukan'),
-      tone: rate === null ? '' : (rate >= 0.2 ? 'good' : rate < 0 ? 'bad' : 'warn')
-    }
-  ];
 
-  grid.innerHTML = tiles.map(t => `
-    <div class="mm-pulse-tile ${t.tone ? 'is-' + t.tone : ''}">
-      <span class="mm-pulse-label">${lucideIconSvg(t.icon, 14)}${t.label}</span>
-      <strong class="mm-pulse-value">${t.value}</strong>
-      <span class="mm-pulse-sub">${escapeHtml(t.sub)}</span>
-    </div>`).join('');
+  // One tile, one decision: how much is safe to spend today. Pace,
+  // projection and savings ratio moved to Insight — the dashboard was a
+  // wall of eight numbers that said the same thing four ways.
+  const tone = remaining <= 0 ? 'bad' : (perDay < avg * 0.6 ? 'warn' : 'good');
+  grid.innerHTML = `
+    <button type="button" class="mm-pulse-tile mm-pulse-wide ${tone ? 'is-' + tone : ''}" onclick="mmShowPage('mmInsightPage')">
+      <span class="mm-pulse-label">${lucideIconSvg('wallet', 14)}Aman dipakai</span>
+      <strong class="mm-pulse-value">${mmFormatIDRShort(perDay)}<small>/hari</small></strong>
+      <span class="mm-pulse-sub">${escapeHtml(remaining > 0
+        ? `sisa ${mmFormatIDRShort(remaining)} untuk ${ctx.daysLeft} hari · hari ke-${ctx.day} dari ${ctx.daysInMonth}`
+        : 'budget belanja habis — detail di Insight')}</span>
+    </button>`;
 
   if (!alertsEl) return;
 
@@ -11440,7 +11464,7 @@ function mmRenderPulse(data) {
     alerts.push({ rank: 4, tone: 'info', icon: 'info', text: 'Belum ada pemasukan tercatat bulan ini — budget belum terbentuk' });
   }
 
-  alertsEl.innerHTML = alerts.sort((a, b) => a.rank - b.rank).slice(0, 3).map(a => {
+  alertsEl.innerHTML = alerts.sort((a, b) => a.rank - b.rank).slice(0, 2).map(a => {
     const attrs = a.cat
       ? `role="button" tabindex="0" onclick="mmShowCategoryDetail('${jsStr(a.cat)}')" onkeydown="if(event.key==='Enter'){this.click();}"`
       : '';
