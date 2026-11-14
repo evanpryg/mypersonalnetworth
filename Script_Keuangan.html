@@ -419,8 +419,14 @@ function mmMonthContext() {
 const MM_NON_SPEND_RE = /invest|saving|tabung|darurat|emergency/i;
 
 function mmInvestThisMonth(txs) {
-  return (txs || []).reduce((s, tx) =>
-    s + (tx.type === 'Transfer' && (tx.category === 'Invest' || /invest/i.test(tx.accountTo || '')) ? tx.amount : 0), 0);
+  // Net flow: transfers into Invest add, withdrawals back to an account
+  // (account prefixed "Invest:") subtract.
+  return (txs || []).reduce((s, tx) => {
+    if (tx.type !== 'Transfer') return s;
+    if (String(tx.account || '').startsWith('Invest:')) return s - tx.amount;
+    if (String(tx.accountTo || '').startsWith('Invest:') || tx.category === 'Invest' || /invest/i.test(tx.accountTo || '')) return s + tx.amount;
+    return s;
+  }, 0);
 }
 
 /* === CASH FLOW (inside the hero) === */
@@ -473,8 +479,6 @@ function mmRenderPulse(data) {
   const expense = data.totalExpense || 0;
   const prev = data.prevMonth || { income: 0, expense: 0, expenseToDate: 0, days: 30 };
 
-  setText('mmPulseSub', `Hari ke-${ctx.day} dari ${ctx.daysInMonth} · sisa ${ctx.daysLeft - 1} hari`);
-
   // 1. Safe to spend per day: what is left in the spending posts, spread over
   // the days that remain. Falls back to income minus expense with no split.
   const spendCards = (data.allocationCards || []).filter(c => (c.target || 0) > 0 && !MM_NON_SPEND_RE.test(c.category || ''));
@@ -498,41 +502,19 @@ function mmRenderPulse(data) {
   const invest = mmInvestThisMonth(data.monthTransactions);
 
   const pct = (v) => Math.abs(Math.round(v * 100)) + '%';
-  const tiles = [
-    {
-      icon: 'wallet', label: 'Aman dipakai',
-      value: mmFormatIDRShort(perDay) + '<small>/hari</small>',
-      sub: remaining > 0 ? `sisa ${mmFormatIDRShort(remaining)} · ${ctx.daysLeft} hari` : 'budget belanja habis',
-      tone: remaining <= 0 ? 'bad' : (perDay < avg * 0.6 ? 'warn' : 'good')
-    },
-    {
-      icon: 'activity', label: 'Rata-rata harian',
-      value: mmFormatIDRShort(avg),
-      sub: pace === null ? 'belum ada pembanding' : `${pace > 0 ? '↑' : '↓'} ${pct(pace)} vs bulan lalu`,
-      tone: pace === null ? '' : (pace > 0.1 ? 'bad' : pace < -0.05 ? 'good' : '')
-    },
-    {
-      icon: 'trending-up', label: 'Proyeksi keluar',
-      value: mmFormatIDRShort(projected),
-      sub: income > 0
-        ? (projGap >= 0 ? `surplus ± ${mmFormatIDRShort(projGap)}` : `defisit ± ${mmFormatIDRShort(-projGap)}`)
-        : `bulan lalu ${mmFormatIDRShort(prev.expense)}`,
-      tone: income > 0 ? (projGap >= 0 ? 'good' : 'bad') : ''
-    },
-    {
-      icon: 'piggy-bank', label: 'Rasio hemat',
-      value: rate === null ? '–' : (rate < 0 ? '-' : '') + pct(rate),
-      sub: invest > 0 ? `invest ${mmFormatIDRShort(invest)}` : (rate === null ? 'belum ada pemasukan' : 'dari pemasukan'),
-      tone: rate === null ? '' : (rate >= 0.2 ? 'good' : rate < 0 ? 'bad' : 'warn')
-    }
-  ];
 
-  grid.innerHTML = tiles.map(t => `
-    <div class="mm-pulse-tile ${t.tone ? 'is-' + t.tone : ''}">
-      <span class="mm-pulse-label">${lucideIconSvg(t.icon, 14)}${t.label}</span>
-      <strong class="mm-pulse-value">${t.value}</strong>
-      <span class="mm-pulse-sub">${escapeHtml(t.sub)}</span>
-    </div>`).join('');
+  // One tile, one decision: how much is safe to spend today. Pace,
+  // projection and savings ratio moved to Insight — the dashboard was a
+  // wall of eight numbers that said the same thing four ways.
+  const tone = remaining <= 0 ? 'bad' : (perDay < avg * 0.6 ? 'warn' : 'good');
+  grid.innerHTML = `
+    <button type="button" class="mm-pulse-tile mm-pulse-wide ${tone ? 'is-' + tone : ''}" onclick="mmShowPage('mmInsightPage')">
+      <span class="mm-pulse-label">${lucideIconSvg('wallet', 14)}Aman dipakai</span>
+      <strong class="mm-pulse-value">${mmFormatIDRShort(perDay)}<small>/hari</small></strong>
+      <span class="mm-pulse-sub">${escapeHtml(remaining > 0
+        ? `sisa ${mmFormatIDRShort(remaining)} untuk ${ctx.daysLeft} hari · hari ke-${ctx.day} dari ${ctx.daysInMonth}`
+        : 'budget belanja habis — detail di Insight')}</span>
+    </button>`;
 
   if (!alertsEl) return;
 
@@ -566,7 +548,7 @@ function mmRenderPulse(data) {
     alerts.push({ rank: 4, tone: 'info', icon: 'info', text: 'Belum ada pemasukan tercatat bulan ini — budget belum terbentuk' });
   }
 
-  alertsEl.innerHTML = alerts.sort((a, b) => a.rank - b.rank).slice(0, 3).map(a => {
+  alertsEl.innerHTML = alerts.sort((a, b) => a.rank - b.rank).slice(0, 2).map(a => {
     const attrs = a.cat
       ? `role="button" tabindex="0" onclick="mmShowCategoryDetail('${jsStr(a.cat)}')" onkeydown="if(event.key==='Enter'){this.click();}"`
       : '';

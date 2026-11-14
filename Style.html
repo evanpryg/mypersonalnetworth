@@ -5641,6 +5641,23 @@ html, body { overscroll-behavior: none; }
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
+.mm-pulse-grid.is-single { grid-template-columns: 1fr; }
+/* One wide actionable strip: value and context on a single card, tappable
+   through to Insight for the full breakdown. */
+.mm-pulse-tile.mm-pulse-wide {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: 10px;
+  padding: 12px 14px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.mm-pulse-wide .mm-pulse-value { font-size: 20px; margin-left: auto; }
+.mm-pulse-wide .mm-pulse-sub { flex-basis: 100%; }
 .mm-pulse-tile {
   display: flex;
   flex-direction: column;

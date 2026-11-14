@@ -417,16 +417,23 @@
               </div>
             </div>
 
-            <!-- Month pulse: safe daily spend, pace, projection, alerts -->
+            <!-- Month pulse: one actionable number (safe daily spend) + alerts.
+                 The deeper stats (pace, projection, savings ratio) live in Insight. -->
             <section class="mm-dash-section" id="mmPulseSection">
+              <div class="mm-pulse-grid is-single" id="mmPulseGrid"></div>
+              <div class="mm-alerts" id="mmAlerts"></div>
+            </section>
+
+            <!-- Budget: every pos, not just one -->
+            <section class="mm-dash-section" id="mmBudgetSection">
               <div class="mm-section-header">
                 <div>
-                  <h3>Ringkasan bulan ini</h3>
-                  <p class="mm-section-sub" id="mmPulseSub">&nbsp;</p>
+                  <h3>Budget</h3>
+                  <p class="mm-section-sub" id="mmBudgetSummary">&nbsp;</p>
                 </div>
+                <button class="mm-view-all" id="mmBudgetDetailBtn" onclick="mmShowBudgetDetail()">Detail <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
               </div>
-              <div class="mm-pulse-grid" id="mmPulseGrid"></div>
-              <div class="mm-alerts" id="mmAlerts"></div>
+              <div class="mm-dash-card mm-budget-list" id="mmBudgetList"></div>
             </section>
 
             <!-- Daily spending -->
@@ -443,18 +450,6 @@
               </div>
             </section>
 
-            <!-- Budget: every pos, not just one -->
-            <section class="mm-dash-section" id="mmBudgetSection">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Budget</h3>
-                  <p class="mm-section-sub" id="mmBudgetSummary">&nbsp;</p>
-                </div>
-                <button class="mm-view-all" id="mmBudgetDetailBtn" onclick="mmShowBudgetDetail()">Detail <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
-              </div>
-              <div class="mm-dash-card mm-budget-list" id="mmBudgetList"></div>
-            </section>
-
             <!-- Accounts -->
             <section class="mm-dash-section" id="mmAccountsSection">
               <div class="mm-section-header">
@@ -469,24 +464,8 @@
               </div>
             </section>
 
-            <!-- Breakdown -->
-            <section class="mm-dash-section" id="mmExpenseSection">
-              <div class="mm-section-header">
-                <h3>Rincian kategori</h3>
-                <div class="mm-expense-tabs" role="tablist">
-                  <button class="mm-expense-tab active" role="tab" data-tab="expense" onclick="mmSwitchChartTab(this,'expense')">Keluar</button>
-                  <button class="mm-expense-tab" role="tab" data-tab="income" onclick="mmSwitchChartTab(this,'income')">Masuk</button>
-                </div>
-              </div>
-              <div class="mm-dash-card">
-                <div class="mm-expense-content">
-                  <div class="mm-donut-wrapper">
-                    <div id="mmChartDonut" class="chart-donut-wrap"></div>
-                  </div>
-                  <div id="mmChartCategoryList" class="mm-category-list"></div>
-                </div>
-              </div>
-            </section>
+            <!-- Rincian kategori (donut) pindah ke Insight — dashboard cukup
+                 budget + daily; breakdown lengkap ada di Insight & History. -->
 
             <!-- This month's transactions, grouped by day -->
             <section class="mm-dash-section" id="mmTransactionsSection">

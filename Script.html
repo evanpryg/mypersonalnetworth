@@ -297,36 +297,59 @@
     const customInput = document.getElementById('ivAssetCustom');
     if (!container) return;
 
-    // For sell/value, show existing assets from portfolio
-    if ((IV_TYPE === 'sell' || IV_TYPE === 'value') && ASSET_OPTIONS.length) {
-      let filtered = ASSET_OPTIONS;
-      if (IV_SELECTED_PLATFORM) filtered = filtered.filter(a => a.platform === IV_SELECTED_PLATFORM);
-      if (IV_SELECTED_SECTOR) filtered = filtered.filter(a => a.sector === IV_SELECTED_SECTOR);
-
-      container.innerHTML = filtered.slice(0, 8).map(a => {
-        const isActive = IV_SELECTED_ASSET === a.asset;
-        return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${jsStr(a.asset)}')">${escapeHtml(a.asset)}</button>`;
-      }).join('');
-      if (customInput) customInput.style.display = 'none';
-    } else if (IV_TYPE === 'buy') {
-      // Buy: show recent assets + text input for new
-      const recent = ASSET_OPTIONS.slice(0, 6);
-      container.innerHTML = recent.map(a => {
-        const isActive = IV_SELECTED_ASSET === a.asset;
-        return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${jsStr(a.asset)}')">${escapeHtml(a.asset)}</button>`;
-      }).join('');
-      if (customInput) customInput.style.display = 'block';
-    } else {
+    if (IV_TYPE !== 'buy' && IV_TYPE !== 'sell' && IV_TYPE !== 'value') {
       container.innerHTML = '';
       if (customInput) customInput.style.display = 'none';
+      return;
     }
+
+    let list = ASSET_OPTIONS;
+    if (IV_SELECTED_PLATFORM) list = list.filter(a => a.platform === IV_SELECTED_PLATFORM);
+    if (IV_SELECTED_SECTOR) list = list.filter(a => a.sector === IV_SELECTED_SECTOR);
+
+    // The same coin held on two platforms used to render as identical chips
+    // ("BTC BTC BTC"). Each holding keeps its own chip, but a name that
+    // appears more than once is labelled with its platform.
+    const nameCount = {};
+    list.forEach(a => { const k = a.asset.toUpperCase(); nameCount[k] = (nameCount[k] || 0) + 1; });
+
+    const max = IV_TYPE === 'buy' ? 6 : 10;
+    container.innerHTML = list.slice(0, max).map(a => {
+      const isActive = IV_SELECTED_ASSET === a.asset
+        && (!IV_SELECTED_PLATFORM || IV_SELECTED_PLATFORM === a.platform)
+        && (!IV_SELECTED_SECTOR || IV_SELECTED_SECTOR === a.sector);
+      const label = nameCount[a.asset.toUpperCase()] > 1 ? a.asset + ' · ' + a.platform : a.asset;
+      return `<button class="tx-chip tx-chip-sm ${isActive ? 'active' : ''}" style="--chip-color:var(--accent2)" onclick="ivSelectAsset('${jsStr(a.asset)}','${jsStr(a.platform)}','${jsStr(a.sector)}')">${escapeHtml(label)}</button>`;
+    }).join('');
+    if (customInput) customInput.style.display = IV_TYPE === 'buy' ? 'block' : 'none';
   }
 
-  function ivSelectAsset(name) {
-    IV_SELECTED_ASSET = IV_SELECTED_ASSET === name ? '' : name;
+  function ivSelectAsset(name, platform, sector) {
+    if (IV_SELECTED_ASSET === name && (!platform || IV_SELECTED_PLATFORM === platform)) {
+      IV_SELECTED_ASSET = '';
+    } else {
+      IV_SELECTED_ASSET = name;
+      // Picking a holding answers platform and sector too — fill them in
+      // instead of making the user tap three separate rows for one asset.
+      if (platform) IV_SELECTED_PLATFORM = platform;
+      if (sector) IV_SELECTED_SECTOR = sector;
+    }
     const customInput = document.getElementById('ivAssetCustom');
-    if (customInput && IV_SELECTED_ASSET) customInput.value = IV_SELECTED_ASSET;
+    if (customInput) customInput.value = IV_SELECTED_ASSET;
+
+    // Update Value: start from the value on record, so the user edits a
+    // number instead of retyping it from memory.
+    if (IV_TYPE === 'value' && IV_SELECTED_ASSET) {
+      const opt = ASSET_OPTIONS.find(a => a.asset === IV_SELECTED_ASSET
+        && a.platform === IV_SELECTED_PLATFORM && a.sector === IV_SELECTED_SECTOR);
+      const amt = document.getElementById('ivAmountInput');
+      if (opt && amt && !amt.value) amt.value = Number(opt.currentValueIDR || 0).toLocaleString('id-ID');
+    }
+
+    ivRenderPlatforms();
+    ivRenderSectors();
     ivRenderAssets();
+    ivUpdateCashInfo();
   }
 
   function ivSubmit() {

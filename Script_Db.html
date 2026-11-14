@@ -100,6 +100,15 @@ function makeAssetKey_(platform, sector, asset) {
   return [normalizeUpper_(platform), normalizeUpper_(sector), normalizeUpper_(asset)].join('|');
 }
 function getCashAssetName_(platform) { return normalize_(platform) + ' Cash'; }
+// How much an MM transfer moves into (+) or out of (−) the investment side.
+// Old rows only carry category='Invest' on the way in; direction is read from
+// the Invest: prefix so withdrawals reduce the month's invest total too.
+function investFlowAmount_(tx) {
+  if (normalize_(tx.type) !== 'Transfer') return 0;
+  if (String(tx.accountTo || '').indexOf('Invest:') === 0) return toNumber_(tx.amount);
+  if (String(tx.account || '').indexOf('Invest:') === 0) return -toNumber_(tx.amount);
+  return normalize_(tx.category) === 'Invest' ? toNumber_(tx.amount) : 0;
+}
 function formatDateForClient_(value) {
   if (!value) return '';
   var d = new Date(value);
@@ -364,6 +373,21 @@ var DB_API = {
       error = retry.error;
     }
     if (error) throw error;
+
+    // A Buy/Sell moves money in or out of the asset, so a persisted market
+    // value (from "Update Value") must move with it. Without this, buying an
+    // existing asset left its CurrentValue frozen at the old persisted number
+    // and the user had to re-enter the value by hand after every buy.
+    if ((transactionType === 'Buy' || transactionType === 'Sell') && sector && sector !== 'Cash' && asset) {
+      var pf = await _sb.from('portfolio').select('platform,sector,asset,currentvalueidr')
+        .ilike('platform', platform).ilike('sector', sector).ilike('asset', asset).maybeSingle();
+      if (pf.data) {
+        var newVal = toNumber_(pf.data.currentvalueidr) + (transactionType === 'Buy' ? amountIDR : -amountIDR);
+        var upd = await _sb.from('portfolio').update({ currentvalueidr: Math.max(newVal, 0) })
+          .eq('platform', pf.data.platform).eq('sector', pf.data.sector).eq('asset', pf.data.asset);
+        if (upd.error) console.warn('Persisted asset value not adjusted:', upd.error.message);
+      }
+    }
     return { success:true, message:'Transaction added successfully.' };
   },
 
@@ -529,7 +553,7 @@ var DB_API = {
 
   async mmAddTransaction(payload) {
     var type=normalize_(payload.type),account=normalize_(payload.account),accountTo=normalize_(payload.accountTo)||'',amount=toNumber_(payload.amount);
-    var category=(type==='Transfer'&&accountTo.startsWith('Invest:'))?'Invest':normalize_(payload.category)||'';
+    var category=(type==='Transfer'&&(accountTo.startsWith('Invest:')||account.startsWith('Invest:')))?'Invest':normalize_(payload.category)||'';
     // Need the new id back so the paired investment row can point at it.
     var { data, error } = await _sb.from('mm_transactions').insert(mapRowToDb({Date:payload.date,Type:type,Account:account,AccountTo:accountTo,Category:category,Subcategory:normalize_(payload.subcategory)||'',Amount:amount,Notes:normalize_(payload.notes)||'',Status:'Active'})).select('id');
     if (error) throw error;
@@ -667,7 +691,8 @@ var DB_API = {
     monthTransactions.forEach(function(tx){
       if(tx.type==='Income') totalIncome+=tx.amount;
       if(tx.type==='Expense'){totalExpense+=tx.amount;if(categoryExpenses[tx.category]!==undefined) categoryExpenses[tx.category]+=tx.amount;}
-      if(tx.type==='Transfer'&&tx.category==='Invest'){if(categoryExpenses['Invest']!==undefined) categoryExpenses['Invest']+=tx.amount;}
+      var iv=investFlowAmount_(tx);
+      if(iv!==0&&categoryExpenses['Invest']!==undefined) categoryExpenses['Invest']+=iv;
     });
     var saving=totalIncome-totalExpense;
 
@@ -684,7 +709,7 @@ var DB_API = {
       if(tx.type==='Expense'){ prevMonth.expense+=tx.amount; if(tx.date<=pmSameDay) prevMonth.expenseToDate+=tx.amount; }
     });
 
-    var allocationCards=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.min(spent/target,1):0;return{category:a.category,percent:a.percent,icon:a.icon,color:a.color,spent:spent,target:target,progress:progress};});
+    var allocationCards=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.max(Math.min(spent/target,1),0):0;return{category:a.category,percent:a.percent,icon:a.icon,color:a.color,spent:spent,target:target,progress:progress};});
     return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,prevNetWorth:prevNetWorth,netWorthTrend:netWorthTrend,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,prevMonth:prevMonth,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
   },
 
@@ -987,9 +1012,8 @@ var DB_API = {
         var cat = tx.category || 'Other';
         categoryExpenses[cat] = (categoryExpenses[cat] || 0) + tx.amount;
       }
-      if(tx.type==='Transfer'&&tx.category==='Invest'){
-        categoryExpenses['Invest'] = (categoryExpenses['Invest'] || 0) + tx.amount;
-      }
+      var iv=investFlowAmount_(tx);
+      if(iv!==0) categoryExpenses['Invest'] = (categoryExpenses['Invest'] || 0) + iv;
     });
 
     var summaryRowsAll = await this.mmGetSummaryRows();
@@ -1024,9 +1048,8 @@ var DB_API = {
         var cat = tx.category || 'Other';
         prevCategoryExpenses[cat] = (prevCategoryExpenses[cat] || 0) + tx.amount;
       }
-      if(tx.type==='Transfer'&&tx.category==='Invest'){
-        prevCategoryExpenses['Invest'] = (prevCategoryExpenses['Invest'] || 0) + tx.amount;
-      }
+      var iv=investFlowAmount_(tx);
+      if(iv!==0) prevCategoryExpenses['Invest'] = (prevCategoryExpenses['Invest'] || 0) + iv;
     });
 
     if(prevTxs.length === 0){
