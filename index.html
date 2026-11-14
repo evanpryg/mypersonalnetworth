@@ -4961,6 +4961,39 @@ select.form-input:focus {
 .mm-budget-row.is-over .mm-budget-row-note,
 .mm-budget-row.is-over .mm-budget-row-pct { color: var(--error); }
 
+/* Budget pool: carry-over + income, stated once above the posts */
+.mm-budget-basis { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.mm-budget-basis-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.mm-budget-basis > strong { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); font-variant-numeric: tabular-nums; }
+.mm-budget-basis-parts { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.mm-budget-basis-parts > span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Category breakdown (money out / in), tap a row to open its sub-categories */
+.mm-bd-card { padding: 14px 14px 2px; }
+.mm-bd-total { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-muted); }
+.mm-bd-total > strong { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.mm-bd-stack { display: flex; gap: 2px; height: 8px; margin: 10px 0 4px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.06); }
+.mm-bd-stack > span { display: block; height: 100%; min-width: 3px; }
+.mm-bd-item { border-bottom: 1px solid var(--border); }
+.mm-bd-item:last-child { border-bottom: none; }
+.mm-bd-row { width: 100%; min-height: 56px; display: flex; align-items: center; gap: 12px; padding: 12px 0; border: none; background: none; color: inherit; font-family: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mm-bd-main { flex: 1; min-width: 0; display: grid; gap: 5px; }
+.mm-bd-top, .mm-bd-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mm-bd-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mm-bd-top > strong { flex-shrink: 0; font-size: 14px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.mm-bd-meta { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.mm-bd-chev { display: inline-flex; transition: transform var(--dur-fast); }
+.mm-bd-item.is-open .mm-bd-chev { transform: rotate(180deg); }
+.mm-bd-bar { display: block; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.07); overflow: hidden; }
+.mm-bd-bar > span { display: block; height: 100%; border-radius: 999px; }
+.mm-bd-detail { display: grid; gap: 2px; margin: 0 0 12px 48px; padding: 6px 12px; border-radius: 12px; background: rgba(255,255,255,0.04); }
+.mm-bd-sub { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; min-height: 32px; font-size: 13px; color: var(--text); }
+.mm-bd-sub > span:first-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mm-bd-sub-pct { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.mm-bd-sub > strong { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mm-bd-more { display: inline-flex; align-items: center; gap: 4px; justify-self: start; min-height: 40px; padding: 0; border: none; background: none; color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .mm-bd-chev { transition: none; } }
+
 /* This month's transactions, one group per day */
 .dashboard-wrap > .mm-dash-section:last-child { margin-bottom: 0; }
 .mm-dash-card.mm-transaction-list { padding: 0 14px; gap: 0; }
@@ -6891,6 +6924,21 @@ html, body { overscroll-behavior: none; }
               <div class="mm-dash-card mm-budget-list" id="mmBudgetList"></div>
             </section>
 
+            <!-- Category breakdown: where money came from / went, tap to drill down -->
+            <section class="mm-dash-section" id="mmExpenseSection">
+              <div class="mm-section-header">
+                <div>
+                  <h3>Rincian kategori</h3>
+                  <p class="mm-section-sub" id="mmBreakdownSub">&nbsp;</p>
+                </div>
+                <div class="mm-expense-tabs" role="tablist">
+                  <button class="mm-expense-tab active" role="tab" aria-selected="true" data-tab="expense" onclick="mmSwitchChartTab(this,'expense')">Keluar</button>
+                  <button class="mm-expense-tab" role="tab" aria-selected="false" data-tab="income" onclick="mmSwitchChartTab(this,'income')">Masuk</button>
+                </div>
+              </div>
+              <div class="mm-dash-card mm-bd-card" id="mmBreakdown"></div>
+            </section>
+
             <!-- Daily spending -->
             <section class="mm-dash-section" id="mmDailySection">
               <div class="mm-section-header">
@@ -6918,9 +6966,6 @@ html, body { overscroll-behavior: none; }
                 <div class="empty-state">No accounts yet.</div>
               </div>
             </section>
-
-            <!-- Rincian kategori (donut) pindah ke Insight — dashboard cukup
-                 budget + daily; breakdown lengkap ada di Insight & History. -->
 
             <!-- This month's transactions, grouped by day -->
             <section class="mm-dash-section" id="mmTransactionsSection">
@@ -7636,6 +7681,28 @@ function makeAssetKey_(platform, sector, asset) {
   return [normalizeUpper_(platform), normalizeUpper_(sector), normalizeUpper_(asset)].join('|');
 }
 function getCashAssetName_(platform) { return normalize_(platform) + ' Cash'; }
+// Money already sitting in the dashboard accounts when a month begins (all
+// activity dated before `beforeDate`). This is the carry-over that joins the
+// month's income in the budget pool, so the budget always agrees with the
+// balances the user actually holds.
+function openingBalance_(accounts, txs, beforeDate) {
+  var bal = {}, key = {};
+  accounts.forEach(function(a) { bal[a.name] = a.initialBalance; key[a.name.toLowerCase()] = a.name; });
+  function resolve(n) { n = String(n || '').trim(); return n ? (key[n.toLowerCase()] || n) : null; }
+  txs.forEach(function(tx) {
+    if (tx.date >= beforeDate) return;
+    var from = resolve(tx.account), to = resolve(tx.accountTo);
+    if (tx.type === 'Income') { if (from) bal[from] = (bal[from] || 0) + tx.amount; }
+    else if (tx.type === 'Expense') { if (from) bal[from] = (bal[from] || 0) - tx.amount; }
+    else if (tx.type === 'Transfer') {
+      if (from) bal[from] = (bal[from] || 0) - tx.amount;
+      if (to) bal[to] = (bal[to] || 0) + tx.amount;
+    }
+  });
+  var total = 0;
+  accounts.forEach(function(a) { if (a.showOnDashboard) total += bal[a.name] || 0; });
+  return total;
+}
 // How much an MM transfer moves into (+) or out of (−) the investment side.
 // Old rows only carry category='Invest' on the way in; direction is read from
 // the Invest: prefix so withdrawals reduce the month's invest total too.
@@ -8245,8 +8312,12 @@ var DB_API = {
       if(tx.type==='Expense'){ prevMonth.expense+=tx.amount; if(tx.date<=pmSameDay) prevMonth.expenseToDate+=tx.amount; }
     });
 
-    var allocationCards=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.max(Math.min(spent/target,1),0):0;return{category:a.category,percent:a.percent,icon:a.icon,color:a.color,spent:spent,target:target,progress:progress};});
-    return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,prevNetWorth:prevNetWorth,netWorthTrend:netWorthTrend,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,prevMonth:prevMonth,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
+    // Budget pool = what was left from earlier months + this month's income,
+    // split by the allocation percentages. Every new income raises it, and the
+    // sum of what is still free in each post tracks the money actually held.
+    var carryover=Math.max(prevNetWorth,0), budgetBase=carryover+totalIncome;
+    var allocationCards=allocation.map(function(a){var target=budgetBase*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.max(Math.min(spent/target,1),0):0;return{category:a.category,percent:a.percent,icon:a.icon,color:a.color,spent:spent,target:target,progress:progress};});
+    return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,prevNetWorth:prevNetWorth,netWorthTrend:netWorthTrend,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,prevMonth:prevMonth,carryover:carryover,budgetBase:budgetBase,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
   },
 
   // Years whose detail has been archived live in mm_summary instead of
@@ -8601,7 +8672,8 @@ var DB_API = {
     }
 
     var prevSaving=prevIncome-prevExpense,prevSavingRate=prevIncome>0?(prevSaving/prevIncome)*100:0;
-    var budgetAnalysis=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?spent/target:0,prevSpent=prevCategoryExpenses[a.category]||0;var isSaving=(['invest','saving','tabungan'].indexOf(a.category.toLowerCase())>=0);return{category:a.category,percent:a.percent,spent:spent,target:target,progress:progress,prevSpent:prevSpent,isSaving:isSaving};});
+    var carryover=Math.max(openingBalance_(accounts,allTransactions,monthStartStr),0), budgetBase=carryover+totalIncome;
+    var budgetAnalysis=allocation.map(function(a){var target=budgetBase*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?spent/target:0,prevSpent=prevCategoryExpenses[a.category]||0;var isSaving=(['invest','saving','tabungan'].indexOf(a.category.toLowerCase())>=0);return{category:a.category,percent:a.percent,spent:spent,target:target,progress:progress,prevSpent:prevSpent,isSaving:isSaving};});
     var spendingByCategory=Object.entries(categoryExpenses).filter(function(e){return e[1]>0&&['invest','saving','tabungan'].indexOf(e[0].toLowerCase())<0;}).sort(function(a,b){return b[1]-a[1];}).map(function(e){return{category:e[0],amount:e[1],percent:totalExpense>0?(e[1]/totalExpense)*100:0};});
     var monthlyHistory=[];
     for(var i=5;i>=0;i--){
@@ -8641,7 +8713,7 @@ var DB_API = {
     var budgetMetMonths=0;for(var i=1;i<=6;i++){var m=new Date(year,month-1-i,1);var h=monthlyHistory.find(function(mh){return mh.month===m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0');});if(h&&h.saving>=0)budgetMetMonths++;}
     var yearlySummary=await this.mmGetYearlySummary();
 
-    return{yearlySummary:yearlySummary,currentMonth:month,currentYear:year,isCurrentMonth:isCurrentMonth,dayOfMonth:dayOfMonth,daysInMonth:daysInMonth,netWorth:monthNetWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,savingRate:savingRate,prevIncome:prevIncome,prevExpense:prevExpense,prevSaving:prevSaving,prevSavingRate:prevSavingRate,budgetAnalysis:budgetAnalysis,spendingByCategory:spendingByCategory,monthlyHistory:monthlyHistory,investmentData:investmentData,prediction:{income:predictedIncome,expense:predictedExpense,saving:predictedSaving,netWorth:predictedNetWorth,isPastMonth:!isCurrentMonth},streak:streak,isNetWorthHighest:isNetWorthHighest,budgetMetMonths:budgetMetMonths,isArchived:isArchivedMonth};
+    return{yearlySummary:yearlySummary,currentMonth:month,currentYear:year,isCurrentMonth:isCurrentMonth,dayOfMonth:dayOfMonth,daysInMonth:daysInMonth,netWorth:monthNetWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,savingRate:savingRate,prevIncome:prevIncome,prevExpense:prevExpense,prevSaving:prevSaving,prevSavingRate:prevSavingRate,budgetAnalysis:budgetAnalysis,carryover:carryover,budgetBase:budgetBase,spendingByCategory:spendingByCategory,monthlyHistory:monthlyHistory,investmentData:investmentData,prediction:{income:predictedIncome,expense:predictedExpense,saving:predictedSaving,netWorth:predictedNetWorth,isPastMonth:!isCurrentMonth},streak:streak,isNetWorthHighest:isNetWorthHighest,budgetMetMonths:budgetMetMonths,isArchived:isArchivedMonth};
   },
 
   // EXPORT / IMPORT / DELETE
@@ -10921,6 +10993,7 @@ function injectAuthSettingsCard() {
 
 let MM_DASHBOARD = null;
 let MM_ALLOC_CARDS = [];
+let MM_BUDGET_BASIS = { income: 0, carryover: 0 };
 let MM_ACCOUNTS = [];
 let MM_CATEGORIES = [];
 let MM_ALLOCATION = [];
@@ -11315,7 +11388,7 @@ function mmRenderDashboard(data) {
   mmRenderPulse(data);
   mmRenderDaily(data);
   mmRenderAccountCards(data.accounts || [], data.netWorth || 0);
-  mmRenderBudgetCard(data.allocationCards || [], data.totalIncome || 0);
+  mmRenderBudgetCard(data.allocationCards || [], data.totalIncome || 0, data.carryover || 0);
   mmRenderChart(mmCurrentChartType || 'expense');
   mmRenderDashboardTransactions();
 }
@@ -11395,13 +11468,18 @@ function mmRenderPulse(data) {
   const expense = data.totalExpense || 0;
   const prev = data.prevMonth || { income: 0, expense: 0, expenseToDate: 0, days: 30 };
 
-  // 1. Safe to spend per day: what is left in the spending posts, spread over
-  // the days that remain. Falls back to income minus expense with no split.
+  // 1. Safe to spend per day. The budget pool already includes last month's
+  // leftovers, so what is still free in the spending posts is capped by the
+  // money actually held in the accounts — the figure can never promise more
+  // than the balance shows.
+  const balance = Math.max(data.netWorth || 0, 0);
   const spendCards = (data.allocationCards || []).filter(c => (c.target || 0) > 0 && !MM_NON_SPEND_RE.test(c.category || ''));
-  const remaining = spendCards.length
+  const spendRoom = spendCards.length
     ? spendCards.reduce((s, c) => s + Math.max((c.target || 0) - (c.spent || 0), 0), 0)
-    : Math.max(income - expense, 0);
-  const perDay = remaining / Math.max(ctx.daysLeft, 1);
+    : balance;
+  const safe = Math.min(spendRoom, balance);
+  const capped = spendRoom > balance;
+  const perDay = safe / Math.max(ctx.daysLeft, 1);
 
   // 2. Average per day, against last month over the same number of days.
   const avg = expense / Math.max(ctx.day, 1);
@@ -11409,27 +11487,20 @@ function mmRenderPulse(data) {
   const prevAvg = prev.expenseToDate / Math.max(prevDaysSoFar, 1);
   const pace = prevAvg > 0 ? (avg - prevAvg) / prevAvg : null;
 
-  // 3. Where the month lands if the pace holds.
-  const projected = expense + avg * (ctx.daysInMonth - ctx.day);
-  const projGap = income - projected;
-
-  // 4. Savings rate, with what went to investments beside it.
-  const rate = income > 0 ? (income - expense) / income : null;
-  const invest = mmInvestThisMonth(data.monthTransactions);
-
   const pct = (v) => Math.abs(Math.round(v * 100)) + '%';
 
-  // One tile, one decision: how much is safe to spend today. Pace,
-  // projection and savings ratio moved to Insight — the dashboard was a
-  // wall of eight numbers that said the same thing four ways.
-  const tone = remaining <= 0 ? 'bad' : (perDay < avg * 0.6 ? 'warn' : 'good');
+  let sub;
+  if (balance <= 0) sub = 'saldo akun sudah habis';
+  else if (safe <= 0) sub = 'budget belanja bulan ini sudah habis';
+  else sub = `${mmFormatIDRShort(safe)} untuk ${ctx.daysLeft} hari${capped ? ' · dibatasi saldo' : ''}`;
+
+  // One tile, one decision. Pace, projection and savings ratio live in Insight.
+  const tone = safe <= 0 ? 'bad' : (capped || perDay < avg * 0.6 ? 'warn' : 'good');
   grid.innerHTML = `
-    <button type="button" class="mm-pulse-tile mm-pulse-wide ${tone ? 'is-' + tone : ''}" onclick="mmShowPage('mmInsightPage')">
+    <button type="button" class="mm-pulse-tile mm-pulse-wide is-${tone}" onclick="mmShowPage('mmInsightPage')">
       <span class="mm-pulse-label">${lucideIconSvg('wallet', 14)}Aman dipakai</span>
       <strong class="mm-pulse-value">${mmFormatIDRShort(perDay)}<small>/hari</small></strong>
-      <span class="mm-pulse-sub">${escapeHtml(remaining > 0
-        ? `sisa ${mmFormatIDRShort(remaining)} untuk ${ctx.daysLeft} hari · hari ke-${ctx.day} dari ${ctx.daysInMonth}`
-        : 'budget belanja habis — detail di Insight')}</span>
+      <span class="mm-pulse-sub">${escapeHtml(sub)}</span>
     </button>`;
 
   if (!alertsEl) return;
@@ -11640,9 +11711,23 @@ function mmRenderAccountCards(accounts, netWorth) {
 }
 
 /* === BUDGET CARD === */
-function mmRenderBudgetCard(allocationCards, totalIncome) {
+function mmBudgetBasisHtml() {
+  const b = MM_BUDGET_BASIS;
+  return `
+    <div class="mm-budget-basis">
+      <span class="mm-budget-basis-label">Dana bulan ini</span>
+      <strong>${mmFormatIDR(b.carryover + b.income)}</strong>
+      <span class="mm-budget-basis-parts">
+        <span>${lucideIconSvg('arrow-down-to-line', 12)}Sisa bulan lalu ${mmFormatIDRShort(b.carryover)}</span>
+        <span>${lucideIconSvg('plus', 12)}Pemasukan ${mmFormatIDRShort(b.income)}</span>
+      </span>
+    </div>`;
+}
+
+function mmRenderBudgetCard(allocationCards, totalIncome, carryover) {
   // Keep the full allocation list for the detail sheet
   MM_ALLOC_CARDS = allocationCards || [];
+  MM_BUDGET_BASIS = { income: totalIncome || 0, carryover: carryover || 0 };
 
   // Every pos in one compact list — the old card showed only "Living", so
   // overspending anywhere else was invisible from the dashboard.
@@ -11652,17 +11737,20 @@ function mmRenderBudgetCard(allocationCards, totalIncome) {
 
   const cards = MM_ALLOC_CARDS.filter(c => (c.target || 0) > 0 || (c.spent || 0) > 0);
   if (!cards.length) {
-    if (summary) summary.textContent = 'Belum ada pemasukan bulan ini';
-    list.innerHTML = mmEmpty('circle-dollar', 'Budget belum terbentuk', 'Budget dihitung dari pemasukan bulan ini dan pembagian di Settings.', `<button class="mm-empty-action" onclick="mmShowActionSheet('income')">Catat pemasukan</button>`);
+    if (summary) summary.textContent = 'Belum ada dana bulan ini';
+    list.innerHTML = mmEmpty('circle-dollar', 'Budget belum terbentuk', 'Budget dibentuk dari sisa saldo bulan lalu ditambah pemasukan, lalu dibagi sesuai persentase di Settings.', `<button class="mm-empty-action" onclick="mmShowActionSheet('income')">Catat pemasukan</button>`);
     return;
   }
 
   const totalTarget = cards.reduce((s, c) => s + (c.target || 0), 0);
   const totalSpent = cards.reduce((s, c) => s + (c.spent || 0), 0);
   const totalPct = totalTarget > 0 ? Math.round(totalSpent / totalTarget * 100) : 0;
-  if (summary) summary.textContent = `${mmFormatIDR(totalSpent)} dari ${mmFormatIDR(totalTarget)} · ${totalPct}%`;
+  if (summary) summary.textContent = `${mmFormatIDR(totalSpent)} terpakai dari ${mmFormatIDR(totalTarget)} · ${totalPct}%`;
 
-  list.innerHTML = cards.map(c => {
+  // Where the pool comes from, stated once above the posts.
+  const basis = mmBudgetBasisHtml();
+
+  list.innerHTML = basis + cards.map(c => {
     const target = c.target || 0;
     const spent = c.spent || 0;
     const remaining = target - spent;
@@ -11705,8 +11793,9 @@ function mmShowBudgetDetail() {
   const totalTarget = cards.reduce((s, c) => s + (c.target || 0), 0);
   const totalSpent = cards.reduce((s, c) => s + (c.spent || 0), 0);
 
-  let html = '<h3 class="sheet-title">Monthly Budget</h3>';
-  html += `<p class="sheet-desc">${mmFormatIDR(totalSpent)} used of ${mmFormatIDR(totalTarget)}</p>`;
+  let html = '<h3 class="sheet-title">Budget bulan ini</h3>';
+  html += `<p class="sheet-desc">${mmFormatIDR(totalSpent)} terpakai dari ${mmFormatIDR(totalTarget)}</p>`;
+  html += mmBudgetBasisHtml();
   html += '<div class="mm-budget-detail-list">';
   html += cards.map(c => {
     const target = c.target || 0;
@@ -11734,222 +11823,118 @@ function mmShowBudgetDetail() {
   sheet.classList.remove('hidden');
 }
 
-/* === CHART === */
-let mmApexChart = null;
-let mmChartActiveIndex = -1;
+/* === CATEGORY BREAKDOWN ===
+   Every category of the month for money out or in, largest first. Tapping a
+   row opens its sub-categories in place; "Lihat transaksi" lists the entries
+   behind it. A single stacked bar shows the proportions at a glance. */
 let mmCurrentChartType = 'expense';
+let MM_BREAKDOWN_OPEN = '';   // "<type>|<category>" of the open row
+const MM_BD_COLORS = ['#22d3ee', '#fbbf24', '#f472b6', '#818cf8', '#fb923c', '#a78bfa', '#2dd4bf', '#60a5fa', '#e879f9', '#94a3b8'];
 
 function mmSwitchChartTab(btn, type) {
-  document.querySelectorAll('.mm-expense-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
+  document.querySelectorAll('.mm-expense-tab').forEach(t => {
+    const on = t === btn;
+    t.classList.toggle('active', on);
+    t.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  MM_BREAKDOWN_OPEN = '';
   mmRenderChart(type);
+}
+
+function mmToggleBreakdown(type, category) {
+  const key = type + '|' + category;
+  MM_BREAKDOWN_OPEN = MM_BREAKDOWN_OPEN === key ? '' : key;
+  mmRenderChart(mmCurrentChartType);
+}
+
+function mmBreakdownEntries(type) {
+  const want = type === 'income' ? 'Income' : 'Expense';
+  const map = {};
+  ((MM_DASHBOARD && MM_DASHBOARD.monthTransactions) || []).forEach(tx => {
+    if (tx.type !== want) return;
+    const name = tx.category || 'Tanpa kategori';
+    const c = map[name] || (map[name] = { name, amount: 0, count: 0, subs: {} });
+    c.amount += tx.amount;
+    c.count++;
+    // Income rarely has sub-categories; its note ("Gaji", "Freelance") is what
+    // says where the money came from.
+    const sub = tx.subcategory || (type === 'income' ? (tx.notes || 'Lainnya') : 'Tanpa sub-kategori');
+    c.subs[sub] = (c.subs[sub] || 0) + tx.amount;
+  });
+  const list = Object.values(map).sort((a, b) => b.amount - a.amount);
+  list.forEach((c, i) => {
+    const cfg = MM_CATEGORY_CONFIG[c.name];
+    c.color = cfg ? cfg.color : MM_BD_COLORS[i % MM_BD_COLORS.length];
+  });
+  return list;
 }
 
 function mmRenderChart(type) {
   mmCurrentChartType = type;
-  mmChartActiveIndex = -1;
+  const box = document.getElementById('mmBreakdown');
+  const sub = document.getElementById('mmBreakdownSub');
+  if (!box) return;
 
-  const donutEl = document.getElementById('mmChartDonut');
-  const listEl = document.getElementById('mmChartCategoryList');
-  if (!donutEl || !listEl) return;
-
-  const contentEl = donutEl.closest('.mm-expense-content');
-  const setEmpty = (on) => { if (contentEl) contentEl.classList.toggle('is-empty', on); };
-
-  if (!MM_DASHBOARD) {
-    setEmpty(true);
-    donutEl.innerHTML = mmEmpty('circle-dollar', 'Belum ada data', 'Grafik muncul setelah ada transaksi tercatat.');
-    listEl.innerHTML = '';
-    return;
-  }
-
-  const colors = ['#22d3ee', '#fbbf24', '#f472b6', '#818cf8', '#fb923c', '#a78bfa', '#2dd4bf', '#60a5fa', '#e879f9', '#94a3b8'];
-  let entries = [];
-  let total = 0;
-
-  if (type === 'expense') {
-    const cards = (MM_DASHBOARD.allocationCards || []).filter(c => c.spent > 0).sort((a, b) => b.spent - a.spent);
-    total = cards.reduce((s, c) => s + c.spent, 0);
-    entries = cards.map((c, i) => ({ name: c.category, amount: c.spent, color: mmCategoryColor(c.category) || colors[i % colors.length] }));
-  } else {
-    const txs = (MM_DASHBOARD && MM_DASHBOARD.monthTransactions) || [];
-    const catMap = {};
-    txs.forEach(tx => {
-      if (tx.type === 'Income') {
-        const cat = tx.category || 'Other';
-        catMap[cat] = (catMap[cat] || 0) + tx.amount;
-      }
-    });
-    const sorted = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
-    total = sorted.reduce((s, e) => s + e[1], 0);
-    entries = sorted.map(([name, amount], i) => ({ name, amount, color: colors[i % colors.length] }));
-  }
+  const isIncome = type === 'income';
+  const entries = MM_DASHBOARD ? mmBreakdownEntries(type) : [];
+  const total = entries.reduce((s, e) => s + e.amount, 0);
 
   if (total <= 0) {
-    setEmpty(true);
-    donutEl.innerHTML = mmEmpty('circle-dollar', 'Bulan ini masih kosong', 'Catat transaksi pertama bulan ini, grafiknya langsung terisi.', `<button class="mm-empty-action" onclick="mmShowActionSheet('expense')">Catat pengeluaran</button>`);
-    listEl.innerHTML = '';
+    if (sub) sub.textContent = '';
+    box.innerHTML = mmEmpty('circle-dollar',
+      isIncome ? 'Belum ada pemasukan bulan ini' : 'Belum ada pengeluaran bulan ini',
+      isIncome ? 'Catat pemasukan supaya terlihat berasal dari mana saja.' : 'Catat pengeluaran supaya terlihat ke mana uangnya pergi.',
+      `<button class="mm-empty-action" onclick="mmShowActionSheet('${isIncome ? 'income' : 'expense'}')">${isIncome ? 'Catat pemasukan' : 'Catat pengeluaran'}</button>`);
     return;
   }
 
-  setEmpty(false);
-  mmRenderDonut(entries, total, type);
-  mmRenderCategoryList(entries, total);
-}
+  if (sub) sub.textContent = `${entries.length} kategori · ${entries.reduce((s, e) => s + e.count, 0)} transaksi`;
 
-function mmRenderDonut(entries, total, type) {
-  const donutEl = document.getElementById('mmChartDonut');
+  const stack = entries.map(e =>
+    `<span style="width:${(e.amount / total * 100).toFixed(2)}%;background:${e.color}" title="${escapeHtml(e.name)}"></span>`).join('');
 
-  if (mmApexChart) {
-    mmApexChart.destroy();
-    mmApexChart = null;
-  }
-
-  donutEl.innerHTML = '';
-
-  const series = entries.map(e => e.amount);
-  const labels = entries.map(e => e.name);
-  const chartColors = entries.map(e => e.color);
-
-  const options = {
-    series: series,
-    chart: {
-      type: 'donut',
-      height: 150,
-      background: 'transparent',
-      animations: {
-        enabled: true,
-        easing: 'easeinout',
-        speed: 800,
-        animateGradually: { enabled: true, delay: 100 }
-      },
-      events: {
-        dataPointSelection: function(event, chartContext, config) {
-          const idx = config.dataPointIndex;
-          mmHighlightCategory(idx);
-        }
-      }
-    },
-    colors: chartColors,
-    labels: labels,
-    plotOptions: {
-      pie: {
-        donut: {
-          size: '65%',
-          labels: {
-            show: true,
-            name: {
-              show: true,
-              fontSize: '9px',
-              fontFamily: 'Inter',
-              fontWeight: 600,
-              color: '#94a3b8',
-              offsetY: -6
-            },
-            value: {
-              show: true,
-              fontSize: '13px',
-              fontFamily: 'Inter',
-              fontWeight: 800,
-              color: '#fafafa',
-              offsetY: 2,
-              formatter: function(val) {
-                if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••';
-                return 'Rp' + Number(val).toLocaleString('id-ID');
-              }
-            },
-            total: {
-              show: true,
-              showAlways: true,
-              label: type === 'expense' ? 'Expense' : 'Income',
-              fontSize: '9px',
-              fontFamily: 'Inter',
-              fontWeight: 600,
-              color: '#94a3b8',
-              formatter: function(w) {
-                const t = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
-                if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••';
-                // Full precision does not fit inside a donut this small on a
-                // phone — it crowds the ring. Compact form, with a space.
-                return 'Rp ' + mmFormatShort(t);
-              }
-            }
-          }
-        },
-        expandOnClick: true
-      }
-    },
-    stroke: {
-      show: true,
-      width: 2,
-      colors: ['#192134']
-    },
-    dataLabels: { enabled: false },
-    legend: { show: false },
-    tooltip: {
-      enabled: true,
-      theme: 'dark',
-      style: { fontSize: '11px', fontFamily: 'Inter' },
-      y: {
-        formatter: function(val) {
-          if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••';
-          return 'Rp' + Number(val).toLocaleString('id-ID');
-        }
-      }
-    },
-    states: {
-      hover: { filter: { type: 'lighten', value: 0.05 } },
-      active: { filter: { type: 'none' } }
-    },
-    responsive: [{
-      breakpoint: 480,
-      options: { chart: { height: 140 } }
-    }]
-  };
-
-  mmApexChart = new ApexCharts(donutEl, options);
-  mmApexChart.render();
-}
-
-function mmHighlightCategory(index) {
-  mmChartActiveIndex = index;
-  const items = document.querySelectorAll('.mm-category-item');
-  items.forEach((item, i) => {
-    item.classList.toggle('active', i === index);
-  });
-}
-
-function mmSelectCategoryFromList(index) {
-  mmChartActiveIndex = index;
-  if (mmApexChart) {
-    mmApexChart.toggleDataPointSelection(index);
-  }
-  const items = document.querySelectorAll('.mm-category-item');
-  items.forEach((item, i) => {
-    item.classList.toggle('active', i === index);
-  });
-}
-
-function mmRenderCategoryList(entries, total) {
-  const listEl = document.getElementById('mmChartCategoryList');
-  if (!listEl) return;
-
-  // Show max 4 categories in side-by-side view
-  const display = entries.slice(0, 4);
-
-  listEl.innerHTML = display.map((entry, i) => {
-    const pct = ((entry.amount / total) * 100).toFixed(0);
-    const icon = mmCategoryEmoji(entry.name);
+  const rows = entries.map(e => {
+    const key = type + '|' + e.name;
+    const open = MM_BREAKDOWN_OPEN === key;
+    const pct = Math.round(e.amount / total * 100);
+    const subs = Object.entries(e.subs).sort((a, b) => b[1] - a[1]);
+    const subRows = subs.map(([name, amount]) => `
+        <div class="mm-bd-sub">
+          <span>${escapeHtml(name)}</span>
+          <span class="mm-bd-sub-pct">${Math.round(amount / e.amount * 100)}%</span>
+          <strong>${mmFormatIDR(amount)}</strong>
+        </div>`).join('');
     return `
-      <div class="mm-category-item" onclick="mmSelectCategoryFromList(${i});mmShowCategoryDetail('${jsStr(entry.name)}')">
-        <div class="mm-cat-icon" style="background:${entry.color}22;color:${entry.color}">${icon}</div>
-        <div class="mm-cat-text">
-          <span class="mm-cat-name">${escapeHtml(entry.name)}</span>
-          <span class="mm-cat-amount">${mmFormatIDR(entry.amount)}</span>
-        </div>
-        <span class="mm-cat-percent">${pct}%</span>
+      <div class="mm-bd-item ${open ? 'is-open' : ''}">
+        <button type="button" class="mm-bd-row" aria-expanded="${open}" onclick="mmToggleBreakdown('${type}','${jsStr(e.name)}')">
+          <span class="mm-budget-row-icon" style="background:${e.color}22;color:${e.color}">${mmCategoryEmoji(e.name, isIncome ? 'Income' : undefined)}</span>
+          <span class="mm-bd-main">
+            <span class="mm-bd-top">
+              <span class="mm-bd-name">${escapeHtml(e.name)}</span>
+              <strong>${mmFormatIDR(e.amount)}</strong>
+            </span>
+            <span class="mm-bd-meta">
+              <span>${e.count} transaksi · ${pct}%</span>
+              <span class="mm-bd-chev" aria-hidden="true">${lucideIconSvg('chevron-down', 14)}</span>
+            </span>
+            <span class="mm-bd-bar" aria-hidden="true"><span style="width:${Math.max(pct, 2)}%;background:${e.color}"></span></span>
+          </span>
+        </button>
+        ${open ? `
+        <div class="mm-bd-detail">
+          ${subRows}
+          <button type="button" class="mm-bd-more" onclick="mmShowCategoryDetail('${jsStr(e.name)}','${type}')">Lihat ${e.count} transaksi ${lucideIconSvg('chevron-right', 14)}</button>
+        </div>` : ''}
       </div>`;
   }).join('');
+
+  box.innerHTML = `
+    <div class="mm-bd-total">
+      <span>${isIncome ? 'Total pemasukan' : 'Total pengeluaran'}</span>
+      <strong class="${isIncome ? 'income-color' : 'expense-color'}">${mmFormatIDR(total)}</strong>
+    </div>
+    <div class="mm-bd-stack" role="img" aria-label="Porsi tiap kategori dari total">${stack}</div>
+    <div class="mm-bd-list">${rows}</div>`;
 }
 
 /* === DASHBOARD TRANSACTIONS === */
@@ -12992,7 +12977,7 @@ function mmDeleteCat(groupKey, subcategory) {
 }
 
 /* === CATEGORY DETAIL BOTTOM SHEET === */
-function mmShowCategoryDetail(category) {
+function mmShowCategoryDetail(category, type) {
   const sheet = document.getElementById('mmCategoryDetailSheet');
   const content = document.getElementById('mmCategoryDetailContent');
   content.innerHTML = skRows(5);
@@ -13003,9 +12988,10 @@ function mmShowCategoryDetail(category) {
 
   google.script.run
     .withSuccessHandler(txs => {
-      const filtered = txs.filter(tx => (tx.type === 'Expense' || tx.type === 'Income' || (tx.type === 'Transfer' && tx.category)) && tx.category === category);
+      const filtered = txs.filter(tx => (type ? tx.type === (type === 'income' ? 'Income' : 'Expense')
+        : (tx.type === 'Expense' || tx.type === 'Income' || (tx.type === 'Transfer' && tx.category))) && (tx.category || 'Tanpa kategori') === category);
       if (!filtered.length) {
-        content.innerHTML = `<h3 class="sheet-title">${mmCategoryEmoji(category)} ${escapeHtml(category)}</h3><p class="sheet-desc">No transactions this month.</p>`;
+        content.innerHTML = `<h3 class="sheet-title">${mmCategoryEmoji(category)} ${escapeHtml(category)}</h3><p class="sheet-desc">Belum ada transaksi bulan ini.</p>`;
         return;
       }
 
@@ -13023,13 +13009,13 @@ function mmShowCategoryDetail(category) {
       const subs = Object.entries(subMap).sort((a, b) => b[1].amount - a[1].amount);
 
       let html = `<h3 class="sheet-title">${mmCategoryEmoji(category)} ${escapeHtml(category)}</h3>`;
-      html += `<p class="sheet-desc">Total: ${mmFormatIDR(total)}</p>`;
+      html += `<p class="sheet-desc">Total bulan ini: ${mmFormatIDR(total)} · ${filtered.length} transaksi</p>`;
 
       html += subs.map(([subName, data]) => {
         const txRows = data.transactions.map(tx => `
           <div class="mm-detail-tx-row">
-            <span>${escapeHtml(tx.notes || tx.type)} <small style="color:var(--text-muted)">${mmFormatDate(tx.date)}</small></span>
-            <strong style="color:var(--error)">${mmFormatIDR(tx.amount)}</strong>
+            <span>${escapeHtml(tx.notes || tx.type)} <small style="color:var(--text-muted)">${mmFormatDate(tx.date)} · ${escapeHtml(tx.account || '')}</small></span>
+            <strong style="color:${tx.type === 'Income' ? 'var(--success)' : tx.type === 'Expense' ? 'var(--error)' : 'var(--text-muted)'}">${mmFormatIDR(tx.amount)}</strong>
           </div>`).join('');
         return `
           <div class="mm-detail-sub-group">
@@ -13209,6 +13195,9 @@ function lucideIconSvg(name, size) {
     'arrow-right-left': '<polyline points="21 7 3 7"/><polyline points="15 1 21 7 15 13"/><polyline points="3 17 21 17"/><polyline points="9 11 3 17 9 23"/>',
     'tag': '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>',
     'chevron-right': '<path d="m9 18 6-6-6-6"/>',
+    'chevron-down': '<path d="m6 9 6 6 6-6"/>',
+    'plus': '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    'arrow-down-to-line': '<path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/>',
     'credit-card': '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',
     'banknote': '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01"/><path d="M18 12h.01"/>',
     'coins': '<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/>',
@@ -13979,9 +13968,10 @@ function renderBudgetPace(data) {
       </div>`;
   }).join('');
 
+  const basis = `Dana ${insightShort(data.budgetBase || 0)} = sisa bulan lalu ${insightShort(data.carryover || 0)} + pemasukan ${insightShort(data.totalIncome)}`;
   const sub = isCurrent
-    ? `Garis putih = batas ideal hari ini (${timePct.toFixed(0)}%)`
-    : 'Realisasi akhir pengeluaran vs target budget';
+    ? `${basis} · garis putih = batas ideal hari ini (${timePct.toFixed(0)}%)`
+    : `${basis} · realisasi akhir`;
   return insightSection(isCurrent ? 'Laju budget' : 'Realisasi budget', sub, `<div class="ins-card">${rows}</div>`);
 }
 
