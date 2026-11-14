@@ -436,6 +436,21 @@
               <div class="mm-dash-card mm-budget-list" id="mmBudgetList"></div>
             </section>
 
+            <!-- Category breakdown: where money came from / went, tap to drill down -->
+            <section class="mm-dash-section" id="mmExpenseSection">
+              <div class="mm-section-header">
+                <div>
+                  <h3>Rincian kategori</h3>
+                  <p class="mm-section-sub" id="mmBreakdownSub">&nbsp;</p>
+                </div>
+                <div class="mm-expense-tabs" role="tablist">
+                  <button class="mm-expense-tab active" role="tab" aria-selected="true" data-tab="expense" onclick="mmSwitchChartTab(this,'expense')">Keluar</button>
+                  <button class="mm-expense-tab" role="tab" aria-selected="false" data-tab="income" onclick="mmSwitchChartTab(this,'income')">Masuk</button>
+                </div>
+              </div>
+              <div class="mm-dash-card mm-bd-card" id="mmBreakdown"></div>
+            </section>
+
             <!-- Daily spending -->
             <section class="mm-dash-section" id="mmDailySection">
               <div class="mm-section-header">
@@ -463,9 +478,6 @@
                 <div class="empty-state">No accounts yet.</div>
               </div>
             </section>
-
-            <!-- Rincian kategori (donut) pindah ke Insight — dashboard cukup
-                 budget + daily; breakdown lengkap ada di Insight & History. -->
 
             <!-- This month's transactions, grouped by day -->
             <section class="mm-dash-section" id="mmTransactionsSection">

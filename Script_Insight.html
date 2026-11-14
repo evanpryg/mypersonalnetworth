@@ -472,9 +472,10 @@ function renderBudgetPace(data) {
       </div>`;
   }).join('');
 
+  const basis = `Dana ${insightShort(data.budgetBase || 0)} = sisa bulan lalu ${insightShort(data.carryover || 0)} + pemasukan ${insightShort(data.totalIncome)}`;
   const sub = isCurrent
-    ? `Garis putih = batas ideal hari ini (${timePct.toFixed(0)}%)`
-    : 'Realisasi akhir pengeluaran vs target budget';
+    ? `${basis} · garis putih = batas ideal hari ini (${timePct.toFixed(0)}%)`
+    : `${basis} · realisasi akhir`;
   return insightSection(isCurrent ? 'Laju budget' : 'Realisasi budget', sub, `<div class="ins-card">${rows}</div>`);
 }
 

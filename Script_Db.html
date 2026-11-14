@@ -100,6 +100,28 @@ function makeAssetKey_(platform, sector, asset) {
   return [normalizeUpper_(platform), normalizeUpper_(sector), normalizeUpper_(asset)].join('|');
 }
 function getCashAssetName_(platform) { return normalize_(platform) + ' Cash'; }
+// Money already sitting in the dashboard accounts when a month begins (all
+// activity dated before `beforeDate`). This is the carry-over that joins the
+// month's income in the budget pool, so the budget always agrees with the
+// balances the user actually holds.
+function openingBalance_(accounts, txs, beforeDate) {
+  var bal = {}, key = {};
+  accounts.forEach(function(a) { bal[a.name] = a.initialBalance; key[a.name.toLowerCase()] = a.name; });
+  function resolve(n) { n = String(n || '').trim(); return n ? (key[n.toLowerCase()] || n) : null; }
+  txs.forEach(function(tx) {
+    if (tx.date >= beforeDate) return;
+    var from = resolve(tx.account), to = resolve(tx.accountTo);
+    if (tx.type === 'Income') { if (from) bal[from] = (bal[from] || 0) + tx.amount; }
+    else if (tx.type === 'Expense') { if (from) bal[from] = (bal[from] || 0) - tx.amount; }
+    else if (tx.type === 'Transfer') {
+      if (from) bal[from] = (bal[from] || 0) - tx.amount;
+      if (to) bal[to] = (bal[to] || 0) + tx.amount;
+    }
+  });
+  var total = 0;
+  accounts.forEach(function(a) { if (a.showOnDashboard) total += bal[a.name] || 0; });
+  return total;
+}
 // How much an MM transfer moves into (+) or out of (−) the investment side.
 // Old rows only carry category='Invest' on the way in; direction is read from
 // the Invest: prefix so withdrawals reduce the month's invest total too.
@@ -709,8 +731,12 @@ var DB_API = {
       if(tx.type==='Expense'){ prevMonth.expense+=tx.amount; if(tx.date<=pmSameDay) prevMonth.expenseToDate+=tx.amount; }
     });
 
-    var allocationCards=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.max(Math.min(spent/target,1),0):0;return{category:a.category,percent:a.percent,icon:a.icon,color:a.color,spent:spent,target:target,progress:progress};});
-    return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,prevNetWorth:prevNetWorth,netWorthTrend:netWorthTrend,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,prevMonth:prevMonth,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
+    // Budget pool = what was left from earlier months + this month's income,
+    // split by the allocation percentages. Every new income raises it, and the
+    // sum of what is still free in each post tracks the money actually held.
+    var carryover=Math.max(prevNetWorth,0), budgetBase=carryover+totalIncome;
+    var allocationCards=allocation.map(function(a){var target=budgetBase*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?Math.max(Math.min(spent/target,1),0):0;return{category:a.category,percent:a.percent,icon:a.icon,color:a.color,spent:spent,target:target,progress:progress};});
+    return {accounts:accounts.map(function(acc){return Object.assign({},acc,{balance:balances[acc.name]||0});}),netWorth:netWorth,prevNetWorth:prevNetWorth,netWorthTrend:netWorthTrend,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,prevMonth:prevMonth,carryover:carryover,budgetBase:budgetBase,allocationCards:allocationCards,monthTransactions:monthTransactions,allocation:allocation};
   },
 
   // Years whose detail has been archived live in mm_summary instead of
@@ -1065,7 +1091,8 @@ var DB_API = {
     }
 
     var prevSaving=prevIncome-prevExpense,prevSavingRate=prevIncome>0?(prevSaving/prevIncome)*100:0;
-    var budgetAnalysis=allocation.map(function(a){var target=totalIncome*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?spent/target:0,prevSpent=prevCategoryExpenses[a.category]||0;var isSaving=(['invest','saving','tabungan'].indexOf(a.category.toLowerCase())>=0);return{category:a.category,percent:a.percent,spent:spent,target:target,progress:progress,prevSpent:prevSpent,isSaving:isSaving};});
+    var carryover=Math.max(openingBalance_(accounts,allTransactions,monthStartStr),0), budgetBase=carryover+totalIncome;
+    var budgetAnalysis=allocation.map(function(a){var target=budgetBase*(a.percent/100),spent=categoryExpenses[a.category]||0,progress=target>0?spent/target:0,prevSpent=prevCategoryExpenses[a.category]||0;var isSaving=(['invest','saving','tabungan'].indexOf(a.category.toLowerCase())>=0);return{category:a.category,percent:a.percent,spent:spent,target:target,progress:progress,prevSpent:prevSpent,isSaving:isSaving};});
     var spendingByCategory=Object.entries(categoryExpenses).filter(function(e){return e[1]>0&&['invest','saving','tabungan'].indexOf(e[0].toLowerCase())<0;}).sort(function(a,b){return b[1]-a[1];}).map(function(e){return{category:e[0],amount:e[1],percent:totalExpense>0?(e[1]/totalExpense)*100:0};});
     var monthlyHistory=[];
     for(var i=5;i>=0;i--){
@@ -1105,7 +1132,7 @@ var DB_API = {
     var budgetMetMonths=0;for(var i=1;i<=6;i++){var m=new Date(year,month-1-i,1);var h=monthlyHistory.find(function(mh){return mh.month===m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0');});if(h&&h.saving>=0)budgetMetMonths++;}
     var yearlySummary=await this.mmGetYearlySummary();
 
-    return{yearlySummary:yearlySummary,currentMonth:month,currentYear:year,isCurrentMonth:isCurrentMonth,dayOfMonth:dayOfMonth,daysInMonth:daysInMonth,netWorth:monthNetWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,savingRate:savingRate,prevIncome:prevIncome,prevExpense:prevExpense,prevSaving:prevSaving,prevSavingRate:prevSavingRate,budgetAnalysis:budgetAnalysis,spendingByCategory:spendingByCategory,monthlyHistory:monthlyHistory,investmentData:investmentData,prediction:{income:predictedIncome,expense:predictedExpense,saving:predictedSaving,netWorth:predictedNetWorth,isPastMonth:!isCurrentMonth},streak:streak,isNetWorthHighest:isNetWorthHighest,budgetMetMonths:budgetMetMonths,isArchived:isArchivedMonth};
+    return{yearlySummary:yearlySummary,currentMonth:month,currentYear:year,isCurrentMonth:isCurrentMonth,dayOfMonth:dayOfMonth,daysInMonth:daysInMonth,netWorth:monthNetWorth,totalIncome:totalIncome,totalExpense:totalExpense,saving:saving,savingRate:savingRate,prevIncome:prevIncome,prevExpense:prevExpense,prevSaving:prevSaving,prevSavingRate:prevSavingRate,budgetAnalysis:budgetAnalysis,carryover:carryover,budgetBase:budgetBase,spendingByCategory:spendingByCategory,monthlyHistory:monthlyHistory,investmentData:investmentData,prediction:{income:predictedIncome,expense:predictedExpense,saving:predictedSaving,netWorth:predictedNetWorth,isPastMonth:!isCurrentMonth},streak:streak,isNetWorthHighest:isNetWorthHighest,budgetMetMonths:budgetMetMonths,isArchived:isArchivedMonth};
   },
 
   // EXPORT / IMPORT / DELETE
