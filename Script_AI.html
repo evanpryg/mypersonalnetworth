@@ -10,9 +10,15 @@
    browser's storage only, pasted in by the user. */
 const MM_AI_KEY_STORE = 'gemini_api_key';
 const MM_AI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/';
-// Tried in order: the first is the best fit; the others take over when it is
-// overloaded (503) or out of quota (429) — both common on the free tier.
-const MM_AI_MODELS = ['gemini-3-flash-preview', 'gemini-flash-latest', 'gemini-3.1-flash-lite-preview'];
+// Flash-class models the free tier offers, best first. Pro models are left
+// out: the free tier has no quota for them (always 429). Gemma is left out:
+// it rejects a system instruction.
+const MM_AI_MODELS = [
+  'gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-flash-latest', 'gemini-3.8-flash',
+  'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-flash-lite-latest', 'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite-preview'
+];
+const MM_AI_MODEL_STORE = 'gemini_model_ok';
 const MM_AI_SUGGESTIONS = [
   'Bagaimana kondisi keuanganku bulan ini?',
   'Kategori mana yang paling boros?',
@@ -147,7 +153,8 @@ function mmAiMessageHtml(m, i) {
   const body = m.error
     ? `<div class="ai-error">${lucideIconSvg('alert-circle', 16)}<span>${escapeHtml(m.error)}</span>
          <button type="button" onclick="mmAiRetry()">Coba lagi</button></div>`
-    : (text ? mmAiMarkdown(text) : '<span class="ai-typing" aria-label="Sedang menulis"><i></i><i></i><i></i></span>');
+    : (text ? mmAiMarkdown(text)
+      : `<span class="ai-typing" aria-label="Sedang menulis"><i></i><i></i><i></i></span>${m.status ? `<small class="ai-status">${escapeHtml(m.status)}</small>` : ''}`);
   return `<div class="ai-msg is-model" data-i="${i}"><span class="ai-avatar" aria-hidden="true">${lucideIconSvg('sparkles', 14)}</span><div class="ai-answer">${body}</div></div>`;
 }
 
@@ -396,61 +403,156 @@ async function mmAiRun() {
   }
 }
 
-// Streams from the first model that accepts the request; overload and quota
-// errors move on to the next one (after one short retry on the first).
+// The free tier is overloaded much of the time: any one model may answer
+// 503 (busy), 429 (no quota) or simply hang. So a question walks through
+// every flash model, cuts off one that doesn't start answering in time,
+// and goes round again after a pause. The model that last worked is tried
+// first next time.
+// How long a model may take to start answering, per round: short at first
+// so a hung model doesn't hold things up, longer later in case every model
+// is merely slow.
+const MM_AI_FIRST_BYTE_MS = [15000, 25000, 40000];
+const MM_AI_STALL_MS = 30000;       // a model that stops mid-answer
+const MM_AI_ROUNDS = MM_AI_FIRST_BYTE_MS.length;
+
+// Models out of quota (429) or unknown (404) sit out until this time, so a
+// question doesn't spend its attempts on models that can't answer anyway.
+const MM_AI_COOLDOWN = {};
+
+function mmAiModelOrder() {
+  const ok = safeStorage.getItem(MM_AI_MODEL_STORE);
+  const order = ok && MM_AI_MODELS.includes(ok) ? [ok, ...MM_AI_MODELS.filter(m => m !== ok)] : MM_AI_MODELS.slice();
+  const now = Date.now();
+  return order.filter(m => !(MM_AI_COOLDOWN[m] > now));
+}
+
+function mmAiCooldown(model, err) {
+  if (err.status === 404) { MM_AI_COOLDOWN[model] = Date.now() + 24 * 3600e3; return; }
+  if (err.status !== 429) return;
+  // Gemini says how long to wait ("Please retry in 41.5s"); default a minute.
+  const m = String(err.message || '').match(/retry in ([\d.]+)s/i);
+  MM_AI_COOLDOWN[model] = Date.now() + (m ? Math.ceil(Number(m[1])) : 60) * 1000;
+}
+
+function mmAiSleep(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(resolve, ms);
+    if (signal) signal.addEventListener('abort', () => { clearTimeout(t); reject(new DOMException('Aborted', 'AbortError')); }, { once: true });
+  });
+}
+
+// Busy, quota, timeout, unknown model or an empty reply: worth trying
+// another model. A bad key or a cancelled request is not.
+function mmAiRetryable(err) {
+  if (!err) return false;
+  if (err.timeout || err.empty) return true;
+  if (err.status === 400) return !/api key/i.test(err.message || '');
+  return [404, 408, 429, 500, 502, 503, 504].includes(err.status);
+}
+
 async function mmAiStream(key, body, answer) {
-  let lastErr = null;
-  const attempts = [MM_AI_MODELS[0], MM_AI_MODELS[0], ...MM_AI_MODELS.slice(1)];
-  for (let i = 0; i < attempts.length; i++) {
-    if (i === 1) await new Promise(r => setTimeout(r, 1200));
-    try {
-      await mmAiStreamOnce(attempts[i], key, body, answer);
-      return;
-    } catch (err) {
-      lastErr = err;
-      if (err.name === 'AbortError' || answer.parts[0].text) throw err;
-      if (![429, 500, 503, 404].includes(err.status)) throw err;
+  const signal = MM_AI_ABORT.signal;
+  let lastErr = null, tries = 0;
+  for (let round = 0; round < MM_AI_ROUNDS; round++) {
+    const order = mmAiModelOrder();
+    if (!order.length) break;
+    if (round) {
+      answer.status = 'Gemini sedang ramai, mencoba lagi…';
+      mmAiUpdateLast();
+      await mmAiSleep(2000 * round, signal);
+    }
+    for (const model of order) {
+      if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+      if (tries++) { answer.status = `Gemini sedang ramai, mencoba jalur lain (${tries})…`; mmAiUpdateLast(); }
+      try {
+        await mmAiStreamOnce(model, key, body, answer, MM_AI_FIRST_BYTE_MS[round]);
+        safeStorage.setItem(MM_AI_MODEL_STORE, model);
+        answer.status = '';
+        return;
+      } catch (err) {
+        lastErr = err;
+        if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        mmAiCooldown(model, err);
+        if (!mmAiRetryable(err)) throw err;
+        // Cut off mid-answer: start the answer over on the next model rather
+        // than leave half a reply.
+        if (answer.parts[0].text) { answer.parts[0].text = ''; mmAiUpdateLast(); }
+      }
     }
   }
+  if (!lastErr) { lastErr = new Error('quota'); lastErr.status = 429; }
   throw lastErr;
 }
 
-async function mmAiStreamOnce(model, key, body, answer) {
-  const res = await fetch(`${MM_AI_ENDPOINT}${model}:streamGenerateContent?alt=sse`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-    body: JSON.stringify(body),
-    signal: MM_AI_ABORT ? MM_AI_ABORT.signal : undefined
-  });
-  if (!res.ok) {
-    let msg = '';
-    try { msg = ((await res.json()).error || {}).message || ''; } catch (e) {}
-    const err = new Error(msg || ('HTTP ' + res.status));
-    err.status = res.status;
-    throw err;
-  }
+async function mmAiStreamOnce(model, key, body, answer, firstByteMs) {
+  // One controller per attempt, cancelled by the user's stop button or by
+  // our own timers.
+  const ctl = new AbortController();
+  const parent = MM_AI_ABORT.signal;
+  const onStop = () => ctl.abort();
+  parent.addEventListener('abort', onStop, { once: true });
+  let timedOut = false, timer = null;
+  const arm = (ms) => { clearTimeout(timer); timer = setTimeout(() => { timedOut = true; ctl.abort(); }, ms); };
+  const fail = (err) => {
+    if (timedOut && !parent.aborted) { const e = new Error('timeout'); e.timeout = true; return e; }
+    return err;
+  };
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buf = '';
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buf += decoder.decode(value, { stream: true });
-    let nl;
-    while ((nl = buf.indexOf('\n')) !== -1) {
-      const line = buf.slice(0, nl).trim();
-      buf = buf.slice(nl + 1);
-      if (!line.startsWith('data:')) continue;
+  try {
+    arm(firstByteMs);
+    let res;
+    try {
+      res = await fetch(`${MM_AI_ENDPOINT}${model}:streamGenerateContent?alt=sse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify(body),
+        signal: ctl.signal
+      });
+    } catch (e) { throw fail(e); }
+    if (!res.ok) {
+      let msg = '';
+      try { msg = ((await res.json()).error || {}).message || ''; } catch (e) {}
+      const err = new Error(msg || ('HTTP ' + res.status));
+      err.status = res.status;
+      throw err;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '', got = false;
+    for (;;) {
       let chunk;
-      try { chunk = JSON.parse(line.slice(5)); } catch (e) { continue; }
-      const parts = (((chunk.candidates || [])[0] || {}).content || {}).parts || [];
-      const add = parts.filter(p => !p.thought).map(p => p.text || '').join('');
-      if (add) {
-        answer.parts[0].text += add;
-        mmAiUpdateLast();
+      try { chunk = await reader.read(); } catch (e) { throw fail(e); }
+      if (chunk.done) break;
+      buf += decoder.decode(chunk.value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf('\n')) !== -1) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (!line.startsWith('data:')) continue;
+        let data;
+        try { data = JSON.parse(line.slice(5)); } catch (e) { continue; }
+        if (data.error) {
+          const err = new Error(data.error.message || 'stream error');
+          err.status = data.error.code;
+          throw err;
+        }
+        const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
+        const add = parts.filter(p => !p.thought).map(p => p.text || '').join('');
+        if (add) {
+          if (!got) { got = true; answer.status = ''; }
+          answer.parts[0].text += add;
+          mmAiUpdateLast();
+        }
+        // Thinking models can take a while before the first visible word;
+        // any chunk proves the model is alive.
+        arm(MM_AI_STALL_MS);
       }
     }
+    if (!got) { const e = new Error('empty'); e.empty = true; throw e; }
+  } finally {
+    clearTimeout(timer);
+    parent.removeEventListener('abort', onStop);
   }
 }
 
@@ -459,8 +561,8 @@ function mmAiErrorText(err) {
   const msg = (err && err.message) || '';
   if (s === 400 && /api key/i.test(msg)) return 'API key tidak valid. Periksa lagi di Profil → AI Assistant.';
   if (s === 401 || s === 403) return 'API key ditolak. Pastikan key aktif dan Gemini API sudah diaktifkan.';
-  if (s === 429) return 'Kuota Gemini sedang habis. Tunggu sebentar lalu coba lagi.';
-  if (s === 503 || s === 500) return 'Server Gemini sedang sibuk. Coba lagi sebentar lagi.';
+  if (s === 429) return 'Kuota gratis Gemini sedang habis di semua model. Coba lagi beberapa menit lagi.';
+  if (err && (err.timeout || err.empty || [500, 502, 503, 504].includes(s))) return 'Semua model Gemini sedang penuh saat ini. Ketuk Coba lagi sebentar lagi.';
   if (err instanceof TypeError) return 'Tidak bisa terhubung ke Gemini. Periksa koneksi internet.';
   return msg || 'Terjadi kesalahan. Coba lagi.';
 }
