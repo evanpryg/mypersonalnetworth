@@ -1,0 +1,467 @@
+<script>
+/* === AI ASSISTANT ===
+   A chat that answers questions about the user's own money. Each request
+   sends a fresh snapshot of their data (balances, budget, this month's
+   transactions, monthly history) as the system instruction, so answers
+   always reflect what is on screen right now.
+
+   The Gemini key is never in the source: the app is public on GitHub Pages,
+   so a key in the bundle would be readable by anyone. It lives in this
+   browser's storage only, pasted in by the user. */
+const MM_AI_KEY_STORE = 'gemini_api_key';
+const MM_AI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/';
+// Tried in order: the first is the best fit; the others take over when it is
+// overloaded (503) or out of quota (429) — both common on the free tier.
+const MM_AI_MODELS = ['gemini-3-flash-preview', 'gemini-flash-latest', 'gemini-3.1-flash-lite-preview'];
+const MM_AI_SUGGESTIONS = [
+  'Bagaimana kondisi keuanganku bulan ini?',
+  'Kategori mana yang paling boros?',
+  'Berapa yang aman kubelanjakan per hari?',
+  'Bandingkan bulan ini dengan bulan lalu',
+  'Berapa yang bisa kutabung bulan ini?'
+];
+
+let MM_AI_HISTORY = [];   // Gemini "contents": {role, parts:[{text}]}
+let MM_AI_BUSY = false;
+let MM_AI_ABORT = null;
+let MM_AI_OPENER = null;  // focus returns here when the chat closes
+
+function mmAiGetKey() { return (safeStorage.getItem(MM_AI_KEY_STORE) || '').trim(); }
+
+/* ---------- open / close ---------- */
+function mmOpenAiChat() {
+  const sheet = document.getElementById('mmAiSheet');
+  if (!sheet) return;
+  MM_AI_OPENER = document.activeElement;
+  sheet.classList.remove('hidden');
+  document.body.classList.add('ai-open');
+  mmAiRender();
+  // Warm the full history in the background; the first answer needs it.
+  if (typeof mmLoadSearchData === 'function' && !MM_SEARCH_CACHE) mmLoadSearchData();
+  const input = document.getElementById('mmAiInput');
+  // Keyboard users land in the field; on a phone focus goes to the dialog's
+  // first control so the on-screen keyboard doesn't cover the suggestions.
+  setTimeout(() => {
+    if (input && mmAiGetKey() && window.matchMedia('(pointer: fine)').matches) input.focus();
+    else { const back = sheet.querySelector('.mm-search-back'); if (back) back.focus({ preventScroll: true }); }
+  }, 80);
+}
+
+function mmCloseAiChat() {
+  const sheet = document.getElementById('mmAiSheet');
+  if (sheet) sheet.classList.add('hidden');
+  document.body.classList.remove('ai-open');
+  const input = document.getElementById('mmAiInput');
+  if (input) input.blur();
+  if (MM_AI_OPENER && document.contains(MM_AI_OPENER)) MM_AI_OPENER.focus({ preventScroll: true });
+  MM_AI_OPENER = null;
+}
+
+function mmAiNewChat() {
+  if (MM_AI_ABORT) MM_AI_ABORT.abort();
+  MM_AI_HISTORY = [];
+  mmAiRender();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const sheet = document.getElementById('mmAiSheet');
+  if (sheet && !sheet.classList.contains('hidden')) mmCloseAiChat();
+});
+
+/* ---------- key management ---------- */
+function mmAiSaveKey(inputId) {
+  const input = document.getElementById(inputId);
+  const key = (input && input.value || '').trim();
+  if (key.length < 20) { showToast('API key terlihat tidak lengkap', 'error'); return; }
+  safeStorage.setItem(MM_AI_KEY_STORE, key);
+  if (input) input.value = '';
+  showToast('API key tersimpan di browser ini', 'success');
+  mmAiRenderKeyStatus();
+  mmAiRender();
+}
+
+function mmAiClearKey() {
+  safeStorage.removeItem(MM_AI_KEY_STORE);
+  showToast('API key dihapus dari browser ini', 'success');
+  mmAiRenderKeyStatus();
+  mmAiRender();
+}
+
+function mmAiRenderKeyStatus() {
+  const status = document.getElementById('mmAiKeyStatus');
+  const clear = document.getElementById('mmAiKeyClear');
+  const key = mmAiGetKey();
+  if (status) {
+    status.innerHTML = key
+      ? `<span class="ai-key-dot is-on"></span>Terpasang · berakhiran <strong>${escapeHtml(key.slice(-4))}</strong>`
+      : `<span class="ai-key-dot"></span>Belum ada key. Buat gratis di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.`;
+  }
+  if (clear) clear.hidden = !key;
+}
+
+/* ---------- rendering ---------- */
+function mmAiRender() {
+  const log = document.getElementById('mmAiLog');
+  const form = document.getElementById('mmAiForm');
+  if (!log) return;
+  const hasKey = !!mmAiGetKey();
+  if (form) form.hidden = !hasKey;
+
+  if (!hasKey) {
+    log.innerHTML = `
+      <div class="ai-intro">
+        <span class="ai-intro-mark" aria-hidden="true">${lucideIconSvg('sparkles', 26)}</span>
+        <h3>Pasang API key Gemini</h3>
+        <p>Asisten membaca saldo, budget, dan transaksimu lalu menjawab pertanyaan soal kondisi keuanganmu. Key disimpan hanya di browser ini, tidak ikut ke server.</p>
+        <div class="ai-key-row">
+          <input type="password" id="mmAiKeyInline" class="form-input" placeholder="Tempel API key di sini" autocomplete="off" spellcheck="false"
+                 onkeydown="if(event.key==='Enter'){mmAiSaveKey('mmAiKeyInline');}">
+          <button type="button" class="btn-primary" onclick="mmAiSaveKey('mmAiKeyInline')">Simpan</button>
+        </div>
+        <p class="ai-fine">Belum punya? Buat gratis di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</p>
+      </div>`;
+    return;
+  }
+
+  if (!MM_AI_HISTORY.length) {
+    log.innerHTML = `
+      <div class="ai-intro">
+        <span class="ai-intro-mark" aria-hidden="true">${lucideIconSvg('sparkles', 26)}</span>
+        <h3>Tanya soal keuanganmu</h3>
+        <p>Jawaban disusun dari saldo, budget, dan riwayat transaksimu, bukan angka karangan.</p>
+        <div class="ai-suggest">
+          ${MM_AI_SUGGESTIONS.map(s => `<button type="button" class="ai-chip" onclick="mmAiAsk('${jsStr(s)}')">${escapeHtml(s)}</button>`).join('')}
+        </div>
+      </div>`;
+    return;
+  }
+
+  log.innerHTML = MM_AI_HISTORY.map((m, i) => mmAiMessageHtml(m, i)).join('');
+  log.scrollTop = log.scrollHeight;
+}
+
+function mmAiMessageHtml(m, i) {
+  const text = (m.parts || []).map(p => p.text || '').join('');
+  if (m.role === 'user') return `<div class="ai-msg is-user"><div class="ai-bubble">${escapeHtml(text).replace(/\n/g, '<br>')}</div></div>`;
+  const body = m.error
+    ? `<div class="ai-error">${lucideIconSvg('alert-circle', 16)}<span>${escapeHtml(m.error)}</span>
+         <button type="button" onclick="mmAiRetry()">Coba lagi</button></div>`
+    : (text ? mmAiMarkdown(text) : '<span class="ai-typing" aria-label="Sedang menulis"><i></i><i></i><i></i></span>');
+  return `<div class="ai-msg is-model" data-i="${i}"><span class="ai-avatar" aria-hidden="true">${lucideIconSvg('sparkles', 14)}</span><div class="ai-answer">${body}</div></div>`;
+}
+
+// Re-renders only the answer being written, so a long chat does not
+// re-parse every earlier message on each streamed chunk.
+function mmAiUpdateLast() {
+  const log = document.getElementById('mmAiLog');
+  if (!log) return;
+  const i = MM_AI_HISTORY.length - 1;
+  const node = log.querySelector(`.ai-msg[data-i="${i}"]`);
+  if (!node) { mmAiRender(); return; }
+  const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 120;
+  node.outerHTML = mmAiMessageHtml(MM_AI_HISTORY[i], i);
+  if (nearBottom) log.scrollTop = log.scrollHeight;
+}
+
+function mmAiSetBusy(busy) {
+  MM_AI_BUSY = busy;
+  const log = document.getElementById('mmAiLog');
+  if (log) log.setAttribute('aria-busy', busy ? 'true' : 'false');
+  const send = document.getElementById('mmAiSend');
+  if (send) {
+    send.innerHTML = busy ? lucideIconSvg('square', 16) : lucideIconSvg('send', 18);
+    send.setAttribute('aria-label', busy ? 'Hentikan' : 'Kirim');
+    send.classList.toggle('is-stop', busy);
+  }
+}
+
+/* Minimal markdown: escape everything first, then add back the few
+   constructs Gemini uses — bold, italic, code, headings, lists, tables. */
+function mmAiInline(s) {
+  return s
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
+}
+
+function mmAiMarkdown(src) {
+  const lines = escapeHtml(src).split('\n');
+  let html = '', list = null, table = [];
+  const closeList = () => { if (list) { html += `</${list}>`; list = null; } };
+  const flushTable = () => {
+    if (!table.length) return;
+    const rows = table.filter(r => !/^\|?\s*:?-{2,}/.test(r));
+    const cells = r => r.replace(/^\||\|$/g, '').split('|').map(c => mmAiInline(c.trim()));
+    html += '<div class="ai-table"><table>' + rows.map((r, idx) =>
+      '<tr>' + cells(r).map(c => idx === 0 ? `<th>${c}</th>` : `<td>${c}</td>`).join('') + '</tr>').join('') + '</table></div>';
+    table = [];
+  };
+  lines.forEach(raw => {
+    const line = raw.trimEnd();
+    if (/^\s*\|.*\|\s*$/.test(line)) { closeList(); table.push(line.trim()); return; }
+    flushTable();
+    let m;
+    if (!line.trim()) { closeList(); return; }
+    if ((m = line.match(/^#{1,4}\s+(.*)$/))) { closeList(); html += `<h4>${mmAiInline(m[1])}</h4>`; return; }
+    if ((m = line.match(/^\s*[-*•]\s+(.*)$/))) {
+      if (list !== 'ul') { closeList(); html += '<ul>'; list = 'ul'; }
+      html += `<li>${mmAiInline(m[1])}</li>`; return;
+    }
+    if ((m = line.match(/^\s*\d+[.)]\s+(.*)$/))) {
+      if (list !== 'ol') { closeList(); html += '<ol>'; list = 'ol'; }
+      html += `<li>${mmAiInline(m[1])}</li>`; return;
+    }
+    closeList();
+    html += `<p>${mmAiInline(line)}</p>`;
+  });
+  closeList(); flushTable();
+  return html;
+}
+
+/* ---------- financial context ---------- */
+function mmAiRp(v) {
+  return 'Rp' + new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(Math.round(Number(v) || 0));
+}
+
+async function mmAiEnsureDashboard() {
+  if (MM_DASHBOARD) return MM_DASHBOARD;
+  try {
+    return await new Promise((resolve, reject) => {
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).mmGetDashboard();
+    });
+  } catch (e) { return null; }
+}
+
+async function mmAiBuildContext() {
+  const d = await mmAiEnsureDashboard();
+  let all = MM_SEARCH_CACHE;
+  if (!all && typeof mmLoadSearchData === 'function') all = await mmLoadSearchData();
+  all = all || [];
+
+  const out = [];
+  const now = new Date();
+  out.push(`Tanggal hari ini: ${new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now)} (${localISODate(now)}).`);
+
+  if (d) {
+    const ctx = mmMonthContext();
+    out.push(`\n## Ringkasan\n- Total saldo (akun yang tampil di dashboard): ${mmAiRp(d.netWorth)}\n- Saldo akhir bulan lalu: ${mmAiRp(d.prevNetWorth)}\n- Hari ke-${ctx.day} dari ${ctx.daysInMonth}, sisa ${ctx.daysLeft} hari termasuk hari ini`);
+
+    const accs = (d.accounts || []).slice().sort((a, b) => (b.balance || 0) - (a.balance || 0));
+    if (accs.length) out.push('\n## Akun\n' + accs.map(a =>
+      `- ${a.name} (${a.type || 'Lainnya'})${a.showOnDashboard ? '' : ' [tidak dihitung di total]'}: ${mmAiRp(a.balance)}`).join('\n'));
+
+    const pm = d.prevMonth || {};
+    out.push(`\n## Bulan ini (${ctx.monthName})\n- Pemasukan: ${mmAiRp(d.totalIncome)}\n- Pengeluaran: ${mmAiRp(d.totalExpense)}\n- Selisih (pemasukan − pengeluaran): ${mmAiRp(d.saving)}\n- Bulan lalu: pemasukan ${mmAiRp(pm.income)}, pengeluaran ${mmAiRp(pm.expense)}; pengeluaran bulan lalu sampai tanggal yang sama: ${mmAiRp(pm.expenseToDate)}`);
+
+    const a = mmAllowance(d);
+    out.push(`\n## Jatah belanja\n- Dana aman dibelanjakan sampai akhir bulan: ${mmAiRp(a.safe)}${a.capped ? ' (dibatasi oleh saldo yang ada)' : ''}\n- Jatah per hari: ${mmAiRp(a.todayBudget)}\n- Sudah dibelanjakan hari ini: ${mmAiRp(a.spentToday)}`);
+
+    const cards = (d.allocationCards || []).filter(c => (c.target || 0) > 0 || (c.spent || 0) > 0);
+    if (cards.length) {
+      out.push(`\n## Budget per pos\nDana budget = sisa saldo bulan lalu (${mmAiRp(d.carryover)}) + pemasukan bulan ini, dibagi sesuai persentase tiap pos. Pos tabungan/investasi/dana darurat adalah target menabung, bukan batas belanja.\n` +
+        cards.map(c => {
+          const pct = c.target > 0 ? Math.round(c.spent / c.target * 100) : 0;
+          if (MM_NON_SPEND_RE.test(c.category || '')) {
+            return `- ${c.category} (${c.percent}%, target menabung): terkumpul ${mmAiRp(c.spent)} dari target ${mmAiRp(c.target)} (${pct}%)`;
+          }
+          return `- ${c.category} (${c.percent}%): terpakai ${mmAiRp(c.spent)} dari ${mmAiRp(c.target)} (${pct}%), sisa ${mmAiRp(c.target - c.spent)}`;
+        }).join('\n'));
+    }
+
+    const trend = (d.netWorthTrend || []).slice(-12);
+    if (trend.length) out.push('\n## Tren saldo akhir bulan\n' + trend.map(t => `- ${t.month}: ${mmAiRp(t.netWorth)}`).join('\n'));
+  }
+
+  // Monthly history by category, from every transaction ever recorded.
+  const months = {};
+  all.forEach(tx => {
+    const m = String(tx.date || '').slice(0, 7);
+    if (!m) return;
+    const r = months[m] || (months[m] = { inc: 0, exp: 0, cats: {} });
+    if (tx.type === 'Income') r.inc += tx.amount || 0;
+    else if (tx.type === 'Expense') {
+      r.exp += tx.amount || 0;
+      const c = tx.category || 'Lainnya';
+      r.cats[c] = (r.cats[c] || 0) + (tx.amount || 0);
+    }
+  });
+  const keys = Object.keys(months).sort().slice(-12);
+  if (keys.length) {
+    out.push('\n## Riwayat bulanan (12 bulan terakhir)\n' + keys.map(k => {
+      const r = months[k];
+      const cats = Object.entries(r.cats).sort((x, y) => y[1] - x[1]).slice(0, 8).map(([c, v]) => `${c} ${mmAiRp(v)}`).join(', ');
+      return `- ${k}: masuk ${mmAiRp(r.inc)}, keluar ${mmAiRp(r.exp)}${cats ? ' — ' + cats : ''}`;
+    }).join('\n'));
+  }
+
+  // This month and last month in detail, newest first.
+  const pmStart = localISODate(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+  const recent = all.filter(tx => (tx.date || '') >= pmStart)
+    .sort((x, y) => (y.date || '').localeCompare(x.date || '')).slice(0, 300);
+  if (recent.length) {
+    out.push('\n## Transaksi bulan ini & bulan lalu (tanggal | jenis | kategori/sub | akun | nominal | catatan)\n' + recent.map(tx =>
+      `${tx.date} | ${tx.type} | ${[tx.category, tx.subcategory].filter(Boolean).join('/') || '-'} | ${tx.account || '-'}${tx.accountTo ? ' → ' + tx.accountTo : ''} | ${mmAiRp(tx.amount)} | ${(tx.notes || '').replace(/\s+/g, ' ').slice(0, 60)}`).join('\n'));
+  }
+
+  if (!d && !all.length) out.push('\n(Data keuangan belum berhasil dimuat.)');
+  return out.join('\n');
+}
+
+const MM_AI_RULES = `Kamu adalah asisten keuangan pribadi di aplikasi MoneyMate. Pengguna bertanya soal kondisi keuangannya sendiri.
+
+Aturan:
+- Jawab dalam bahasa Indonesia yang santai tapi jelas, sapa pengguna dengan "kamu".
+- Dasarkan setiap angka HANYA pada DATA KEUANGAN di bawah. Jangan mengarang angka. Jika data tidak cukup, katakan terus terang apa yang kurang.
+- Tulis nominal dalam format rupiah, contoh Rp1.250.000 atau Rp1,25 jt.
+- Ringkas: mulai dengan jawaban langsung (1–2 kalimat), lalu poin pendukung seperlunya. Maksimal sekitar 180 kata kecuali diminta lebih rinci.
+- Gunakan daftar berpoin untuk rincian; hindari tabel kecuali diminta membandingkan banyak angka.
+- Boleh memberi saran praktis (menghemat, mengatur budget, menabung), tapi jangan merekomendasikan membeli/menjual saham, kripto, atau produk investasi tertentu.
+- Transfer antar akun bukan pengeluaran. Pos tabungan/investasi/dana darurat adalah target menabung.`;
+
+/* ---------- sending ---------- */
+function mmAiAsk(text) {
+  const input = document.getElementById('mmAiInput');
+  if (input) input.value = text;
+  mmAiSubmit();
+}
+
+function mmAiSubmit(e) {
+  if (e) e.preventDefault();
+  if (MM_AI_BUSY) { if (MM_AI_ABORT) MM_AI_ABORT.abort(); return; }
+  const input = document.getElementById('mmAiInput');
+  const text = (input && input.value || '').trim();
+  if (!text) return;
+  input.value = '';
+  mmAiAutosize();
+  MM_AI_HISTORY.push({ role: 'user', parts: [{ text }] });
+  mmAiRun();
+}
+
+function mmAiRetry() {
+  if (MM_AI_BUSY) return;
+  const last = MM_AI_HISTORY[MM_AI_HISTORY.length - 1];
+  if (last && last.role === 'model') MM_AI_HISTORY.pop();
+  mmAiRun();
+}
+
+function mmAiKey(e) {
+  // Enter sends on a keyboard; on a phone the return key adds a line and
+  // the send button sends.
+  if (e.key === 'Enter' && !e.shiftKey && window.matchMedia('(pointer: fine)').matches) {
+    e.preventDefault();
+    mmAiSubmit();
+  }
+}
+
+function mmAiAutosize() {
+  const el = document.getElementById('mmAiInput');
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+  el.style.overflowY = el.scrollHeight > 140 ? 'auto' : 'hidden';
+}
+
+async function mmAiRun() {
+  const key = mmAiGetKey();
+  if (!key) { mmAiRender(); return; }
+  const answer = { role: 'model', parts: [{ text: '' }] };
+  MM_AI_HISTORY.push(answer);
+  mmAiRender();
+  mmAiSetBusy(true);
+  MM_AI_ABORT = new AbortController();
+
+  try {
+    const context = await mmAiBuildContext();
+    const body = {
+      systemInstruction: { parts: [{ text: MM_AI_RULES + '\n\n=== DATA KEUANGAN ===\n' + context }] },
+      // Only finished turns go back to the model; the empty answer slot and
+      // failed attempts stay local.
+      contents: MM_AI_HISTORY.filter(m => m !== answer && !m.error)
+        .map(m => ({ role: m.role, parts: [{ text: (m.parts || []).map(p => p.text || '').join('') }] })),
+      generationConfig: { temperature: 0.4, maxOutputTokens: 2048 }
+    };
+    await mmAiStream(key, body, answer);
+    if (!answer.parts[0].text.trim()) throw new Error('Tidak ada jawaban. Coba ulangi pertanyaannya.');
+  } catch (err) {
+    if (err && err.name === 'AbortError') {
+      if (!answer.parts[0].text) MM_AI_HISTORY.pop();
+    } else {
+      answer.error = mmAiErrorText(err);
+    }
+  } finally {
+    MM_AI_ABORT = null;
+    mmAiSetBusy(false);
+    mmAiRender();
+  }
+}
+
+// Streams from the first model that accepts the request; overload and quota
+// errors move on to the next one (after one short retry on the first).
+async function mmAiStream(key, body, answer) {
+  let lastErr = null;
+  const attempts = [MM_AI_MODELS[0], MM_AI_MODELS[0], ...MM_AI_MODELS.slice(1)];
+  for (let i = 0; i < attempts.length; i++) {
+    if (i === 1) await new Promise(r => setTimeout(r, 1200));
+    try {
+      await mmAiStreamOnce(attempts[i], key, body, answer);
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (err.name === 'AbortError' || answer.parts[0].text) throw err;
+      if (![429, 500, 503, 404].includes(err.status)) throw err;
+    }
+  }
+  throw lastErr;
+}
+
+async function mmAiStreamOnce(model, key, body, answer) {
+  const res = await fetch(`${MM_AI_ENDPOINT}${model}:streamGenerateContent?alt=sse`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+    body: JSON.stringify(body),
+    signal: MM_AI_ABORT ? MM_AI_ABORT.signal : undefined
+  });
+  if (!res.ok) {
+    let msg = '';
+    try { msg = ((await res.json()).error || {}).message || ''; } catch (e) {}
+    const err = new Error(msg || ('HTTP ' + res.status));
+    err.status = res.status;
+    throw err;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf('\n')) !== -1) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line.startsWith('data:')) continue;
+      let chunk;
+      try { chunk = JSON.parse(line.slice(5)); } catch (e) { continue; }
+      const parts = (((chunk.candidates || [])[0] || {}).content || {}).parts || [];
+      const add = parts.filter(p => !p.thought).map(p => p.text || '').join('');
+      if (add) {
+        answer.parts[0].text += add;
+        mmAiUpdateLast();
+      }
+    }
+  }
+}
+
+function mmAiErrorText(err) {
+  const s = err && err.status;
+  const msg = (err && err.message) || '';
+  if (s === 400 && /api key/i.test(msg)) return 'API key tidak valid. Periksa lagi di Profil → AI Assistant.';
+  if (s === 401 || s === 403) return 'API key ditolak. Pastikan key aktif dan Gemini API sudah diaktifkan.';
+  if (s === 429) return 'Kuota Gemini sedang habis. Tunggu sebentar lalu coba lagi.';
+  if (s === 503 || s === 500) return 'Server Gemini sedang sibuk. Coba lagi sebentar lagi.';
+  if (err instanceof TypeError) return 'Tidak bisa terhubung ke Gemini. Periksa koneksi internet.';
+  return msg || 'Terjadi kesalahan. Coba lagi.';
+}
+</script>

@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#0F172A">
+  <meta name="theme-color" content="#0B1220">
   <!-- Dark UA canvas from the first frame, so no white shows before the
        stylesheet applies or at the edges of an overscroll. -->
   <meta name="color-scheme" content="dark">
@@ -347,150 +347,159 @@
     <div id="moneyWorkspace" class="workspace active">
       <main class="main-content">
 
-        <!-- ===== MM DASHBOARD PAGE =====
-             Answers, top to bottom: how much do I have and which way is it
-             moving; how is this month going (cash flow, pace, what is safe
-             to spend per day); what needs attention; where the money went;
-             what happened. Every number that can be compared is compared —
-             to last month, to the budget, or to income. -->
+        <!-- ===== HOME =====
+             Built around three questions, in the order they are asked:
+             how much do I have; how much can I still spend today; how is
+             the month going. Logging a transaction is one tap from the top,
+             everything deeper is one tap into Analytics, Transactions or
+             Budget. -->
         <div id="mmDashboardPage" class="page active-page">
-          <section class="dashboard-wrap">
+          <section class="dashboard-wrap hm">
 
-            <div class="mm-dashboard-header">
-              <div class="mm-header-left">
-                <p class="mm-greeting-line">
-                  <span id="mmGreeting">Halo,</span>
-                  <strong class="mm-user-name" id="mmUserName">Mr Evan</strong>
-                </p>
-                <p class="mm-date-display" id="mmDateDisplay">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  <span id="mmDateText"></span>
-                </p>
+            <header class="hm-top">
+              <button type="button" class="hm-avatar" id="mmHomeAvatar" aria-label="Buka profil" onclick="mmShowPage('mmSettingsPage')">E</button>
+              <div class="hm-hello">
+                <p><span id="mmGreeting">Selamat datang</span> · <span id="mmDateText"></span></p>
+                <h2 id="mmUserName">Mr Evan</h2>
               </div>
-              <button class="mm-header-btn" id="mmBtnSearch" aria-label="Cari transaksi" onclick="mmOpenSearch()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <button type="button" class="hm-icon-btn hm-ai-btn" id="mmBtnAi" aria-label="Tanya asisten AI" onclick="mmOpenAiChat()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg>
               </button>
+              <button type="button" class="hm-icon-btn" id="mmBtnSearch" aria-label="Cari transaksi" onclick="mmOpenSearch()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </button>
+            </header>
+
+            <div class="hm-grid">
+              <div class="hm-col">
+
+                <!-- What I have: balance, its direction, where it sits -->
+                <section class="hm-hero" id="mmNetworthCard" aria-label="Total saldo">
+                  <div class="hm-hero-label">
+                    <span>Total saldo</span>
+                    <button type="button" class="hm-eye" id="mmBalanceEye" aria-label="Tampilkan/sembunyikan nominal" onclick="toggleAmountVisibility()"></button>
+                  </div>
+                  <h1 class="hm-balance" id="mmNetWorthValue">Rp 0</h1>
+                  <div class="hm-change">
+                    <span class="mm-change-badge up" id="mmChangeBadge"></span>
+                    <span id="mmChangeText">vs akhir bulan lalu</span>
+                  </div>
+                  <button type="button" class="hm-trend" id="mmTrendWrap" aria-label="Lihat analitik saldo" onclick="mmShowPage('mmInsightPage')">
+                    <svg id="mmNetworthSparkline" viewBox="0 0 320 72" preserveAspectRatio="none" aria-hidden="true"></svg>
+                    <span class="hm-trend-labels" id="mmTrendLabels" aria-hidden="true"></span>
+                  </button>
+                  <div class="hm-accounts" id="mmAccountsScroll" aria-label="Saldo per akun"></div>
+                </section>
+
+                <!-- Log something: the most frequent job, one tap -->
+                <nav class="hm-actions" aria-label="Catat transaksi">
+                  <button type="button" class="hm-action" onclick="mmShowActionSheet('expense')">
+                    <span class="hm-action-ic is-out" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></span>
+                    <span>Pengeluaran</span>
+                  </button>
+                  <button type="button" class="hm-action" onclick="mmShowActionSheet('income')">
+                    <span class="hm-action-ic is-in" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17"/><path d="M17 17H7V7"/></svg></span>
+                    <span>Pemasukan</span>
+                  </button>
+                  <button type="button" class="hm-action" onclick="mmShowActionSheet('transfer')">
+                    <span class="hm-action-ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg></span>
+                    <span>Transfer</span>
+                  </button>
+                </nav>
+
+                <!-- Today: the one number to decide with -->
+                <section class="hm-card hm-today" id="mmTodayCard" aria-label="Jatah hari ini"></section>
+                <div class="mm-alerts hm-alerts" id="mmAlerts"></div>
+
+                <!-- Budget posts -->
+                <section class="hm-section" id="mmBudgetSection">
+                  <div class="hm-sec-head">
+                    <div>
+                      <h3>Budget</h3>
+                      <p id="mmBudgetSummary">&nbsp;</p>
+                    </div>
+                    <button type="button" class="mm-view-all" onclick="mmShowPage('mmBudgetPage')">Detail <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+                  </div>
+                  <div class="hm-budget" id="mmBudgetList"></div>
+                </section>
+
+              </div>
+              <div class="hm-col">
+
+                <!-- The month: in, out, left; day by day; where it went -->
+                <section class="hm-section" id="mmMonthSection">
+                  <div class="hm-sec-head">
+                    <div>
+                      <h3 id="mmCashflowTitle">Bulan ini</h3>
+                      <p id="mmCashflowSub">&nbsp;</p>
+                    </div>
+                    <button type="button" class="mm-view-all" onclick="mmShowPage('mmInsightPage')">Analitik <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+                  </div>
+                  <div class="hm-card hm-month">
+                    <div class="hm-flow">
+                      <div class="hm-flow-item">
+                        <span class="hm-k"><i class="hm-dot is-in"></i>Masuk</span>
+                        <strong id="mmTotalIncome">Rp 0</strong>
+                        <span class="lx-delta" id="mmIncomeDelta"></span>
+                      </div>
+                      <div class="hm-flow-item">
+                        <span class="hm-k"><i class="hm-dot is-out"></i>Keluar</span>
+                        <strong id="mmTotalExpense">Rp 0</strong>
+                        <span class="lx-delta" id="mmExpenseDelta"></span>
+                      </div>
+                      <div class="hm-flow-item">
+                        <span class="hm-k">Sisa</span>
+                        <strong id="mmTotalSaving">Rp 0</strong>
+                        <span class="lx-delta"><span class="mm-rate-chip" id="mmSavingRate"></span></span>
+                      </div>
+                    </div>
+
+                    <div class="hm-block">
+                      <div class="hm-block-head"><span>Pengeluaran harian</span><span id="mmDailySub"></span></div>
+                      <div class="mm-daily-chart" id="mmDailyChart"></div>
+                      <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
+                    </div>
+
+                    <div class="hm-block" id="mmBreakdown"></div>
+                  </div>
+                </section>
+
+                <!-- Latest activity -->
+                <section class="hm-section" id="mmTransactionsSection">
+                  <div class="hm-sec-head">
+                    <div>
+                      <h3>Terbaru</h3>
+                      <p id="mmTxMonthCount">&nbsp;</p>
+                    </div>
+                    <button type="button" class="mm-view-all" onclick="mmShowPage('mmHistoryPage')">Semua <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+                  </div>
+                  <div class="hm-card mm-transaction-list" id="mmDashboardTransactions"></div>
+                </section>
+
+              </div>
             </div>
+          </section>
+        </div>
 
-            <!-- Net worth + this month's cash flow -->
-            <div class="mm-networth-card" id="mmNetworthCard">
-              <div class="mm-networth-header-row">
-                <span class="mm-networth-label">Total saldo</span>
-                <button class="mm-networth-eye" aria-label="Tampilkan/sembunyikan nominal" onclick="toggleAmountVisibility()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
-                <button class="mm-networth-arrow" id="mmNetworthDetailBtn" aria-label="Buka insight keuangan" onclick="mmShowPage('mmInsightPage')">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-                </button>
+        <!-- ===== MM BUDGET PAGE =====
+             Every pos in full: allocation share, used, remaining and state.
+             Rendered from the same dashboard data as the overview card. -->
+        <div id="mmBudgetPage" class="page">
+          <section class="lx-page">
+            <header class="lx-page-head">
+              <div>
+                <h2 class="page-title">Budget</h2>
+                <p class="lx-page-sub" id="mmBudgetPageSub">&nbsp;</p>
               </div>
-              <h2 class="mm-networth-amount" id="mmNetWorthValue">Rp 0</h2>
-              <div class="mm-networth-change">
-                <span class="mm-change-badge up" id="mmChangeBadge">↑ 0%</span>
-                <span class="mm-change-vs" id="mmChangeText">vs akhir bulan lalu</span>
-              </div>
-              <svg id="mmNetworthSparkline" viewBox="0 0 200 80" preserveAspectRatio="none" aria-hidden="true"></svg>
-
-              <div class="mm-cashflow" aria-label="Arus kas bulan ini">
-                <div class="mm-cashflow-head">
-                  <span id="mmCashflowTitle">Arus kas bulan ini</span>
-                  <span class="mm-rate-chip" id="mmSavingRate">–</span>
-                </div>
-                <!-- Share of income already spent; the rest of the track is
-                     what is left. -->
-                <div class="mm-cashflow-bar" role="img" id="mmCashflowBar" aria-label="Porsi pemasukan yang terpakai">
-                  <span class="mm-cashflow-fill" id="mmCashflowFill"></span>
-                </div>
-                <div class="mm-hero-stats">
-                  <div class="mm-hero-stat">
-                    <span class="mm-hero-stat-label"><span class="mm-hero-dot in" aria-hidden="true">↓</span>Masuk</span>
-                    <strong id="mmTotalIncome">Rp 0</strong>
-                  </div>
-                  <div class="mm-hero-stat">
-                    <span class="mm-hero-stat-label"><span class="mm-hero-dot out" aria-hidden="true">↑</span>Keluar</span>
-                    <strong id="mmTotalExpense">Rp 0</strong>
-                  </div>
-                  <div class="mm-hero-stat">
-                    <span class="mm-hero-stat-label">Sisa</span>
-                    <strong id="mmTotalSaving">Rp 0</strong>
-                  </div>
-                </div>
+              <button class="mm-header-btn" aria-label="Atur pembagian budget" onclick="mmOpenBudgetSettings()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
+              </button>
+            </header>
+            <div id="mmBudgetPageContent">
+              <div class="mm-dash-card">
+                <div class="sk-list"><div class="sk sk-line lg" style="width:60%"></div><div class="sk sk-line" style="width:40%"></div></div>
               </div>
             </div>
-
-            <!-- Month pulse: one actionable number (safe daily spend) + alerts.
-                 The deeper stats (pace, projection, savings ratio) live in Insight. -->
-            <section class="mm-dash-section" id="mmPulseSection">
-              <div class="mm-pulse-grid is-single" id="mmPulseGrid"></div>
-              <div class="mm-alerts" id="mmAlerts"></div>
-            </section>
-
-            <!-- Budget: every pos, not just one -->
-            <section class="mm-dash-section" id="mmBudgetSection">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Budget</h3>
-                  <p class="mm-section-sub" id="mmBudgetSummary">&nbsp;</p>
-                </div>
-                <button class="mm-view-all" id="mmBudgetDetailBtn" onclick="mmShowBudgetDetail()">Detail <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
-              </div>
-              <div class="mm-dash-card mm-budget-list" id="mmBudgetList"></div>
-            </section>
-
-            <!-- Category breakdown: where money came from / went, tap to drill down -->
-            <section class="mm-dash-section" id="mmExpenseSection">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Rincian kategori</h3>
-                  <p class="mm-section-sub" id="mmBreakdownSub">&nbsp;</p>
-                </div>
-                <div class="mm-expense-tabs" role="tablist">
-                  <button class="mm-expense-tab active" role="tab" aria-selected="true" data-tab="expense" onclick="mmSwitchChartTab(this,'expense')">Keluar</button>
-                  <button class="mm-expense-tab" role="tab" aria-selected="false" data-tab="income" onclick="mmSwitchChartTab(this,'income')">Masuk</button>
-                </div>
-              </div>
-              <div class="mm-dash-card mm-bd-card" id="mmBreakdown"></div>
-            </section>
-
-            <!-- Daily spending -->
-            <section class="mm-dash-section" id="mmDailySection">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Pengeluaran harian</h3>
-                  <p class="mm-section-sub" id="mmDailySub">&nbsp;</p>
-                </div>
-              </div>
-              <div class="mm-dash-card mm-daily-card">
-                <div class="mm-daily-chart" id="mmDailyChart"></div>
-                <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
-              </div>
-            </section>
-
-            <!-- Accounts -->
-            <section class="mm-dash-section" id="mmAccountsSection">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Akun</h3>
-                  <p class="mm-section-sub" id="mmAccountsSub">&nbsp;</p>
-                </div>
-                <button class="mm-view-all" onclick="mmShowPage('mmSettingsPage')">Kelola <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
-              </div>
-              <div class="mm-accounts-grid" id="mmAccountsScroll">
-                <div class="empty-state">No accounts yet.</div>
-              </div>
-            </section>
-
-            <!-- This month's transactions, grouped by day -->
-            <section class="mm-dash-section" id="mmTransactionsSection">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Transaksi bulan ini</h3>
-                  <p class="mm-section-sub" id="mmTxMonthCount"></p>
-                </div>
-                <button class="mm-view-all" onclick="mmShowPage('mmHistoryPage')">Semua <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
-              </div>
-              <div class="mm-dash-card mm-transaction-list" id="mmDashboardTransactions"></div>
-            </section>
-
           </section>
         </div>
 
@@ -549,14 +558,19 @@
              edit the split, in one tap. Only the destructive section stays
              folded. -->
         <div id="mmSettingsPage" class="page settings-page">
-          <header class="settings-head">
-            <h2 class="page-title">Settings</h2>
+          <header class="settings-head lx-profile-head">
+            <span class="lx-avatar" id="mmProfileAvatar" aria-hidden="true">ME</span>
+            <div class="lx-profile-text">
+              <h2 class="page-title" id="mmProfileName">Profil</h2>
+              <p class="lx-page-sub">Akun, budget, kategori &amp; data</p>
+            </div>
           </header>
 
           <nav class="settings-nav" aria-label="Bagian settings">
             <a href="#mmSetAccounts" class="settings-nav-chip active" onclick="settingsJump(event,'mmSetAccounts')">Akun</a>
             <a href="#mmSetBudget" class="settings-nav-chip" onclick="settingsJump(event,'mmSetBudget')">Budget</a>
             <a href="#mmSetCategories" class="settings-nav-chip" onclick="settingsJump(event,'mmSetCategories')">Kategori</a>
+            <a href="#mmSetAi" class="settings-nav-chip" onclick="settingsJump(event,'mmSetAi')">AI</a>
             <a href="#mmSetData" class="settings-nav-chip" onclick="settingsJump(event,'mmSetData')">Data</a>
           </nav>
 
@@ -609,6 +623,27 @@
             </div>
             <div class="set-card">
               <div id="mmCategoriesList" class="mm-categories-list"></div>
+            </div>
+          </section>
+
+          <!-- AI assistant: the Gemini key lives in this browser only -->
+          <section class="set-section" id="mmSetAi">
+            <div class="set-section-head">
+              <div>
+                <h3 class="set-section-title">AI Assistant</h3>
+                <p class="set-section-sub">Gemini API key, disimpan hanya di browser ini</p>
+              </div>
+              <button class="set-add-btn" onclick="mmOpenAiChat()"><i data-lucide="sparkles"></i>Buka</button>
+            </div>
+            <div class="set-card">
+              <div class="ai-key-row">
+                <input type="password" id="mmAiKeyInput" class="form-input" placeholder="Tempel API key Gemini" autocomplete="off" spellcheck="false" aria-label="Gemini API key"
+                       onkeydown="if(event.key==='Enter'){mmAiSaveKey('mmAiKeyInput');}">
+                <button type="button" class="btn-primary" onclick="mmAiSaveKey('mmAiKeyInput')">Simpan</button>
+              </div>
+              <p class="ai-key-status" id="mmAiKeyStatus"></p>
+              <p class="set-hint">Saat bertanya, ringkasan saldo, budget, dan transaksimu dikirim ke Google Gemini untuk dijawab.</p>
+              <p class="set-inline-links" id="mmAiKeyClear" hidden><button type="button" onclick="mmAiClearKey()">Hapus key dari browser ini</button></p>
             </div>
           </section>
 
@@ -742,22 +777,26 @@
     </nav>
 
     <!-- ===== MONEY MANAGEMENT BOTTOM TABS ===== -->
-    <nav class="bottom-tabs mm-tabs" id="mmBottomTabs">
-      <button class="tab-item active" data-page="mmDashboardPage" onclick="mmShowPage('mmDashboardPage')">
-        <i data-lucide="layout-dashboard" class="tab-icon"></i>
-        <small>Dashboard</small>
+    <nav class="bottom-tabs mm-tabs" id="mmBottomTabs" aria-label="Navigasi utama">
+      <button class="tab-item active" aria-current="page" data-page="mmDashboardPage" aria-label="Home" onclick="mmShowPage('mmDashboardPage')">
+        <i data-lucide="house" class="tab-icon"></i>
+        <small>Home</small>
       </button>
-      <button class="tab-item" data-page="mmHistoryPage" onclick="mmShowPage('mmHistoryPage')">
-        <i data-lucide="clock" class="tab-icon"></i>
-        <small>History</small>
+      <button class="tab-item" data-page="mmInsightPage" aria-label="Analytics" onclick="mmShowPage('mmInsightPage')">
+        <i data-lucide="chart-pie" class="tab-icon"></i>
+        <small>Analytics</small>
       </button>
-      <button class="tab-item" data-page="mmInsightPage" onclick="mmShowPage('mmInsightPage')">
-        <i data-lucide="brain" class="tab-icon"></i>
-        <small>Insight</small>
+      <button class="tab-item" data-page="mmHistoryPage" aria-label="Transactions" onclick="mmShowPage('mmHistoryPage')">
+        <i data-lucide="arrow-left-right" class="tab-icon"></i>
+        <small>Transactions</small>
       </button>
-      <button class="tab-item" data-page="mmSettingsPage" onclick="mmShowPage('mmSettingsPage')">
-        <i data-lucide="settings" class="tab-icon"></i>
-        <small>Settings</small>
+      <button class="tab-item" data-page="mmBudgetPage" aria-label="Budget" onclick="mmShowPage('mmBudgetPage')">
+        <i data-lucide="wallet" class="tab-icon"></i>
+        <small>Budget</small>
+      </button>
+      <button class="tab-item" data-page="mmSettingsPage" aria-label="Profile" onclick="mmShowPage('mmSettingsPage')">
+        <i data-lucide="circle-user-round" class="tab-icon"></i>
+        <small>Profile</small>
       </button>
     </nav>
 
@@ -1019,6 +1058,34 @@
     <div class="mm-search-results" id="mmSearchResults"></div>
   </div>
 
+  <!-- ===== AI ASSISTANT =====
+       Full screen like search: a conversation needs the whole height, and
+       the keyboard takes half of it on a phone. -->
+  <div id="mmAiSheet" class="ai-chat hidden" role="dialog" aria-modal="true" aria-labelledby="mmAiTitle">
+    <header class="ai-bar">
+      <button class="mm-search-back" aria-label="Tutup asisten" onclick="mmCloseAiChat()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+      </button>
+      <div class="ai-bar-title">
+        <h2 id="mmAiTitle">Asisten Keuangan</h2>
+        <p>Gemini · membaca data keuanganmu</p>
+      </div>
+      <button class="ai-bar-btn" aria-label="Percakapan baru" title="Percakapan baru" onclick="mmAiNewChat()">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
+      </button>
+    </header>
+    <div class="ai-log" id="mmAiLog" aria-live="polite"></div>
+    <form class="ai-compose" id="mmAiForm" onsubmit="mmAiSubmit(event)">
+      <div class="ai-compose-field">
+        <textarea id="mmAiInput" rows="1" placeholder="Tanya soal keuanganmu…" aria-label="Pertanyaan" oninput="mmAiAutosize()" onkeydown="mmAiKey(event)"></textarea>
+        <button type="submit" class="ai-send" id="mmAiSend" aria-label="Kirim">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>
+        </button>
+      </div>
+      <p class="ai-fine">AI bisa keliru. Cek angka penting di halaman terkait.</p>
+    </form>
+  </div>
+
   <!-- ===== LOGIN GATE =====
        Only shown when the database refuses anonymous reads, i.e. once RLS is
        switched on. Before that the app runs exactly as before. -->
@@ -1096,5 +1163,6 @@
   <?!= include('Script_Keuangan'); ?>
   <?!= include('Script_Insight'); ?>
   <?!= include('Script_TxInput'); ?>
+  <?!= include('Script_AI'); ?>
 </body>
 </html>
