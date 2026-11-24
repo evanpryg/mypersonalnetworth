@@ -626,23 +626,23 @@
             </div>
           </section>
 
-          <!-- AI assistant: the Gemini key lives in this browser only -->
+          <!-- AI assistant: the DeepSeek key lives in this browser only -->
           <section class="set-section" id="mmSetAi">
             <div class="set-section-head">
               <div>
                 <h3 class="set-section-title">AI Assistant</h3>
-                <p class="set-section-sub">Gemini API key, disimpan hanya di browser ini</p>
+                <p class="set-section-sub">DeepSeek API key, disimpan hanya di browser ini</p>
               </div>
               <button class="set-add-btn" onclick="mmOpenAiChat()"><i data-lucide="sparkles"></i>Buka</button>
             </div>
             <div class="set-card">
               <div class="ai-key-row">
-                <input type="password" id="mmAiKeyInput" class="form-input" placeholder="Tempel API key Gemini" autocomplete="off" spellcheck="false" aria-label="Gemini API key"
+                <input type="password" id="mmAiKeyInput" class="form-input" placeholder="Tempel API key DeepSeek (sk-…)" autocomplete="off" spellcheck="false" aria-label="DeepSeek API key"
                        onkeydown="if(event.key==='Enter'){mmAiSaveKey('mmAiKeyInput');}">
                 <button type="button" class="btn-primary" onclick="mmAiSaveKey('mmAiKeyInput')">Simpan</button>
               </div>
               <p class="ai-key-status" id="mmAiKeyStatus"></p>
-              <p class="set-hint">Saat bertanya, ringkasan saldo, budget, dan transaksimu dikirim ke Google Gemini untuk dijawab.</p>
+              <p class="set-hint">Saat bertanya, ringkasan saldo, budget, dan transaksimu dikirim ke DeepSeek untuk dijawab.</p>
               <p class="set-inline-links" id="mmAiKeyClear" hidden><button type="button" onclick="mmAiClearKey()">Hapus key dari browser ini</button></p>
             </div>
           </section>
@@ -1068,7 +1068,7 @@
       </button>
       <div class="ai-bar-title">
         <h2 id="mmAiTitle">Asisten Keuangan</h2>
-        <p>Gemini · membaca data keuanganmu</p>
+        <p>DeepSeek · membaca data keuanganmu</p>
       </div>
       <button class="ai-bar-btn" aria-label="Percakapan baru" title="Percakapan baru" onclick="mmAiNewChat()">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
