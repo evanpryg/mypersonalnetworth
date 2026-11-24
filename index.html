@@ -8058,23 +8058,23 @@ body.ai-open { overflow: hidden; }
             </div>
           </section>
 
-          <!-- AI assistant: the Gemini key lives in this browser only -->
+          <!-- AI assistant: the DeepSeek key lives in this browser only -->
           <section class="set-section" id="mmSetAi">
             <div class="set-section-head">
               <div>
                 <h3 class="set-section-title">AI Assistant</h3>
-                <p class="set-section-sub">Gemini API key, disimpan hanya di browser ini</p>
+                <p class="set-section-sub">DeepSeek API key, disimpan hanya di browser ini</p>
               </div>
               <button class="set-add-btn" onclick="mmOpenAiChat()"><i data-lucide="sparkles"></i>Buka</button>
             </div>
             <div class="set-card">
               <div class="ai-key-row">
-                <input type="password" id="mmAiKeyInput" class="form-input" placeholder="Tempel API key Gemini" autocomplete="off" spellcheck="false" aria-label="Gemini API key"
+                <input type="password" id="mmAiKeyInput" class="form-input" placeholder="Tempel API key DeepSeek (sk-…)" autocomplete="off" spellcheck="false" aria-label="DeepSeek API key"
                        onkeydown="if(event.key==='Enter'){mmAiSaveKey('mmAiKeyInput');}">
                 <button type="button" class="btn-primary" onclick="mmAiSaveKey('mmAiKeyInput')">Simpan</button>
               </div>
               <p class="ai-key-status" id="mmAiKeyStatus"></p>
-              <p class="set-hint">Saat bertanya, ringkasan saldo, budget, dan transaksimu dikirim ke Google Gemini untuk dijawab.</p>
+              <p class="set-hint">Saat bertanya, ringkasan saldo, budget, dan transaksimu dikirim ke DeepSeek untuk dijawab.</p>
               <p class="set-inline-links" id="mmAiKeyClear" hidden><button type="button" onclick="mmAiClearKey()">Hapus key dari browser ini</button></p>
             </div>
           </section>
@@ -8500,7 +8500,7 @@ body.ai-open { overflow: hidden; }
       </button>
       <div class="ai-bar-title">
         <h2 id="mmAiTitle">Asisten Keuangan</h2>
-        <p>Gemini · membaca data keuanganmu</p>
+        <p>DeepSeek · membaca data keuanganmu</p>
       </div>
       <button class="ai-bar-btn" aria-label="Percakapan baru" title="Percakapan baru" onclick="mmAiNewChat()">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
@@ -15976,20 +15976,21 @@ function txSaveRecent(payload) {
    transactions, monthly history) as the system instruction, so answers
    always reflect what is on screen right now.
 
-   The Gemini key is never in the source: the app is public on GitHub Pages,
-   so a key in the bundle would be readable by anyone. It lives in this
-   browser's storage only, pasted in by the user. */
-const MM_AI_KEY_STORE = 'gemini_api_key';
-const MM_AI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/';
-// Flash-class models the free tier offers, best first. Pro models are left
-// out: the free tier has no quota for them (always 429). Gemma is left out:
-// it rejects a system instruction.
-const MM_AI_MODELS = [
-  'gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-flash-latest', 'gemini-3.8-flash',
-  'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-flash-lite-latest', 'gemini-3.5-flash-lite',
-  'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite-preview'
-];
-const MM_AI_MODEL_STORE = 'gemini_model_ok';
+   Answers come from DeepSeek (OpenAI-compatible chat API, which allows
+   calls straight from the browser).
+
+   The API key is never in the source: the app is public on GitHub Pages,
+   so a key in the bundle would be readable by anyone and spend the user's
+   balance. It lives in this browser's storage only, pasted in by the user. */
+const MM_AI_KEY_STORE = 'deepseek_api_key';
+const MM_AI_ENDPOINT = 'https://api.deepseek.com/chat/completions';
+const MM_AI_MODEL = 'deepseek-flash';
+const MM_AI_KEY_URL = 'https://platform.deepseek.com/api_keys';
+
+// The assistant used Gemini before; its key and model memo are no longer
+// read, so they don't stay behind in storage.
+safeStorage.removeItem('gemini_api_key');
+safeStorage.removeItem('gemini_model_ok');
 const MM_AI_SUGGESTIONS = [
   'Bagaimana kondisi keuanganku bulan ini?',
   'Kategori mana yang paling boros?',
@@ -15998,7 +15999,7 @@ const MM_AI_SUGGESTIONS = [
   'Berapa yang bisa kutabung bulan ini?'
 ];
 
-let MM_AI_HISTORY = [];   // Gemini "contents": {role, parts:[{text}]}
+let MM_AI_HISTORY = [];   // {role: 'user' | 'model', parts: [{text}]}, plus status/error on answers
 let MM_AI_BUSY = false;
 let MM_AI_ABORT = null;
 let MM_AI_OPENER = null;  // focus returns here when the chat closes
@@ -16050,7 +16051,7 @@ document.addEventListener('keydown', (e) => {
 function mmAiSaveKey(inputId) {
   const input = document.getElementById(inputId);
   const key = (input && input.value || '').trim();
-  if (key.length < 20) { showToast('API key terlihat tidak lengkap', 'error'); return; }
+  if (!/^sk-[A-Za-z0-9_-]{16,}$/.test(key)) { showToast('API key DeepSeek diawali "sk-" — periksa lagi', 'error'); return; }
   safeStorage.setItem(MM_AI_KEY_STORE, key);
   if (input) input.value = '';
   showToast('API key tersimpan di browser ini', 'success');
@@ -16072,7 +16073,7 @@ function mmAiRenderKeyStatus() {
   if (status) {
     status.innerHTML = key
       ? `<span class="ai-key-dot is-on"></span>Terpasang · berakhiran <strong>${escapeHtml(key.slice(-4))}</strong>`
-      : `<span class="ai-key-dot"></span>Belum ada key. Buat gratis di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.`;
+      : `<span class="ai-key-dot"></span>Belum ada key. Buat di <a href="${MM_AI_KEY_URL}" target="_blank" rel="noopener">platform.deepseek.com</a>.`;
   }
   if (clear) clear.hidden = !key;
 }
@@ -16089,14 +16090,14 @@ function mmAiRender() {
     log.innerHTML = `
       <div class="ai-intro">
         <span class="ai-intro-mark" aria-hidden="true">${lucideIconSvg('sparkles', 26)}</span>
-        <h3>Pasang API key Gemini</h3>
+        <h3>Pasang API key DeepSeek</h3>
         <p>Asisten membaca saldo, budget, dan transaksimu lalu menjawab pertanyaan soal kondisi keuanganmu. Key disimpan hanya di browser ini, tidak ikut ke server.</p>
         <div class="ai-key-row">
           <input type="password" id="mmAiKeyInline" class="form-input" placeholder="Tempel API key di sini" autocomplete="off" spellcheck="false"
                  onkeydown="if(event.key==='Enter'){mmAiSaveKey('mmAiKeyInline');}">
           <button type="button" class="btn-primary" onclick="mmAiSaveKey('mmAiKeyInline')">Simpan</button>
         </div>
-        <p class="ai-fine">Belum punya? Buat gratis di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</p>
+        <p class="ai-fine">Belum punya? Buat di <a href="${MM_AI_KEY_URL}" target="_blank" rel="noopener">platform.deepseek.com</a>.</p>
       </div>`;
     return;
   }
@@ -16155,7 +16156,7 @@ function mmAiSetBusy(busy) {
 }
 
 /* Minimal markdown: escape everything first, then add back the few
-   constructs Gemini uses — bold, italic, code, headings, lists, tables. */
+   constructs the model uses — bold, italic, code, headings, lists, tables. */
 function mmAiInline(s) {
   return s
     .replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -16273,6 +16274,30 @@ async function mmAiBuildContext() {
     }).join('\n'));
   }
 
+  // Totals per category and subcategory, computed here: asked to add up a
+  // list of transactions itself, the model gets a different (wrong) sum
+  // every time.
+  const ym = localISODate(now).slice(0, 7);
+  const pmYm = localISODate(new Date(now.getFullYear(), now.getMonth() - 1, 1)).slice(0, 7);
+  const breakdown = (month) => {
+    const cats = {};
+    all.forEach(tx => {
+      if (tx.type !== 'Expense' || String(tx.date || '').slice(0, 7) !== month) return;
+      const c = tx.category || 'Lainnya';
+      const r = cats[c] || (cats[c] = { total: 0, n: 0, subs: {} });
+      r.total += tx.amount || 0; r.n++;
+      const sub = tx.subcategory || '(tanpa subkategori)';
+      const sr = r.subs[sub] || (r.subs[sub] = { total: 0, n: 0 });
+      sr.total += tx.amount || 0; sr.n++;
+    });
+    return Object.entries(cats).sort((x, y) => y[1].total - x[1].total).map(([c, r]) =>
+      `- ${c}: ${mmAiRp(r.total)} (${r.n} transaksi)` + Object.entries(r.subs).sort((x, y) => y[1].total - x[1].total)
+        .map(([sname, sr]) => `\n  - ${sname}: ${mmAiRp(sr.total)} (${sr.n}x)`).join('')).join('\n');
+  };
+  const bdNow = breakdown(ym), bdPrev = breakdown(pmYm);
+  if (bdNow) out.push(`\n## Pengeluaran bulan ini per kategori & subkategori (sudah dijumlahkan)\n${bdNow}`);
+  if (bdPrev) out.push(`\n## Pengeluaran bulan lalu per kategori & subkategori (sudah dijumlahkan)\n${bdPrev}`);
+
   // This month and last month in detail, newest first.
   const pmStart = localISODate(new Date(now.getFullYear(), now.getMonth() - 1, 1));
   const recent = all.filter(tx => (tx.date || '') >= pmStart)
@@ -16291,6 +16316,7 @@ const MM_AI_RULES = `Kamu adalah asisten keuangan pribadi di aplikasi MoneyMate.
 Aturan:
 - Jawab dalam bahasa Indonesia yang santai tapi jelas, sapa pengguna dengan "kamu".
 - Dasarkan setiap angka HANYA pada DATA KEUANGAN di bawah. Jangan mengarang angka. Jika data tidak cukup, katakan terus terang apa yang kurang.
+- Untuk total, pakai angka yang SUDAH DIJUMLAHKAN di data (ringkasan, budget, per kategori/subkategori, riwayat bulanan). Jangan menjumlahkan ulang daftar transaksi sendiri; daftar transaksi hanya untuk melihat contoh atau detail.
 - Tulis nominal dalam format rupiah, contoh Rp1.250.000 atau Rp1,25 jt.
 - Ringkas: mulai dengan jawaban langsung (1–2 kalimat), lalu poin pendukung seperlunya. Maksimal sekitar 180 kata kecuali diminta lebih rinci.
 - Gunakan daftar berpoin untuk rincian; hindari tabel kecuali diminta membandingkan banyak angka.
@@ -16352,12 +16378,19 @@ async function mmAiRun() {
   try {
     const context = await mmAiBuildContext();
     const body = {
-      systemInstruction: { parts: [{ text: MM_AI_RULES + '\n\n=== DATA KEUANGAN ===\n' + context }] },
-      // Only finished turns go back to the model; the empty answer slot and
-      // failed attempts stay local.
-      contents: MM_AI_HISTORY.filter(m => m !== answer && !m.error)
-        .map(m => ({ role: m.role, parts: [{ text: (m.parts || []).map(p => p.text || '').join('') }] })),
-      generationConfig: { temperature: 0.4, maxOutputTokens: 2048 }
+      model: MM_AI_MODEL,
+      stream: true,
+      temperature: 0.4,
+      max_tokens: 4096,
+      messages: [
+        { role: 'system', content: MM_AI_RULES + '\n\n=== DATA KEUANGAN ===\n' + context },
+        // Only finished turns go back to the model; the empty answer slot and
+        // failed attempts stay local.
+        ...MM_AI_HISTORY.filter(m => m !== answer && !m.error).map(m => ({
+          role: m.role === 'model' ? 'assistant' : 'user',
+          content: (m.parts || []).map(p => p.text || '').join('')
+        }))
+      ]
     };
     await mmAiStream(key, body, answer);
     if (!answer.parts[0].text.trim()) throw new Error('Tidak ada jawaban. Coba ulangi pertanyaannya.');
@@ -16374,36 +16407,14 @@ async function mmAiRun() {
   }
 }
 
-// The free tier is overloaded much of the time: any one model may answer
-// 503 (busy), 429 (no quota) or simply hang. So a question walks through
-// every flash model, cuts off one that doesn't start answering in time,
-// and goes round again after a pause. The model that last worked is tried
-// first next time.
-// How long a model may take to start answering, per round: short at first
-// so a hung model doesn't hold things up, longer later in case every model
-// is merely slow.
-const MM_AI_FIRST_BYTE_MS = [15000, 25000, 40000];
-const MM_AI_STALL_MS = 30000;       // a model that stops mid-answer
-const MM_AI_ROUNDS = MM_AI_FIRST_BYTE_MS.length;
-
-// Models out of quota (429) or unknown (404) sit out until this time, so a
-// question doesn't spend its attempts on models that can't answer anyway.
-const MM_AI_COOLDOWN = {};
-
-function mmAiModelOrder() {
-  const ok = safeStorage.getItem(MM_AI_MODEL_STORE);
-  const order = ok && MM_AI_MODELS.includes(ok) ? [ok, ...MM_AI_MODELS.filter(m => m !== ok)] : MM_AI_MODELS.slice();
-  const now = Date.now();
-  return order.filter(m => !(MM_AI_COOLDOWN[m] > now));
-}
-
-function mmAiCooldown(model, err) {
-  if (err.status === 404) { MM_AI_COOLDOWN[model] = Date.now() + 24 * 3600e3; return; }
-  if (err.status !== 429) return;
-  // Gemini says how long to wait ("Please retry in 41.5s"); default a minute.
-  const m = String(err.message || '').match(/retry in ([\d.]+)s/i);
-  MM_AI_COOLDOWN[model] = Date.now() + (m ? Math.ceil(Number(m[1])) : 60) * 1000;
-}
+// DeepSeek streams in the OpenAI format: "data: {choices:[{delta}]}" lines
+// ending with "data: [DONE]". The model reasons first (delta.reasoning_content,
+// not shown) and then answers (delta.content). A busy server (429/5xx), a
+// dropped connection or a request that never starts is retried with a short
+// back-off; a bad key or an empty balance is not.
+const MM_AI_FIRST_BYTE_MS = 25000;  // no response at all
+const MM_AI_STALL_MS = 45000;       // nothing new mid-answer
+const MM_AI_ATTEMPTS = 3;
 
 function mmAiSleep(ms, signal) {
   return new Promise((resolve, reject) => {
@@ -16412,52 +16423,38 @@ function mmAiSleep(ms, signal) {
   });
 }
 
-// Busy, quota, timeout, unknown model or an empty reply: worth trying
-// another model. A bad key or a cancelled request is not.
 function mmAiRetryable(err) {
   if (!err) return false;
-  if (err.timeout || err.empty) return true;
-  if (err.status === 400) return !/api key/i.test(err.message || '');
-  return [404, 408, 429, 500, 502, 503, 504].includes(err.status);
+  if (err.timeout || err.empty || err.network) return true;
+  return [408, 429, 500, 502, 503, 504].includes(err.status);
 }
 
 async function mmAiStream(key, body, answer) {
   const signal = MM_AI_ABORT.signal;
-  let lastErr = null, tries = 0;
-  for (let round = 0; round < MM_AI_ROUNDS; round++) {
-    const order = mmAiModelOrder();
-    if (!order.length) break;
-    if (round) {
-      answer.status = 'Gemini sedang ramai, mencoba lagi…';
+  let lastErr = null;
+  for (let attempt = 0; attempt < MM_AI_ATTEMPTS; attempt++) {
+    if (attempt) {
+      answer.status = 'Server sedang sibuk, mencoba lagi…';
       mmAiUpdateLast();
-      await mmAiSleep(2000 * round, signal);
+      await mmAiSleep(1500 * attempt, signal);
     }
-    for (const model of order) {
+    try {
+      await mmAiStreamOnce(key, body, answer);
+      answer.status = '';
+      return;
+    } catch (err) {
+      lastErr = err;
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-      if (tries++) { answer.status = `Gemini sedang ramai, mencoba jalur lain (${tries})…`; mmAiUpdateLast(); }
-      try {
-        await mmAiStreamOnce(model, key, body, answer, MM_AI_FIRST_BYTE_MS[round]);
-        safeStorage.setItem(MM_AI_MODEL_STORE, model);
-        answer.status = '';
-        return;
-      } catch (err) {
-        lastErr = err;
-        if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-        mmAiCooldown(model, err);
-        if (!mmAiRetryable(err)) throw err;
-        // Cut off mid-answer: start the answer over on the next model rather
-        // than leave half a reply.
-        if (answer.parts[0].text) { answer.parts[0].text = ''; mmAiUpdateLast(); }
-      }
+      if (!mmAiRetryable(err)) throw err;
+      // Cut off mid-answer: start over rather than leave half a reply.
+      if (answer.parts[0].text) { answer.parts[0].text = ''; mmAiUpdateLast(); }
     }
   }
-  if (!lastErr) { lastErr = new Error('quota'); lastErr.status = 429; }
   throw lastErr;
 }
 
-async function mmAiStreamOnce(model, key, body, answer, firstByteMs) {
-  // One controller per attempt, cancelled by the user's stop button or by
-  // our own timers.
+async function mmAiStreamOnce(key, body, answer) {
+  // One controller per attempt, cancelled by the stop button or our timers.
   const ctl = new AbortController();
   const parent = MM_AI_ABORT.signal;
   const onStop = () => ctl.abort();
@@ -16465,17 +16462,19 @@ async function mmAiStreamOnce(model, key, body, answer, firstByteMs) {
   let timedOut = false, timer = null;
   const arm = (ms) => { clearTimeout(timer); timer = setTimeout(() => { timedOut = true; ctl.abort(); }, ms); };
   const fail = (err) => {
-    if (timedOut && !parent.aborted) { const e = new Error('timeout'); e.timeout = true; return e; }
+    if (parent.aborted) return err;
+    if (timedOut) { const e = new Error('timeout'); e.timeout = true; return e; }
+    if (err instanceof TypeError) err.network = true;
     return err;
   };
 
   try {
-    arm(firstByteMs);
+    arm(MM_AI_FIRST_BYTE_MS);
     let res;
     try {
-      res = await fetch(`${MM_AI_ENDPOINT}${model}:streamGenerateContent?alt=sse`, {
+      res = await fetch(MM_AI_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
         body: JSON.stringify(body),
         signal: ctl.signal
       });
@@ -16490,7 +16489,8 @@ async function mmAiStreamOnce(model, key, body, answer, firstByteMs) {
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
-    let buf = '', got = false;
+    let buf = '', got = false, thinking = false;
+    arm(MM_AI_STALL_MS);
     for (;;) {
       let chunk;
       try { chunk = await reader.read(); } catch (e) { throw fail(e); }
@@ -16501,22 +16501,27 @@ async function mmAiStreamOnce(model, key, body, answer, firstByteMs) {
         const line = buf.slice(0, nl).trim();
         buf = buf.slice(nl + 1);
         if (!line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+        if (payload === '[DONE]') continue;
         let data;
-        try { data = JSON.parse(line.slice(5)); } catch (e) { continue; }
+        try { data = JSON.parse(payload); } catch (e) { continue; }
         if (data.error) {
           const err = new Error(data.error.message || 'stream error');
-          err.status = data.error.code;
+          err.status = Number(data.error.code) || 500;
           throw err;
         }
-        const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
-        const add = parts.filter(p => !p.thought).map(p => p.text || '').join('');
-        if (add) {
-          if (!got) { got = true; answer.status = ''; }
-          answer.parts[0].text += add;
+        const delta = ((data.choices || [])[0] || {}).delta || {};
+        if (delta.reasoning_content && !got && !thinking) {
+          thinking = true;
+          answer.status = 'Menganalisis datamu…';
           mmAiUpdateLast();
         }
-        // Thinking models can take a while before the first visible word;
-        // any chunk proves the model is alive.
+        if (delta.content) {
+          if (!got) { got = true; answer.status = ''; }
+          answer.parts[0].text += delta.content;
+          mmAiUpdateLast();
+        }
+        // Reasoning chunks count as life too: the answer comes after them.
         arm(MM_AI_STALL_MS);
       }
     }
@@ -16529,13 +16534,13 @@ async function mmAiStreamOnce(model, key, body, answer, firstByteMs) {
 
 function mmAiErrorText(err) {
   const s = err && err.status;
-  const msg = (err && err.message) || '';
-  if (s === 400 && /api key/i.test(msg)) return 'API key tidak valid. Periksa lagi di Profil → AI Assistant.';
-  if (s === 401 || s === 403) return 'API key ditolak. Pastikan key aktif dan Gemini API sudah diaktifkan.';
-  if (s === 429) return 'Kuota gratis Gemini sedang habis di semua model. Coba lagi beberapa menit lagi.';
-  if (err && (err.timeout || err.empty || [500, 502, 503, 504].includes(s))) return 'Semua model Gemini sedang penuh saat ini. Ketuk Coba lagi sebentar lagi.';
-  if (err instanceof TypeError) return 'Tidak bisa terhubung ke Gemini. Periksa koneksi internet.';
-  return msg || 'Terjadi kesalahan. Coba lagi.';
+  if (s === 401) return 'API key DeepSeek tidak valid. Periksa lagi di Profil → AI Assistant.';
+  if (s === 402) return 'Saldo DeepSeek habis. Isi ulang di platform.deepseek.com lalu coba lagi.';
+  if (s === 422 || s === 400) return 'Permintaan ditolak DeepSeek. Coba ulangi dengan pertanyaan yang lebih singkat.';
+  if (s === 429) return 'Terlalu banyak permintaan dalam waktu singkat. Tunggu sebentar lalu coba lagi.';
+  if (err && (err.timeout || err.empty || [500, 502, 503, 504].includes(s))) return 'Server DeepSeek sedang sibuk. Ketuk Coba lagi sebentar lagi.';
+  if (err && err.network) return 'Tidak bisa terhubung ke DeepSeek. Periksa koneksi internet.';
+  return (err && err.message) || 'Terjadi kesalahan. Coba lagi.';
 }
 </script>
 
