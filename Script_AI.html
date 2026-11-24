@@ -32,6 +32,10 @@ let MM_AI_HISTORY = [];   // {role: 'user' | 'model', parts: [{text}]}, plus sta
 let MM_AI_BUSY = false;
 let MM_AI_ABORT = null;
 let MM_AI_OPENER = null;  // focus returns here when the chat closes
+// Investment Tracker data and archived month summaries, fetched once each
+// time the chat opens (they change rarely, and a question shouldn't wait on
+// three extra round trips).
+let MM_AI_EXTRA = null;
 
 function mmAiGetKey() { return (safeStorage.getItem(MM_AI_KEY_STORE) || '').trim(); }
 
@@ -45,6 +49,7 @@ function mmOpenAiChat() {
   mmAiRender();
   // Warm the full history in the background; the first answer needs it.
   if (typeof mmLoadSearchData === 'function' && !MM_SEARCH_CACHE) mmLoadSearchData();
+  MM_AI_EXTRA = mmAiLoadExtra();
   const input = document.getElementById('mmAiInput');
   // Keyboard users land in the field; on a phone focus goes to the dialog's
   // first control so the on-screen keyboard doesn't cover the suggestions.
@@ -241,6 +246,58 @@ async function mmAiEnsureDashboard() {
   } catch (e) { return null; }
 }
 
+function mmAiCall(name, ...args) {
+  return new Promise((resolve, reject) => {
+    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[name](...args);
+  });
+}
+
+// Each source on its own: a failure in one (say, the Investment Tracker
+// tables are empty) still leaves the rest of the picture.
+async function mmAiLoadExtra() {
+  const [invest, investTx, summary] = await Promise.all([
+    mmAiCall('getDashboardData').catch(() => null),
+    mmAiCall('getHistoryData').catch(() => null),
+    mmAiCall('mmGetSummaryRows').catch(() => [])
+  ]);
+  return { invest, investTx: (investTx && investTx.transactions) || [], summary: summary || [] };
+}
+
+function mmAiPct(fraction) {
+  return (Number(fraction) * 100 || 0).toFixed(1).replace('.', ',') + '%';
+}
+
+function mmAiInvestContext(inv, txs) {
+  if (!inv || !inv.summary) return '';
+  const s = inv.summary, out = [];
+  const pl = s.totalProfitLossIDR || 0;
+  out.push(`\n## Investasi (Investment Tracker)\nDicatat terpisah dari akun Money Management di atas. Jangan menjumlahkan keduanya kecuali pengguna menanyakan total kekayaan; jika dijumlahkan, ingatkan bahwa bisa ada yang tercatat dua kali bila ada akun Money Management bertipe Investment.
+- Nilai portofolio total: ${mmAiRp(s.totalPortfolioValueIDR)} (aset ${mmAiRp(s.totalInvestedAssetsIDR)} + kas di platform ${mmAiRp(s.totalCashIDR)})
+- Modal di aset: ${mmAiRp(s.totalCapitalIDR)}; untung/rugi: ${pl >= 0 ? '+' : '−'}${mmAiRp(Math.abs(pl))} (${s.totalCapitalIDR > 0 ? mmAiPct(pl / s.totalCapitalIDR) : '0%'})
+- Target "${(inv.target && inv.target.name) || 'Target'}": ${mmAiRp(inv.target && inv.target.amount)}; tercapai ${mmAiPct(s.progressPercent)}, kurang ${mmAiRp(s.remainingAmountIDR)}
+- Rata-rata setoran per bulan: ${mmAiRp(s.averageMonthlyInvestmentIDR)}${s.estimatedMonthsLeft ? `; perkiraan target tercapai dalam ${s.estimatedMonthsLeft} bulan` : ''}`);
+
+  const assets = (inv.portfolio || []).filter(a => a.Sector !== 'Cash' && ((a.TotalCapitalIDR || 0) !== 0 || (a.CurrentValueIDR || 0) !== 0))
+    .sort((a, b) => (b.CurrentValueIDR || 0) - (a.CurrentValueIDR || 0));
+  if (assets.length) out.push('\n## Portofolio per aset (platform | sektor | aset | modal | nilai sekarang | untung/rugi)\n' + assets.map(a =>
+    `- ${a.Platform} | ${a.Sector} | ${a.Asset} | ${mmAiRp(a.TotalCapitalIDR)} | ${mmAiRp(a.CurrentValueIDR)} | ${(a.ProfitLossIDR || 0) >= 0 ? '+' : '−'}${mmAiRp(Math.abs(a.ProfitLossIDR || 0))} (${mmAiPct(a.GrowthPercent)})`).join('\n'));
+
+  const sectors = (inv.allocationBySector || []).slice().sort((a, b) => (b.valueIDR || 0) - (a.valueIDR || 0));
+  if (sectors.length) out.push('\n## Alokasi per sektor (nilai | aktual | target | status)\n' + sectors.map(x =>
+    `- ${x.sector}: ${mmAiRp(x.valueIDR)} | ${mmAiPct((x.actualPercent || 0) / 100)} | ${x.targetPercent ? x.targetPercent + '%' : 'tanpa target'} | ${({ Balanced: 'seimbang', Overweight: 'kelebihan', Underweight: 'kekurangan', 'No Target': '-' })[x.status] || x.status}`).join('\n'));
+
+  const cash = (inv.cashByPlatform || []).filter(c => c.cashBalanceIDR);
+  if (cash.length) out.push('\n## Kas di tiap platform investasi\n' + cash.map(c => `- ${c.platform}: ${mmAiRp(c.cashBalanceIDR)}`).join('\n'));
+
+  const reb = inv.rebalanceSuggestions || [];
+  if (reb.length) out.push('\n## Saran rebalance dari aplikasi (membagi kas ke sektor yang kekurangan)\n' + reb.map(r =>
+    `- ${r.sector}: ${mmAiRp(r.suggestedAmountIDR)} (aktual ${mmAiPct(r.actualPercent / 100)} vs target ${r.targetPercent}%)`).join('\n'));
+
+  if (txs.length) out.push('\n## Transaksi investasi terakhir (tanggal | jenis | platform | sektor | aset | nominal | catatan)\n' + txs.map(t =>
+    `${t.date} | ${t.transactionType} | ${t.platform || '-'} | ${t.sector || '-'} | ${t.asset || '-'} | ${mmAiRp(t.amountIDR)} | ${(t.notes || '').replace(/\s+/g, ' ').slice(0, 50)}`).join('\n'));
+  return out.join('\n');
+}
+
 async function mmAiBuildContext() {
   const d = await mmAiEnsureDashboard();
   let all = MM_SEARCH_CACHE;
@@ -281,8 +338,20 @@ async function mmAiBuildContext() {
     if (trend.length) out.push('\n## Tren saldo akhir bulan\n' + trend.map(t => `- ${t.month}: ${mmAiRp(t.netWorth)}`).join('\n'));
   }
 
-  // Monthly history by category, from every transaction ever recorded.
+  // Monthly history by category: every transaction ever recorded, plus the
+  // summaries of months whose transactions were archived.
+  const extra = await (MM_AI_EXTRA || (MM_AI_EXTRA = mmAiLoadExtra()));
   const months = {};
+  (extra.summary || []).forEach(r => {
+    const m = r.year + '-' + String(r.month).padStart(2, '0');
+    const b = months[m] || (months[m] = { inc: 0, exp: 0, cats: {} });
+    if (r.type === 'Income') b.inc += r.amount || 0;
+    else if (r.type === 'Expense') {
+      b.exp += r.amount || 0;
+      const c = r.category || 'Lainnya';
+      b.cats[c] = (b.cats[c] || 0) + (r.amount || 0);
+    }
+  });
   all.forEach(tx => {
     const m = String(tx.date || '').slice(0, 7);
     if (!m) return;
@@ -294,9 +363,9 @@ async function mmAiBuildContext() {
       r.cats[c] = (r.cats[c] || 0) + (tx.amount || 0);
     }
   });
-  const keys = Object.keys(months).sort().slice(-12);
+  const keys = Object.keys(months).sort();
   if (keys.length) {
-    out.push('\n## Riwayat bulanan (12 bulan terakhir)\n' + keys.map(k => {
+    out.push('\n## Riwayat bulanan Money Management (semua bulan)\n' + keys.map(k => {
       const r = months[k];
       const cats = Object.entries(r.cats).sort((x, y) => y[1] - x[1]).slice(0, 8).map(([c, v]) => `${c} ${mmAiRp(v)}`).join(', ');
       return `- ${k}: masuk ${mmAiRp(r.inc)}, keluar ${mmAiRp(r.exp)}${cats ? ' — ' + cats : ''}`;
@@ -336,6 +405,9 @@ async function mmAiBuildContext() {
       `${tx.date} | ${tx.type} | ${[tx.category, tx.subcategory].filter(Boolean).join('/') || '-'} | ${tx.account || '-'}${tx.accountTo ? ' → ' + tx.accountTo : ''} | ${mmAiRp(tx.amount)} | ${(tx.notes || '').replace(/\s+/g, ' ').slice(0, 60)}`).join('\n'));
   }
 
+  const inv = mmAiInvestContext(extra.invest, extra.investTx);
+  out.push(inv || '\n## Investasi (Investment Tracker)\n(Data investasi belum ada atau gagal dimuat.)');
+
   if (!d && !all.length) out.push('\n(Data keuangan belum berhasil dimuat.)');
   return out.join('\n');
 }
@@ -350,7 +422,8 @@ Aturan:
 - Ringkas: mulai dengan jawaban langsung (1–2 kalimat), lalu poin pendukung seperlunya. Maksimal sekitar 180 kata kecuali diminta lebih rinci.
 - Gunakan daftar berpoin untuk rincian; hindari tabel kecuali diminta membandingkan banyak angka.
 - Boleh memberi saran praktis (menghemat, mengatur budget, menabung), tapi jangan merekomendasikan membeli/menjual saham, kripto, atau produk investasi tertentu.
-- Transfer antar akun bukan pengeluaran. Pos tabungan/investasi/dana darurat adalah target menabung.`;
+- Transfer antar akun bukan pengeluaran. Pos tabungan/investasi/dana darurat adalah target menabung.
+- Data mencakup Money Management (akun, transaksi, budget) dan Investment Tracker (portofolio, alokasi sektor, target, transaksi investasi). Boleh membahas kinerja portofolio, alokasi, dan saran rebalance yang sudah dihitung aplikasi.`;
 
 /* ---------- sending ---------- */
 function mmAiAsk(text) {
