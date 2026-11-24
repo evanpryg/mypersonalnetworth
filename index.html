@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#0F172A">
+  <meta name="theme-color" content="#0B1220">
   <!-- Dark UA canvas from the first frame, so no white shows before the
        stylesheet applies or at the edges of an overscroll. -->
   <meta name="color-scheme" content="dark">
@@ -57,56 +57,79 @@ html, body {
 :root {
   color-scheme: dark;
 
-  /* Surfaces */
-  --bg: #0F172A;
-  --bg-card: #192134;
-  --bg-elevated: #222C42;
-  --glass-bg: rgba(15,23,42,0.72);
-  --glass-card: rgba(25,33,52,0.78);
-  --glass-border: rgba(255,255,255,0.10);
+  /* ============================================================
+     DARK LUXE FINANCE — design tokens
+     One emerald accent on layered navy. Green = money in / healthy,
+     coral = money out, amber = warnings only, blue = information.
+     ============================================================ */
 
-  /* Text — muted is slate-400: 6.3:1 on cards, above the 4.5 floor */
-  --text: #F8FAFC;
-  --text-muted: #94A3B8;
-  --border: rgba(255,255,255,0.08);
+  /* Surfaces, darkest to lightest */
+  --bg: #0B1220;
+  --bg-2: #101A29;
+  --bg-card: #121D2D;
+  --bg-elevated: #1C2B3D;
+  --glass-bg: rgba(11,18,32,0.82);
+  --glass-card: rgba(18,29,45,0.92);
+  --glass-border: rgba(255,255,255,0.07);
 
-  /* Brand — trust blue. --accent is the readable tint for text and
-     icons on dark; --accent-strong is the fill that carries white
-     text at 5.2:1. Tints use --accent-rgb. */
-  --accent: #60A5FA;
-  --accent-strong: #2563EB;
-  --accent-rgb: 59,130,246;
-  --accent2: #22D3EE;
-  --on-accent: #FFFFFF;
+  /* Text — muted is #8997AA: 6.1:1 on --bg-card */
+  --text: #F1F5F9;
+  --text-2: #C3CDD9;
+  --text-muted: #8997AA;
+  --border: rgba(255,255,255,0.06);
+  --hairline: rgba(255,255,255,0.05);
 
-  /* Call to action — same brand blue as every other control. Green and
-     red are reserved for money moving in and out, nothing else. */
-  --cta: #2563EB;
-  --cta-rgb: 59,130,246;
-  --on-cta: #FFFFFF;
+  /* Brand — emerald. Fills carry dark ink (#04241A on #20C997 is 9:1);
+     white on emerald would fail contrast. */
+  --accent: #20C997;
+  --accent-strong: #16A985;
+  --accent-rgb: 32,201,151;
+  --accent2: #16A985;
+  --on-accent: #04241A;
+
+  --cta: #20C997;
+  --cta-rgb: 32,201,151;
+  --on-cta: #04241A;
 
   /* Semantic */
-  --success: #34D399;
-  --success-rgb: 16,185,129;
-  --error: #F87171;
-  --error-rgb: 239,68,68;
-  --warning: #FBBF24;
-  --info: #A78BFA;
-  --info-rgb: 167,139,250;
+  --success: #20C997;
+  --success-rgb: 32,201,151;
+  --error: #F06478;
+  --error-rgb: 240,100,120;
+  --warning: #F5B942;
+  --warning-rgb: 245,185,66;
+  --info: #60A5FA;
+  --info-rgb: 96,165,250;
 
-  --radius: 16px;
+  /* Shape */
+  --radius: 18px;
+  --radius-lg: 20px;
   --radius-sm: 12px;
-  --shadow: 0 12px 32px rgba(2,6,23,0.55);
-  --accent-gradient: linear-gradient(90deg, #3B82F6, #22D3EE);
-  --btn-gradient: linear-gradient(135deg, #2563EB, #1D4ED8);
-  --cta-gradient: linear-gradient(135deg, #3B82F6, #1D4ED8);
-  --focus-ring: 0 0 0 3px rgba(96,165,250,0.55);
+  --radius-btn: 12px;
+  --shadow: 0 16px 40px rgba(3,7,16,0.55);
+  --accent-gradient: linear-gradient(90deg, #20C997, #16A985);
+  --btn-gradient: linear-gradient(180deg, #20C997, #16A985);
+  --cta-gradient: linear-gradient(180deg, #20C997, #16A985);
+  --focus-ring: 0 0 0 3px rgba(32,201,151,0.45);
+
+  /* Type scale */
+  --fs-display: 34px;
+  --fs-h1: 24px;
+  --fs-h2: 17px;
+  --fs-body: 15px;
+  --fs-sm: 13px;
+  --fs-xs: 12px;
+
+  /* Spacing */
+  --gutter: 20px;
+  --section-gap: 28px;
+  --card-pad: 18px;
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-fast: 150ms;
   --dur: 220ms;
 
-  --tab-height: 60px;
+  --tab-height: 64px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -159,7 +182,7 @@ body {
 /* The root gets the dark colour too: any area the browser hasn't painted
    yet during a fast scroll shows this instead of default white. */
 html {
-  background-color: #0F172A;
+  background-color: #0B1220;
   background-color: var(--bg);
   /* Hitting the end of a scroll made Android Chrome stretch/bounce the page
      and paint the exposed edge in its default white canvas. The app has its
@@ -176,9 +199,7 @@ body { overscroll-behavior-y: none; }
    that layer's un-rastered tiles as white patches. */
 html {
   background:
-    radial-gradient(900px 520px at 100% -10%, rgba(59,130,246,0.16), transparent 60%) no-repeat,
-    radial-gradient(700px 480px at -10% 30%, rgba(99,102,241,0.10), transparent 60%) no-repeat,
-    #0F172A;
+    #0B1220;
 }
 
 ::selection {
@@ -1663,7 +1684,7 @@ select.form-input:focus {
   overscroll-behavior: contain;
   background:
     linear-gradient(180deg, rgba(var(--accent-rgb),0.07), transparent 140px),
-    rgba(25,33,52,0.92);
+    rgba(18,29,45,0.92);
   backdrop-filter: blur(24px) saturate(150%);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   border-top-left-radius: 28px;
@@ -1724,7 +1745,7 @@ select.form-input:focus {
   width: min(420px, 100%);
   max-height: calc(100dvh - 32px);
   overflow-y: auto;
-  background: rgba(25,33,52,0.94);
+  background: rgba(18,29,45,0.94);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--glass-border);
@@ -1871,7 +1892,7 @@ select.form-input:focus {
   right: 16px;
   bottom: calc(var(--tab-height) + var(--safe-bottom) + 20px);
   z-index: 300;
-  background: rgba(25,33,52,0.92);
+  background: rgba(18,29,45,0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
@@ -1887,8 +1908,8 @@ select.form-input:focus {
 
 /* Tinted over the solid glass, not instead of it, so the text keeps its
    contrast whatever is scrolling underneath. */
-.toast.success { background: linear-gradient(rgba(var(--success-rgb),0.18), rgba(var(--success-rgb),0.18)), rgba(25,33,52,0.94); border-color: rgba(var(--success-rgb),0.35); color: var(--success); }
-.toast.error { background: linear-gradient(rgba(var(--error-rgb),0.18), rgba(var(--error-rgb),0.18)), rgba(25,33,52,0.94); border-color: rgba(var(--error-rgb),0.35); color: var(--error); }
+.toast.success { background: linear-gradient(rgba(var(--success-rgb),0.18), rgba(var(--success-rgb),0.18)), rgba(18,29,45,0.94); border-color: rgba(var(--success-rgb),0.35); color: var(--success); }
+.toast.error { background: linear-gradient(rgba(var(--error-rgb),0.18), rgba(var(--error-rgb),0.18)), rgba(18,29,45,0.94); border-color: rgba(var(--error-rgb),0.35); color: var(--error); }
 
 /* ============================================================
    RESPONSIVE — Desktop (>768px)
@@ -2137,13 +2158,13 @@ select.form-input:focus {
   margin: 12px 16px 16px;
   padding: 22px 20px 20px;
   background:
-    radial-gradient(120% 110% at 100% 0%, rgba(59,130,246,0.38) 0%, transparent 55%),
+    radial-gradient(120% 110% at 100% 0%, rgba(var(--accent-rgb),0.38) 0%, transparent 55%),
     radial-gradient(90% 90% at 0% 100%, rgba(34,211,238,0.14) 0%, transparent 60%),
     var(--glass-card);
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
   border-radius: 24px;
-  border: 1px solid rgba(147,197,253,0.22);
+  border: 1px solid rgba(var(--accent-rgb),0.22);
   position: relative;
   overflow: hidden;
   box-shadow: 0 16px 40px rgba(2,6,23,0.55), inset 0 1px 0 rgba(255,255,255,0.12);
@@ -2156,7 +2177,7 @@ select.form-input:focus {
   margin-bottom: 8px;
 }
 .mm-networth-label {
-  color: #CBD5E1;
+  color: var(--text-2);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -2164,7 +2185,7 @@ select.form-input:focus {
 .mm-networth-eye {
   background: none;
   border: none;
-  color: #CBD5E1;
+  color: var(--text-2);
   width: 36px;
   height: 36px;
   margin: -8px 0;
@@ -2208,7 +2229,7 @@ select.form-input:focus {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #CBD5E1;
+  color: var(--text-2);
 }
 .mm-change-badge {
   padding: 3px 10px;
@@ -4707,7 +4728,7 @@ select.form-input:focus {
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 99px;
   background: rgba(255,255,255,0.04);
-  color: #CBD5E1;
+  color: var(--text-2);
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
@@ -4886,7 +4907,7 @@ select.form-input:focus {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #CBD5E1;
+  color: var(--text-2);
 }
 .mm-hero-stat strong {
   display: block;
@@ -5056,9 +5077,9 @@ select.form-input:focus {
   margin-bottom: 22px;
   padding: 16px;
   border-radius: 22px;
-  border: 1px solid rgba(147,197,253,0.2);
+  border: 1px solid rgba(var(--accent-rgb),0.2);
   background:
-    radial-gradient(120% 100% at 100% 0%, rgba(59,130,246,0.30), transparent 55%),
+    radial-gradient(120% 100% at 100% 0%, rgba(var(--accent-rgb),0.30), transparent 55%),
     var(--glass-card);
   box-shadow: 0 12px 32px rgba(2,6,23,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
   animation: fadeInUp 0.35s var(--ease-out) backwards;
@@ -5078,13 +5099,13 @@ select.form-input:focus {
 .ins-status.tone-ok { color: var(--accent); }
 .ins-status.tone-warn { color: var(--warning); }
 .ins-status.tone-bad { color: var(--error); }
-.ins-hero-text p { margin: 0; font-size: 13px; color: #CBD5E1; }
+.ins-hero-text p { margin: 0; font-size: 13px; color: var(--text-2); }
 
 .ins-kpis { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.12); }
 .ins-kpi { min-width: 0; display: grid; gap: 1px; padding: 0 8px; }
 .ins-kpi:first-child { padding-left: 0; }
 .ins-kpi + .ins-kpi { border-left: 1px solid rgba(255,255,255,0.10); }
-.ins-kpi > span { font-size: 11px; font-weight: 600; color: #CBD5E1; white-space: nowrap; }
+.ins-kpi > span { font-size: 11px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
 .ins-kpi strong { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ins-kpi small { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 .ins-kpis-flat { margin-top: 0; padding-top: 0; border-top: none; }
@@ -5099,7 +5120,7 @@ select.form-input:focus {
 .ins-why summary::-webkit-details-marker, .ins-more summary::-webkit-details-marker, .ins-fold summary::-webkit-details-marker { display: none; }
 .ins-why[open] summary svg, .ins-more[open] summary svg, .ins-fold[open] > summary svg { transform: rotate(180deg); }
 .ins-why ul { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.ins-why li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #CBD5E1; }
+.ins-why li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-2); }
 .ins-why li.good svg { color: var(--success); }
 .ins-why li.bad svg { color: var(--error); }
 
@@ -5144,7 +5165,7 @@ select.form-input:focus {
 .ins-tr { display: grid; grid-template-columns: minmax(0, 1.1fr) 1fr 0.7fr 1fr; gap: 8px; align-items: center; padding: 9px 0; font-size: 13px; }
 .ins-tr + .ins-tr { border-top: 1px solid var(--border); }
 .ins-tr > :not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.ins-tr > :first-child { color: #CBD5E1; }
+.ins-tr > :first-child { color: var(--text-2); }
 .ins-th { font-size: 11px; font-weight: 600; color: var(--text-muted); padding: 6px 0; }
 .ins-tr strong { font-weight: 700; }
 .ins-delta { font-size: 12px; font-weight: 700; color: var(--text-muted); }
@@ -5161,7 +5182,7 @@ select.form-input:focus {
 .ins-pace-top strong { font-size: 13px; font-variant-numeric: tabular-nums; }
 .ins-pace-bar { position: relative; height: 8px; margin: 7px 0 6px; border-radius: 99px; background: rgba(255,255,255,0.07); }
 .ins-pace-fill { position: absolute; inset: 0 auto 0 0; border-radius: 99px; background: var(--accent-gradient); }
-.ins-pace-mark { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 2px; background: #fff; box-shadow: 0 0 0 1px rgba(15,23,42,0.6); }
+.ins-pace-mark { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 2px; background: #fff; box-shadow: 0 0 0 1px rgba(11,18,32,0.6); }
 .ins-pace-foot { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ins-pace-foot > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ins-pace-note { flex-shrink: 0; }
@@ -5241,7 +5262,7 @@ select.form-input:focus {
   padding: 14px 14px 14px 16px;
   border-radius: 16px;
   border: 1px solid rgba(var(--error-rgb),0.4);
-  background: linear-gradient(rgba(var(--error-rgb),0.16), rgba(var(--error-rgb),0.16)), rgba(25,33,52,0.96);
+  background: linear-gradient(rgba(var(--error-rgb),0.16), rgba(var(--error-rgb),0.16)), rgba(18,29,45,0.96);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: var(--shadow);
@@ -5308,7 +5329,7 @@ select.form-input:focus {
   border-radius: 99px;
   border: 1px solid rgba(255,255,255,0.10);
   background: rgba(255,255,255,0.04);
-  color: #CBD5E1;
+  color: var(--text-2);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
@@ -5427,7 +5448,7 @@ select.form-input:focus {
 }
 .set-alloc-item { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; }
 .set-alloc-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-.set-alloc-name { flex: 1; min-width: 0; color: #CBD5E1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.set-alloc-name { flex: 1; min-width: 0; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .set-alloc-item strong { font-variant-numeric: tabular-nums; }
 /* Allocation editor rows: one line per sector even on a phone, and no
    card-in-a-card border since the section card already frames them. */
@@ -5552,7 +5573,7 @@ select.form-input:focus {
 .set-danger-toggle .panel-chevron { width: 32px; height: 32px; }
 .set-danger-label { display: inline-flex; align-items: center; gap: 8px; color: var(--error); font-size: 14px; font-weight: 600; }
 .set-danger-label svg { width: 16px; height: 16px; }
-.set-db-label { color: #CBD5E1; }
+.set-db-label { color: var(--text-2); }
 .set-danger > div[id] { padding: 0 14px 14px; }
 .set-danger > div[id] > .set-hint:first-child { margin-top: 0; }
 .set-danger-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
@@ -5584,7 +5605,7 @@ select.form-input:focus {
   cursor: pointer;
 }
 .set-mini-add svg { width: 16px; height: 16px; }
-.set-master .settings-chip { background: rgba(255,255,255,0.05); color: #CBD5E1; border: 1px solid var(--border); }
+.set-master .settings-chip { background: rgba(255,255,255,0.05); color: var(--text-2); border: 1px solid var(--border); }
 
 
 /* ============================================================
@@ -5625,7 +5646,7 @@ html, body { overscroll-behavior: none; }
    ============================================================ */
 .mm-networth-card {
   background:
-    radial-gradient(120% 110% at 100% 0%, rgba(59,130,246,0.34) 0%, transparent 55%),
+    radial-gradient(120% 110% at 100% 0%, rgba(var(--accent-rgb),0.34) 0%, transparent 55%),
     radial-gradient(90% 90% at 0% 100%, rgba(34,211,238,0.12) 0%, transparent 60%),
     #1A2540;
   margin: 8px 16px 20px;
@@ -5653,7 +5674,7 @@ html, body { overscroll-behavior: none; }
   gap: 8px;
   font-size: 12px;
   font-weight: 600;
-  color: #CBD5E1;
+  color: var(--text-2);
 }
 .mm-rate-chip {
   padding: 2px 8px;
@@ -5681,7 +5702,7 @@ html, body { overscroll-behavior: none; }
   height: 100%;
   width: 0;
   border-radius: 99px;
-  background: linear-gradient(90deg, #60A5FA, #3B82F6);
+  background: var(--accent-gradient);
   transition: width 0.6s var(--ease-out);
 }
 .mm-cashflow-fill.is-warn { background: linear-gradient(90deg, #FBBF24, #F59E0B); }
@@ -5907,7 +5928,7 @@ html, body { overscroll-behavior: none; }
   min-width: 0;
   font-size: 13px;
   font-weight: 600;
-  color: #CBD5E1;
+  color: var(--text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -5935,9 +5956,9 @@ html, body { overscroll-behavior: none; }
   margin: 8px 16px 20px;
   padding: 16px;
   border-radius: 24px;
-  border: 1px solid rgba(147,197,253,0.22);
+  border: 1px solid rgba(var(--accent-rgb),0.22);
   background:
-    radial-gradient(120% 110% at 100% 0%, rgba(59,130,246,0.34) 0%, transparent 55%),
+    radial-gradient(120% 110% at 100% 0%, rgba(var(--accent-rgb),0.34) 0%, transparent 55%),
     radial-gradient(90% 90% at 0% 100%, rgba(129,140,248,0.14) 0%, transparent 60%),
     #1A2540;
   box-shadow: 0 16px 40px rgba(2,6,23,0.55), inset 0 1px 0 rgba(255,255,255,0.12);
@@ -5949,7 +5970,7 @@ html, body { overscroll-behavior: none; }
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #CBD5E1;
+  color: var(--text-2);
 }
 .iv-hero-goal {
   display: inline-flex;
@@ -5976,7 +5997,7 @@ html, body { overscroll-behavior: none; }
 }
 .iv-hero-pl { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13px; }
 .iv-pl-amount { font-weight: 700; font-variant-numeric: tabular-nums; }
-.iv-muted { color: #CBD5E1; font-size: 12px; }
+.iv-muted { color: var(--text-2); font-size: 12px; }
 .iv-goal { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.12); }
 .iv-goal-bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,0.10); overflow: hidden; }
 .iv-goal-fill {
@@ -5993,11 +6014,11 @@ html, body { overscroll-behavior: none; }
   gap: 8px;
   margin-top: 6px;
   font-size: 12px;
-  color: #CBD5E1;
+  color: var(--text-2);
   font-variant-numeric: tabular-nums;
 }
 .iv-goal-meta strong { font-size: 14px; color: var(--text); }
-.iv-goal-note { margin: 4px 0 0; font-size: 12px; line-height: 1.4; color: #CBD5E1; }
+.iv-goal-note { margin: 4px 0 0; font-size: 12px; line-height: 1.4; color: var(--text-2); }
 .iv-hero-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -6014,7 +6035,7 @@ html, body { overscroll-behavior: none; }
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #CBD5E1;
+  color: var(--text-2);
 }
 .iv-hero-stat strong {
   display: block;
@@ -6112,7 +6133,7 @@ html, body { overscroll-behavior: none; }
   margin-left: -1px;
   border-radius: 2px;
   background: #fff;
-  box-shadow: 0 0 0 1px rgba(15,23,42,0.7);
+  box-shadow: 0 0 0 1px rgba(11,18,32,0.7);
 }
 .iv-alloc-meta {
   display: flex;
@@ -6282,7 +6303,7 @@ html, body { overscroll-behavior: none; }
 /* ============================================================
    ALLOCATION — full amounts, platform rows open their breakdown
    ============================================================ */
-.iv-alloc-amount { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #CBD5E1; }
+.iv-alloc-amount { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
 .iv-alloc-meta { font-size: 12.5px; }
 .iv-alloc-link {
   display: block;
@@ -6311,9 +6332,9 @@ html, body { overscroll-behavior: none; }
   margin: 0 16px 16px;
   padding: 14px 16px;
   border-radius: 20px;
-  border: 1px solid rgba(147,197,253,0.22);
+  border: 1px solid rgba(var(--accent-rgb),0.22);
   background:
-    radial-gradient(120% 110% at 100% 0%, rgba(59,130,246,0.28) 0%, transparent 55%),
+    radial-gradient(120% 110% at 100% 0%, rgba(var(--accent-rgb),0.28) 0%, transparent 55%),
     #1A2540;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
 }
@@ -6325,7 +6346,7 @@ html, body { overscroll-behavior: none; }
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #CBD5E1;
+  color: var(--text-2);
 }
 .iv-pf-ov-total strong {
   display: block;
@@ -6456,7 +6477,7 @@ html, body { overscroll-behavior: none; }
   font-weight: 800;
   letter-spacing: 0.02em;
 }
-.iv-pf-icon-cash { background: rgba(148,163,184,0.16); color: #CBD5E1; }
+.iv-pf-icon-cash { background: rgba(148,163,184,0.16); color: var(--text-2); }
 .iv-pf-icon-cash svg { width: 17px; height: 17px; }
 .iv-pf-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .iv-pf-name {
@@ -6507,6 +6528,928 @@ html, body { overscroll-behavior: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .iv-pf-card, .iv-pf-card.is-flash { animation: none; }
+}
+
+
+/* ============================================================
+   DARK LUXE FINANCE — dashboard, navigation & shared components
+   Last layer in the file on purpose: it restyles the earlier
+   v1–v3 rules instead of editing them one by one. Rules:
+   one surface per section (no cards inside cards), hairlines
+   instead of borders where a divider is needed, progress bars
+   only in Budget, emerald as the single accent.
+   ============================================================ */
+
+@keyframes lxGrowX { from { transform: scaleX(0); } }
+@keyframes lxGrowY { from { transform: scaleY(0); } }
+@keyframes lxReveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes lxDonut { from { opacity: 0; transform: rotate(-50deg) scale(0.9); } }
+@keyframes lxPop { from { opacity: 0; } }
+
+body { font-size: var(--fs-body); }
+.positive, .income-color { color: var(--success); }
+.negative, .expense-color { color: var(--error); }
+.transfer-color { color: var(--info); }
+
+/* --- Shared buttons ------------------------------------------------ */
+.btn-primary {
+  border-radius: var(--radius-btn);
+  border-color: transparent;
+  box-shadow: 0 8px 20px -8px rgba(var(--accent-rgb),0.55);
+}
+.btn-primary:active { transform: scale(0.97); }
+.btn-ghost { border-radius: var(--radius-btn); }
+
+/* --- Workspace header: slim, quiet --------------------------------- */
+.workspace-header {
+  min-height: 56px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px var(--gutter);
+  background: rgba(11,18,32,0.86);
+  border-bottom: 1px solid var(--hairline);
+}
+.workspace-header h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.ws-subtitle { font-size: 11px; font-weight: 500; letter-spacing: 0.02em; text-transform: none; }
+.ws-indicator { background: rgba(255,255,255,0.04); border-color: transparent; }
+.ws-dot.active { background: var(--accent); box-shadow: none; }
+.global-eye-btn.hidden-mode { color: var(--warning); background: rgba(var(--warning-rgb),0.08); }
+
+/* --- Bottom navigation --------------------------------------------- */
+.bottom-tabs {
+  height: calc(var(--tab-height) + var(--safe-bottom));
+  padding: 0 6px var(--safe-bottom);
+  background: rgba(11,18,32,0.9);
+  border-top: 1px solid var(--hairline);
+}
+.tab-item {
+  gap: 4px;
+  padding: 6px 0 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  min-width: 0;
+}
+.tab-item small { font-weight: 500; letter-spacing: -0.005em; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* No pill behind the active tab: the icon and label turn green, and the
+   heavier stroke and label weight carry the state for anyone who can't
+   rely on colour. */
+.tab-item::before { display: none; }
+.tab-item.active { color: var(--accent); }
+.tab-item.active svg { transform: none; }
+.tab-item.active small { font-weight: 600; }
+.tab-icon { width: 22px; height: 22px; stroke-width: 1.9; }
+.tab-item.active .tab-icon { stroke-width: 2.2; }
+@media (max-width: 360px) {
+  .tab-item { font-size: 10px; }
+}
+
+/* --- FAB ------------------------------------------------------------ */
+.fab-btn {
+  border: none;
+  border-radius: 18px;
+  box-shadow: 0 12px 28px -8px rgba(var(--accent-rgb),0.6);
+}
+.fab-option { background: var(--bg-elevated); border-color: var(--hairline); backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+/* ============================================================
+   HOME
+   Balance on the page itself (no card), logging one tap away,
+   then today, budget, the month and the latest entries. Cards
+   only where content needs grouping; hairlines inside them.
+   ============================================================ */
+.hm { padding-bottom: 8px; }
+
+/* Logging lives on the page here; the floating button returns elsewhere. */
+body:has(#mmDashboardPage.active-page) #mmFabContainer { display: none !important; }
+
+.hm-card {
+  background: var(--bg-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--card-pad);
+}
+.hm-k { display: flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--text-muted); }
+.hm-chev { display: grid; place-items: center; color: var(--text-muted); flex-shrink: 0; }
+
+/* --- Top bar ------------------------------------------------------- */
+.hm-top { display: flex; align-items: center; gap: 12px; padding: 10px var(--gutter) 4px; }
+.hm-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(var(--accent-rgb),0.14);
+  color: var(--accent);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hm-hello { flex: 1; min-width: 0; }
+.hm-hello p { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-hello h2 { margin: 1px 0 0; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-icon-btn {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--hairline);
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+}
+.hm-icon-btn:active, .hm-avatar:active { transform: scale(0.94); }
+
+/* --- Hero: the balance -------------------------------------------- */
+.hm-hero { position: relative; padding: 26px var(--gutter) 0; }
+.hm-hero::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -40px;
+  height: 300px;
+  background: radial-gradient(70% 60% at 30% 20%, rgba(var(--accent-rgb),0.09), transparent 70%);
+  pointer-events: none;
+}
+.hm-hero > * { position: relative; }
+.hm-hero-label { display: flex; align-items: center; gap: 2px; font-size: 14px; font-weight: 500; color: var(--text-2); }
+.hm-eye {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -4px -4px -4px -8px; /* 44px target, same footprint as before */
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.hm-eye:active { background: rgba(255,255,255,0.06); }
+.hm-balance {
+  margin: 2px 0 10px;
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hm-change { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: var(--fs-sm); color: var(--text-muted); }
+
+.hm-trend {
+  position: relative;
+  display: block;
+  width: calc(100% + var(--gutter) * 2);
+  margin: 20px calc(var(--gutter) * -1) 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hm #mmNetworthSparkline { position: static; display: block; width: 100%; height: 88px; opacity: 1; }
+.hm #mmNetworthSparkline.is-drawn { animation: lxReveal 1s var(--ease-out) backwards; }
+.lx-trend-dot {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(var(--accent-rgb),0.18);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.hm-trend-labels { position: relative; display: block; height: 16px; margin-top: 8px; font-size: 11px; color: var(--text-muted); text-transform: capitalize; }
+.hm-trend-labels > span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+
+/* Account chips: a sideways strip that bleeds to the screen edge */
+.hm-accounts {
+  display: flex;
+  gap: 8px;
+  margin: 18px calc(var(--gutter) * -1) 0;
+  padding: 2px var(--gutter);
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+.hm-accounts::-webkit-scrollbar { display: none; }
+.hm-chip {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+  height: 44px;
+  padding: 0 14px 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: var(--bg-card);
+  color: var(--text);
+  font: inherit;
+  scroll-snap-align: start;
+  cursor: pointer;
+}
+.hm-chip:active { transform: scale(0.96); }
+@media (hover: hover) { .hm-chip:hover { background: var(--bg-elevated); } }
+.hm-chip-ic { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.05); }
+.hm-chip-name { font-size: var(--fs-sm); color: var(--text-muted); }
+.hm-chip strong { font-size: var(--fs-sm); font-weight: 600; font-variant-numeric: tabular-nums; }
+.hm-chip.is-manage { width: 44px; padding: 0; justify-content: center; color: var(--text-muted); }
+.hm-accounts .sk-card-row { display: flex; gap: 8px; }
+.hm-accounts .sk-account { width: 130px; height: 44px; border-radius: 999px; }
+.hm-accounts > .empty-state, .hm-accounts > .mm-empty { font-size: var(--fs-sm); color: var(--text-muted); }
+
+/* --- Quick actions ------------------------------------------------- */
+.hm-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 26px var(--gutter) 0; }
+.hm-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px 6px 12px;
+  border-radius: 18px;
+  border: 1px solid var(--hairline);
+  background: var(--bg-card);
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--dur-fast), background var(--dur-fast);
+}
+.hm-action > span:last-child { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-action:active { transform: scale(0.96); }
+@media (hover: hover) { .hm-action:hover { background: var(--bg-elevated); color: var(--text); } }
+.hm-action-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(var(--info-rgb),0.12); color: var(--info); }
+.hm-action-ic.is-out { background: rgba(var(--error-rgb),0.12); color: var(--error); }
+.hm-action-ic.is-in { background: rgba(var(--success-rgb),0.12); color: var(--success); }
+
+/* --- Today ---------------------------------------------------------- */
+.hm-today { margin: 14px var(--gutter) 0; }
+.hm-today:empty { display: none; }
+.hm-today-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hm-ring { position: relative; flex-shrink: 0; width: 60px; height: 60px; }
+.hm-ring > svg, .hm-bring > svg { display: block; width: 100%; height: 100%; }
+.hm-bring > span svg { width: 18px; height: 18px; }
+.hm-ring > span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hm-ring-track { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 5; }
+.hm-ring-val { fill: none; stroke: var(--success); stroke-width: 5; stroke-linecap: round; transition: stroke-dasharray 0.8s var(--ease-out); }
+.is-warn .hm-ring-val { stroke: var(--warning); }
+.is-bad .hm-ring-val, .is-over .hm-ring-val { stroke: var(--error); }
+.hm-today-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hm-today-value { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-today-main.is-bad .hm-today-value { color: var(--error); }
+.hm-today-sub { font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.4; }
+
+.hm-pace { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--hairline); }
+.hm-pace-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: var(--fs-sm); color: var(--text-2); }
+.hm-pace-top strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.hm-pace-status { flex-shrink: 0; font-size: var(--fs-xs); font-weight: 600; color: var(--success); }
+.hm-pace.is-warn .hm-pace-status { color: var(--warning); }
+.hm-pace.is-bad .hm-pace-status { color: var(--error); }
+.hm-pace-track { position: relative; height: 8px; margin: 12px 0 6px; border-radius: 999px; background: rgba(255,255,255,0.06); }
+.hm-pace-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--w);
+  border-radius: 999px;
+  background: var(--success);
+  transform-origin: left center;
+  animation: lxGrowX 0.8s var(--ease-out) backwards;
+}
+.hm-pace.is-warn .hm-pace-fill { background: var(--warning); }
+.hm-pace.is-bad .hm-pace-fill { background: var(--error); }
+.hm-pace-mark { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; border-radius: 2px; background: var(--text); }
+.hm-pace-foot { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--text-muted); }
+
+/* Alerts */
+.hm-alerts { margin: 10px var(--gutter) 0; gap: 8px; }
+.hm .mm-alert {
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 14px;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  background: var(--bg-card);
+}
+.hm .mm-alert > span { flex: 1; min-width: 0; }
+.hm .mm-alert > svg:last-child:not(:first-child) { color: var(--text-muted); }
+.hm .mm-alert.is-bad { background: rgba(var(--error-rgb),0.08); }
+.hm .mm-alert.is-warn { background: rgba(var(--warning-rgb),0.08); }
+.hm .mm-alert.is-info > svg:first-child { color: var(--info); }
+
+/* --- Sections ------------------------------------------------------- */
+.hm-section { margin: var(--section-gap) var(--gutter) 0; }
+.hm-sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.hm-sec-head > div { min-width: 0; }
+.hm-sec-head h3 { margin: 0; font-size: var(--fs-h2); font-weight: 600; letter-spacing: -0.01em; }
+.hm-sec-head p { margin: 3px 0 0; font-size: var(--fs-sm); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Budget tiles */
+.hm-budget { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.hm-budget > .hm-card { grid-column: 1 / -1; }
+.hm-btile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--hairline);
+  background: var(--bg-card);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform var(--dur-fast), background var(--dur-fast);
+}
+.hm-btile:active { transform: scale(0.97); }
+@media (hover: hover) { .hm-btile:hover { background: var(--bg-elevated); } }
+.hm-btile-top { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; margin-bottom: 12px; }
+.hm-bring { position: relative; width: 48px; height: 48px; }
+.hm-bring > span { position: absolute; inset: 0; display: grid; place-items: center; }
+.hm-bring .hm-ring-track, .hm-bring .hm-ring-val { stroke-width: 4; }
+.hm-btile-pct { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+.hm-btile.is-warn .hm-btile-pct, .hm-btile.is-warn .hm-btile-note { color: var(--warning); }
+.hm-btile.is-over .hm-btile-pct, .hm-btile.is-over .hm-btile-note { color: var(--error); }
+.hm-btile.is-goal .hm-btile-pct, .hm-btile.is-goal .hm-btile-note { color: var(--success); }
+.hm-btile-name { max-width: 100%; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-btile-note { max-width: 100%; font-size: var(--fs-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* --- The month ------------------------------------------------------ */
+.hm-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hm-flow-item { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.hm-flow-item + .hm-flow-item { padding-left: 14px; border-left: 1px solid var(--hairline); }
+.hm-flow-item strong { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+.hm-dot.is-in { background: var(--success); }
+.hm-dot.is-out { background: var(--error); }
+.hm .lx-delta { min-height: 22px; }
+.hm .mm-rate-chip { padding: 2px 7px; font-size: 11px; white-space: nowrap; }
+.hm .mm-rate-chip:empty { display: none; }
+
+.hm-block { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--hairline); }
+.hm-block[hidden] { display: none; }
+.hm-block-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 14px; font-size: var(--fs-xs); color: var(--text-muted); }
+.hm-block-head > span:first-child { font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); }
+
+/* Daily bars */
+.hm .mm-daily-plot { position: relative; height: 112px; gap: 3px; border-bottom: none; touch-action: pan-y; }
+.hm .mm-daily-bar span {
+  border-radius: 3px;
+  background: rgba(137,151,170,0.32);
+  transform-origin: bottom;
+  animation: lxGrowY 0.6s var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 14ms);
+}
+.hm .mm-daily-bar.is-high span { background: rgba(var(--error-rgb),0.85); }
+.hm .mm-daily-bar.is-today span { background: var(--accent); box-shadow: none; }
+.hm .mm-daily-bar.is-selected span { background: var(--text); }
+.hm .mm-daily-bar.is-future span { height: 2px; background: rgba(255,255,255,0.05); animation: none; }
+.hm .mm-daily-avg { border-top: 1px dashed rgba(var(--warning-rgb),0.55); }
+.hm .mm-daily-avg span { font-size: 10px; font-weight: 500; color: var(--warning); background: var(--bg-card); }
+.hm .mm-daily-ticks span { font-size: 11px; color: var(--text-muted); }
+.hm .mm-daily-foot { margin-top: 6px; font-size: var(--fs-xs); }
+.hm .mm-daily-foot strong { font-size: 13px; }
+
+/* Where it went */
+.hm-stack { display: flex; gap: 3px; height: 10px; margin-bottom: 4px; border-radius: 999px; overflow: hidden; }
+.hm-stack > span { display: block; min-width: 4px; height: 100%; transform-origin: left center; animation: lxGrowX 0.8s var(--ease-out) backwards; }
+.hm-cats { display: flex; flex-direction: column; }
+.hm-cat {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto 16px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 54px;
+  padding: 8px 0;
+  border: none;
+  border-top: 1px solid var(--hairline);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.hm-cats > .hm-cat:first-child { border-top: none; }
+button.hm-cat { cursor: pointer; }
+button.hm-cat:active { opacity: 0.7; }
+.hm-cat-dot { width: 10px; height: 10px; border-radius: 50%; }
+.hm-cat-name { display: flex; flex-direction: column; min-width: 0; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-cat-name small { font-size: var(--fs-xs); font-weight: 400; color: var(--text-muted); }
+.hm-cat-pct { font-size: var(--fs-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.hm-cat-amt { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Latest transactions */
+.hm .hm-card.mm-transaction-list { display: block; padding: 4px var(--card-pad) 6px; }
+.hm .mm-day-group + .mm-day-group { border-top: 1px solid var(--hairline); }
+.hm .mm-day-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 16px 0 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.hm .mm-day-head strong { font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; }
+.hm .mm-day-group .mm-transaction-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 -10px;
+  padding: 11px 10px;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+}
+.hm .mm-day-group .mm-transaction-item:last-child { padding-bottom: 14px; }
+@media (hover: hover) { .hm .mm-transaction-item:hover { background: rgba(255,255,255,0.025); } }
+.hm .mm-transaction-item:active { background: rgba(255,255,255,0.04); transform: none; }
+.hm .mm-day-group .mm-tx-icon-dash { display: grid; place-items: center; flex-shrink: 0; width: 42px; height: 42px; border-radius: 14px; background: rgba(255,255,255,0.045); }
+.hm .mm-tx-info-dash { flex: 1; min-width: 0; }
+.hm .mm-tx-name-dash { font-size: 15px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm .mm-day-group .mm-tx-category-dash { margin-top: 2px; font-size: var(--fs-sm); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm .mm-day-group .mm-tx-amount-dash { flex-shrink: 0; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+/* Spending reads as the norm (primary text, minus sign); money in stands out in emerald. */
+.hm .mm-tx-amount-dash.expense-color { color: var(--text); }
+.hm .mm-tx-amount-dash.income-color { color: var(--success); }
+.hm .mm-tx-amount-dash.transfer-color { color: var(--text-muted); }
+.lx-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 52px;
+  border: none;
+  border-top: 1px solid var(--hairline);
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lx-more:active { opacity: 0.7; }
+
+/* Shared bits used by Home and the Budget page */
+.mm-view-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0 2px 0 8px;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mm-view-all:active { opacity: 0.7; }
+.mm-change-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px 3px 6px; border-radius: 8px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mm-change-badge.up { background: rgba(var(--success-rgb),0.14); color: var(--success); }
+.mm-change-badge.down { background: rgba(var(--error-rgb),0.14); color: var(--error); }
+.mm-change-badge:empty { display: none; }
+.mm-rate-chip { flex-shrink: 0; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(255,255,255,0.05); color: var(--text-2); }
+.mm-rate-chip.good { background: rgba(var(--success-rgb),0.12); color: var(--success); }
+.mm-rate-chip.warn { background: rgba(var(--warning-rgb),0.12); color: var(--warning); }
+.mm-rate-chip.bad  { background: rgba(var(--error-rgb),0.12); color: var(--error); }
+.lx-delta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 12px; }
+.lx-delta-chip { display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px 2px 4px; border-radius: 6px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.lx-delta-chip.is-good { background: rgba(var(--success-rgb),0.12); color: var(--success); }
+.lx-delta-chip.is-bad { background: rgba(var(--error-rgb),0.12); color: var(--error); }
+.lx-delta-muted { color: var(--text-muted); white-space: nowrap; }
+.lx-tip {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: var(--shadow);
+  transform: translate(-50%, calc(-100% - 6px));
+  white-space: nowrap;
+  pointer-events: none;
+  animation: lxPop 0.16s var(--ease-out);
+}
+.lx-tip span { font-size: 11px; color: var(--text-muted); }
+.lx-tip strong { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Budget page surfaces */
+.lx-page .mm-section-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; min-height: 0; margin: 0 0 12px; }
+.lx-page .mm-section-header h3 { margin: 0; font-size: var(--fs-h2); font-weight: 600; letter-spacing: -0.01em; }
+.lx-page .mm-section-sub { margin: 3px 0 0; font-size: var(--fs-sm); color: var(--text-muted); }
+.lx-page .mm-dash-card { background: var(--bg-card); border: 1px solid var(--hairline); border-radius: var(--radius-lg); padding: var(--card-pad); box-shadow: none; }
+
+/* Entrance: blocks settle in one after another, once per page show. */
+.hm-top, .hm-col > * { animation: fadeInUp 0.45s var(--ease-out) backwards; }
+.hm-col:first-child > :nth-child(2) { animation-delay: 50ms; }
+.hm-col:first-child > :nth-child(3) { animation-delay: 100ms; }
+.hm-col:first-child > :nth-child(4) { animation-delay: 140ms; }
+.hm-col:first-child > :nth-child(5) { animation-delay: 180ms; }
+.hm-col:last-child > :nth-child(1) { animation-delay: 220ms; }
+.hm-col:last-child > :nth-child(2) { animation-delay: 260ms; }
+
+/* --- D. Budget ------------------------------------------------------ */
+.lx-k { display: block; font-size: var(--fs-sm); color: var(--text-muted); }
+.lx-budget-sum-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.lx-budget-left { display: block; margin-top: 2px; font-size: 26px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lx-budget-pct { display: flex; flex-direction: column; align-items: flex-end; font-size: 20px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--success); }
+.lx-budget-pct small { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.lx-budget-pct.is-warn { color: var(--warning); }
+.lx-budget-pct.is-over { color: var(--error); }
+.lx-bar { display: block; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.lx-bar > span {
+  display: block;
+  width: var(--w);
+  height: 100%;
+  border-radius: 999px;
+  background: var(--success);
+  transform-origin: left center;
+  animation: lxGrowX 0.8s var(--ease-out) backwards;
+}
+.lx-bar.is-warn > span { background: var(--warning); }
+.lx-bar.is-over > span { background: var(--error); }
+.lx-budget-sum-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--text-muted); }
+.lx-budget-sum-foot strong { color: var(--text-2); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.lx-budget-rows { margin-top: 18px; border-top: 1px solid var(--hairline); }
+.lx-page .mm-dash-card.mm-budget-list { padding: var(--card-pad); }
+.lx-page .mm-budget-list .lx-budget-rows { margin-top: 0; border-top: none; }
+.mm-budget-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 0;
+  border: none;
+  border-bottom: 1px solid var(--hairline);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.lx-budget-rows .mm-budget-row:last-child { border-bottom: none; padding-bottom: 4px; }
+.lx-page .lx-budget-rows .mm-budget-row:first-child { padding-top: 4px; }
+.mm-budget-row-icon { width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.045); }
+.mm-budget-row-body { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; }
+.mm-budget-row-top { min-width: 0; }
+.mm-budget-row-foot { flex-wrap: wrap; row-gap: 2px; }
+.mm-budget-row-name { font-size: 15px; font-weight: 600; }
+.mm-budget-row-name small { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.mm-budget-row-pct { font-size: 14px; font-weight: 600; color: var(--success); }
+.mm-budget-row.is-warn .mm-budget-row-pct { color: var(--warning); }
+.mm-budget-row.is-over .mm-budget-row-pct { color: var(--error); }
+.mm-budget-row .lx-bar { height: 6px; }
+.mm-budget-row-foot { font-size: 12px; color: var(--text-2); }
+.lx-of { color: var(--text-muted); }
+.mm-budget-row-note { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); white-space: nowrap; }
+.mm-budget-row.is-warn .mm-budget-row-note { color: var(--warning); }
+.mm-budget-row.is-over .mm-budget-row-note { color: var(--error); }
+.lx-state-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+.is-warn > .lx-state-dot, .is-warn .lx-state-dot { background: var(--warning); }
+.is-over > .lx-state-dot, .is-over .lx-state-dot { background: var(--error); }
+@media (hover: hover) { .mm-budget-row:hover .mm-budget-row-name { color: var(--accent); } }
+.mm-budget-row:active { opacity: 0.75; transform: none; }
+.lx-budget-basis { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--hairline); font-size: 12px; line-height: 1.5; color: var(--text-muted); }
+.lx-budget-basis strong { color: var(--text-2); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+
+/* ============================================================
+   BUDGET PAGE & PROFILE HEAD
+   ============================================================ */
+.lx-page { padding: 4px 4px 0; }
+.lx-page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 20px; }
+.lx-page-head .page-title { margin: 0; font-size: var(--fs-h1); font-weight: 700; letter-spacing: -0.02em; }
+.lx-page-sub { margin: 3px 0 0; font-size: var(--fs-sm); color: var(--text-muted); }
+.lx-budget-hero { margin-bottom: var(--section-gap); }
+.lx-budget-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 16px; font-size: 12px; color: var(--text-muted); }
+.lx-budget-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.lx-sub-head { margin-top: 0; }
+.lx-page-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; color: var(--accent); }
+#mmCategoryDetailContent .lx-budget-sum { margin: 12px 0 0; }
+
+.lx-profile-head { display: flex; align-items: center; gap: 14px; padding: 4px 4px 4px; }
+.lx-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(var(--accent-rgb),0.14);
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+}
+.lx-profile-text { min-width: 0; }
+.lx-profile-head .page-title { font-size: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 380px) {
+  :root { --gutter: 16px; --card-pad: 16px; }
+  .hm-balance { font-size: 34px; }
+  .hm-today-value { font-size: 21px; }
+  .hm-ring { width: 52px; height: 52px; }
+  .hm-flow-item + .hm-flow-item { padding-left: 10px; }
+  .hm-flow-item strong { font-size: 16px; }
+  .hm-actions { gap: 8px; }
+  .hm-cat { gap: 10px; }
+}
+
+/* Tablet: one centred column — a phone layout stretched to 900px reads badly */
+@media (min-width: 769px) and (max-width: 979px) {
+  .dashboard-wrap.hm { max-width: 640px; margin-left: auto; margin-right: auto; }
+}
+
+/* Wide: two columns — what I have and today on the left, the month on the right */
+@media (min-width: 980px) {
+  .main-content:has(#mmDashboardPage.active-page) { max-width: 1180px; }
+  .hm-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; column-gap: 8px; }
+  .hm-col:last-child > .hm-section:first-child { margin-top: 26px; }
+  .hm-balance { font-size: 46px; }
+  .hm #mmNetworthSparkline { height: 110px; }
+}
+@media (min-width: 1024px) {
+  /* Navigation floats as a centred bar instead of spanning a wide screen. */
+  .bottom-tabs {
+    left: 50%;
+    right: auto;
+    bottom: 16px;
+    width: min(560px, calc(100% - 32px));
+    height: var(--tab-height);
+    padding: 0 8px;
+    transform: translateX(-50%);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+  }
+  .fab-container { right: max(24px, calc((100vw - 1180px) / 2)); bottom: calc(var(--tab-height) + 32px); }
+  .lx-page { max-width: 720px; margin: 0 auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #mmNetworthSparkline.is-drawn,
+  .lx-bar > span,
+  .hm .mm-daily-bar span,
+  .hm-pace-fill,
+  .hm-stack > span,
+  .lx-tip { animation: none; }
+}
+
+
+/* ============================================================
+   AI ASSISTANT
+   Full-screen conversation. Answers sit on the page with no
+   bubble (they are reading material); the user's questions get
+   a tinted bubble on the right.
+   ============================================================ */
+.hm-ai-btn { color: var(--accent); }
+body.ai-open { overflow: hidden; }
+
+.ai-chat {
+  position: fixed;
+  inset: 0;
+  z-index: 310;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  animation: fadeIn 0.15s ease;
+}
+.ai-chat.hidden { display: none; }
+
+.ai-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 8px 8px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--bg);
+}
+.ai-bar-title { flex: 1; min-width: 0; text-align: center; }
+.ai-bar-title h2 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.ai-bar-title p { margin: 1px 0 0; font-size: var(--fs-xs); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ai-bar-btn {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.ai-bar-btn:active { background: rgba(255,255,255,0.06); }
+
+.ai-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px var(--gutter) 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.ai-log > * { width: 100%; max-width: 720px; margin-left: auto; margin-right: auto; }
+
+/* --- Empty state / key setup ---------------------------------------- */
+.ai-intro { margin-top: auto; margin-bottom: auto; padding: 12px 0; text-align: center; }
+.ai-intro-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: rgba(var(--accent-rgb),0.12);
+  color: var(--accent);
+}
+.ai-intro h3 { margin: 16px 0 6px; font-size: var(--fs-h1); font-weight: 700; letter-spacing: -0.02em; }
+.ai-intro > p { margin: 0 auto; max-width: 360px; font-size: var(--fs-sm); line-height: 1.55; color: var(--text-muted); }
+.ai-intro .ai-key-row { margin: 20px auto 0; max-width: 420px; }
+.ai-suggest { display: flex; flex-direction: column; gap: 8px; margin: 24px auto 0; max-width: 420px; }
+.ai-chip {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  background: var(--bg-card);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur), background var(--dur);
+}
+.ai-chip:active { background: var(--bg-elevated); }
+@media (hover: hover) { .ai-chip:hover { border-color: rgba(var(--accent-rgb),0.4); } }
+
+.ai-key-row { display: flex; gap: 8px; }
+.ai-key-row .form-input { flex: 1; min-width: 0; margin: 0; }
+.ai-key-row .btn-primary { flex-shrink: 0; width: auto; padding: 0 18px; min-height: 44px; }
+.ai-key-status { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; font-size: var(--fs-sm); color: var(--text-2); }
+.ai-key-status a, .ai-fine a { color: var(--accent); }
+.ai-key-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+.ai-key-dot.is-on { background: var(--accent); }
+.ai-fine { margin: 12px 0 0; font-size: var(--fs-xs); color: var(--text-muted); text-align: center; }
+
+/* --- Messages ------------------------------------------------------ */
+.ai-msg { display: flex; gap: 10px; }
+.ai-msg.is-user { justify-content: flex-end; }
+.ai-bubble {
+  max-width: 82%;
+  padding: 10px 14px;
+  border-radius: 18px 18px 6px 18px;
+  background: rgba(var(--accent-rgb),0.14);
+  color: var(--text);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.ai-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-top: 1px;
+  border-radius: 9px;
+  background: rgba(var(--accent-rgb),0.12);
+  color: var(--accent);
+}
+.ai-answer { flex: 1; min-width: 0; font-size: var(--fs-body); line-height: 1.6; color: var(--text); overflow-wrap: anywhere; }
+.ai-answer > :first-child { margin-top: 3px; }
+.ai-answer p { margin: 0 0 10px; }
+.ai-answer h4 { margin: 14px 0 6px; font-size: var(--fs-body); font-weight: 700; }
+.ai-answer ul, .ai-answer ol { margin: 0 0 10px; padding-left: 20px; }
+.ai-answer li { margin: 4px 0; }
+.ai-answer li::marker { color: var(--text-muted); }
+.ai-answer strong { font-weight: 650; color: #fff; }
+.ai-answer code { padding: 1px 5px; border-radius: 6px; background: var(--bg-elevated); font-size: 0.92em; }
+.ai-answer > :last-child { margin-bottom: 0; }
+.ai-table { overflow-x: auto; margin: 0 0 10px; border: 1px solid var(--hairline); border-radius: 12px; }
+.ai-table table { width: 100%; min-width: 0; border-collapse: collapse; font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.ai-table th, .ai-table td { padding: 8px 10px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--hairline); }
+.ai-table th { color: var(--text-muted); font-weight: 600; font-size: var(--fs-xs); }
+.ai-table tr:last-child td { border-bottom: none; }
+
+.ai-typing { display: inline-flex; gap: 4px; padding: 8px 0; }
+.ai-typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); animation: aiDot 1.1s infinite ease-in-out; }
+.ai-typing i:nth-child(2) { animation-delay: 0.15s; }
+.ai-typing i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes aiDot { 0%, 80%, 100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+
+.ai-error {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(var(--error-rgb),0.1);
+  color: var(--error);
+  font-size: var(--fs-sm);
+}
+.ai-error span { flex: 1; min-width: 160px; color: var(--text); }
+.ai-error button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(var(--error-rgb),0.4);
+  border-radius: 10px;
+  background: none;
+  color: var(--error);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* --- Composer ------------------------------------------------------ */
+.ai-compose {
+  padding: 8px var(--gutter) calc(10px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--hairline);
+  background: var(--bg);
+}
+.ai-compose[hidden] { display: none; }
+.ai-compose-field {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 6px 6px 6px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 24px;
+  background: var(--bg-card);
+  transition: border-color var(--dur), box-shadow var(--dur);
+}
+.ai-compose-field:focus-within { border-color: rgba(var(--accent-rgb),0.6); box-shadow: var(--focus-ring); }
+.ai-compose textarea {
+  flex: 1;
+  min-width: 0;
+  max-height: 140px;
+  padding: 9px 0;
+  border: none;
+  outline: none;
+  resize: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.4;
+  overflow-y: hidden;
+}
+.ai-compose textarea::placeholder { color: var(--text-muted); }
+.ai-send {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+  transition: transform var(--dur), background var(--dur);
+}
+.ai-send:active { transform: scale(0.92); }
+.ai-send.is-stop { background: var(--bg-elevated); color: var(--text); }
+.ai-compose .ai-fine { margin-top: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-typing i { animation: none; opacity: 0.6; }
 }
 
 </style>
@@ -6835,150 +7778,159 @@ html, body { overscroll-behavior: none; }
     <div id="moneyWorkspace" class="workspace active">
       <main class="main-content">
 
-        <!-- ===== MM DASHBOARD PAGE =====
-             Answers, top to bottom: how much do I have and which way is it
-             moving; how is this month going (cash flow, pace, what is safe
-             to spend per day); what needs attention; where the money went;
-             what happened. Every number that can be compared is compared —
-             to last month, to the budget, or to income. -->
+        <!-- ===== HOME =====
+             Built around three questions, in the order they are asked:
+             how much do I have; how much can I still spend today; how is
+             the month going. Logging a transaction is one tap from the top,
+             everything deeper is one tap into Analytics, Transactions or
+             Budget. -->
         <div id="mmDashboardPage" class="page active-page">
-          <section class="dashboard-wrap">
+          <section class="dashboard-wrap hm">
 
-            <div class="mm-dashboard-header">
-              <div class="mm-header-left">
-                <p class="mm-greeting-line">
-                  <span id="mmGreeting">Halo,</span>
-                  <strong class="mm-user-name" id="mmUserName">Mr Evan</strong>
-                </p>
-                <p class="mm-date-display" id="mmDateDisplay">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  <span id="mmDateText"></span>
-                </p>
+            <header class="hm-top">
+              <button type="button" class="hm-avatar" id="mmHomeAvatar" aria-label="Buka profil" onclick="mmShowPage('mmSettingsPage')">E</button>
+              <div class="hm-hello">
+                <p><span id="mmGreeting">Selamat datang</span> · <span id="mmDateText"></span></p>
+                <h2 id="mmUserName">Mr Evan</h2>
               </div>
-              <button class="mm-header-btn" id="mmBtnSearch" aria-label="Cari transaksi" onclick="mmOpenSearch()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <button type="button" class="hm-icon-btn hm-ai-btn" id="mmBtnAi" aria-label="Tanya asisten AI" onclick="mmOpenAiChat()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg>
               </button>
+              <button type="button" class="hm-icon-btn" id="mmBtnSearch" aria-label="Cari transaksi" onclick="mmOpenSearch()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </button>
+            </header>
+
+            <div class="hm-grid">
+              <div class="hm-col">
+
+                <!-- What I have: balance, its direction, where it sits -->
+                <section class="hm-hero" id="mmNetworthCard" aria-label="Total saldo">
+                  <div class="hm-hero-label">
+                    <span>Total saldo</span>
+                    <button type="button" class="hm-eye" id="mmBalanceEye" aria-label="Tampilkan/sembunyikan nominal" onclick="toggleAmountVisibility()"></button>
+                  </div>
+                  <h1 class="hm-balance" id="mmNetWorthValue">Rp 0</h1>
+                  <div class="hm-change">
+                    <span class="mm-change-badge up" id="mmChangeBadge"></span>
+                    <span id="mmChangeText">vs akhir bulan lalu</span>
+                  </div>
+                  <button type="button" class="hm-trend" id="mmTrendWrap" aria-label="Lihat analitik saldo" onclick="mmShowPage('mmInsightPage')">
+                    <svg id="mmNetworthSparkline" viewBox="0 0 320 72" preserveAspectRatio="none" aria-hidden="true"></svg>
+                    <span class="hm-trend-labels" id="mmTrendLabels" aria-hidden="true"></span>
+                  </button>
+                  <div class="hm-accounts" id="mmAccountsScroll" aria-label="Saldo per akun"></div>
+                </section>
+
+                <!-- Log something: the most frequent job, one tap -->
+                <nav class="hm-actions" aria-label="Catat transaksi">
+                  <button type="button" class="hm-action" onclick="mmShowActionSheet('expense')">
+                    <span class="hm-action-ic is-out" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></span>
+                    <span>Pengeluaran</span>
+                  </button>
+                  <button type="button" class="hm-action" onclick="mmShowActionSheet('income')">
+                    <span class="hm-action-ic is-in" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17"/><path d="M17 17H7V7"/></svg></span>
+                    <span>Pemasukan</span>
+                  </button>
+                  <button type="button" class="hm-action" onclick="mmShowActionSheet('transfer')">
+                    <span class="hm-action-ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg></span>
+                    <span>Transfer</span>
+                  </button>
+                </nav>
+
+                <!-- Today: the one number to decide with -->
+                <section class="hm-card hm-today" id="mmTodayCard" aria-label="Jatah hari ini"></section>
+                <div class="mm-alerts hm-alerts" id="mmAlerts"></div>
+
+                <!-- Budget posts -->
+                <section class="hm-section" id="mmBudgetSection">
+                  <div class="hm-sec-head">
+                    <div>
+                      <h3>Budget</h3>
+                      <p id="mmBudgetSummary">&nbsp;</p>
+                    </div>
+                    <button type="button" class="mm-view-all" onclick="mmShowPage('mmBudgetPage')">Detail <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+                  </div>
+                  <div class="hm-budget" id="mmBudgetList"></div>
+                </section>
+
+              </div>
+              <div class="hm-col">
+
+                <!-- The month: in, out, left; day by day; where it went -->
+                <section class="hm-section" id="mmMonthSection">
+                  <div class="hm-sec-head">
+                    <div>
+                      <h3 id="mmCashflowTitle">Bulan ini</h3>
+                      <p id="mmCashflowSub">&nbsp;</p>
+                    </div>
+                    <button type="button" class="mm-view-all" onclick="mmShowPage('mmInsightPage')">Analitik <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+                  </div>
+                  <div class="hm-card hm-month">
+                    <div class="hm-flow">
+                      <div class="hm-flow-item">
+                        <span class="hm-k"><i class="hm-dot is-in"></i>Masuk</span>
+                        <strong id="mmTotalIncome">Rp 0</strong>
+                        <span class="lx-delta" id="mmIncomeDelta"></span>
+                      </div>
+                      <div class="hm-flow-item">
+                        <span class="hm-k"><i class="hm-dot is-out"></i>Keluar</span>
+                        <strong id="mmTotalExpense">Rp 0</strong>
+                        <span class="lx-delta" id="mmExpenseDelta"></span>
+                      </div>
+                      <div class="hm-flow-item">
+                        <span class="hm-k">Sisa</span>
+                        <strong id="mmTotalSaving">Rp 0</strong>
+                        <span class="lx-delta"><span class="mm-rate-chip" id="mmSavingRate"></span></span>
+                      </div>
+                    </div>
+
+                    <div class="hm-block">
+                      <div class="hm-block-head"><span>Pengeluaran harian</span><span id="mmDailySub"></span></div>
+                      <div class="mm-daily-chart" id="mmDailyChart"></div>
+                      <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
+                    </div>
+
+                    <div class="hm-block" id="mmBreakdown"></div>
+                  </div>
+                </section>
+
+                <!-- Latest activity -->
+                <section class="hm-section" id="mmTransactionsSection">
+                  <div class="hm-sec-head">
+                    <div>
+                      <h3>Terbaru</h3>
+                      <p id="mmTxMonthCount">&nbsp;</p>
+                    </div>
+                    <button type="button" class="mm-view-all" onclick="mmShowPage('mmHistoryPage')">Semua <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+                  </div>
+                  <div class="hm-card mm-transaction-list" id="mmDashboardTransactions"></div>
+                </section>
+
+              </div>
             </div>
+          </section>
+        </div>
 
-            <!-- Net worth + this month's cash flow -->
-            <div class="mm-networth-card" id="mmNetworthCard">
-              <div class="mm-networth-header-row">
-                <span class="mm-networth-label">Total saldo</span>
-                <button class="mm-networth-eye" aria-label="Tampilkan/sembunyikan nominal" onclick="toggleAmountVisibility()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
-                <button class="mm-networth-arrow" id="mmNetworthDetailBtn" aria-label="Buka insight keuangan" onclick="mmShowPage('mmInsightPage')">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-                </button>
+        <!-- ===== MM BUDGET PAGE =====
+             Every pos in full: allocation share, used, remaining and state.
+             Rendered from the same dashboard data as the overview card. -->
+        <div id="mmBudgetPage" class="page">
+          <section class="lx-page">
+            <header class="lx-page-head">
+              <div>
+                <h2 class="page-title">Budget</h2>
+                <p class="lx-page-sub" id="mmBudgetPageSub">&nbsp;</p>
               </div>
-              <h2 class="mm-networth-amount" id="mmNetWorthValue">Rp 0</h2>
-              <div class="mm-networth-change">
-                <span class="mm-change-badge up" id="mmChangeBadge">↑ 0%</span>
-                <span class="mm-change-vs" id="mmChangeText">vs akhir bulan lalu</span>
-              </div>
-              <svg id="mmNetworthSparkline" viewBox="0 0 200 80" preserveAspectRatio="none" aria-hidden="true"></svg>
-
-              <div class="mm-cashflow" aria-label="Arus kas bulan ini">
-                <div class="mm-cashflow-head">
-                  <span id="mmCashflowTitle">Arus kas bulan ini</span>
-                  <span class="mm-rate-chip" id="mmSavingRate">–</span>
-                </div>
-                <!-- Share of income already spent; the rest of the track is
-                     what is left. -->
-                <div class="mm-cashflow-bar" role="img" id="mmCashflowBar" aria-label="Porsi pemasukan yang terpakai">
-                  <span class="mm-cashflow-fill" id="mmCashflowFill"></span>
-                </div>
-                <div class="mm-hero-stats">
-                  <div class="mm-hero-stat">
-                    <span class="mm-hero-stat-label"><span class="mm-hero-dot in" aria-hidden="true">↓</span>Masuk</span>
-                    <strong id="mmTotalIncome">Rp 0</strong>
-                  </div>
-                  <div class="mm-hero-stat">
-                    <span class="mm-hero-stat-label"><span class="mm-hero-dot out" aria-hidden="true">↑</span>Keluar</span>
-                    <strong id="mmTotalExpense">Rp 0</strong>
-                  </div>
-                  <div class="mm-hero-stat">
-                    <span class="mm-hero-stat-label">Sisa</span>
-                    <strong id="mmTotalSaving">Rp 0</strong>
-                  </div>
-                </div>
+              <button class="mm-header-btn" aria-label="Atur pembagian budget" onclick="mmOpenBudgetSettings()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
+              </button>
+            </header>
+            <div id="mmBudgetPageContent">
+              <div class="mm-dash-card">
+                <div class="sk-list"><div class="sk sk-line lg" style="width:60%"></div><div class="sk sk-line" style="width:40%"></div></div>
               </div>
             </div>
-
-            <!-- Month pulse: one actionable number (safe daily spend) + alerts.
-                 The deeper stats (pace, projection, savings ratio) live in Insight. -->
-            <section class="mm-dash-section" id="mmPulseSection">
-              <div class="mm-pulse-grid is-single" id="mmPulseGrid"></div>
-              <div class="mm-alerts" id="mmAlerts"></div>
-            </section>
-
-            <!-- Budget: every pos, not just one -->
-            <section class="mm-dash-section" id="mmBudgetSection">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Budget</h3>
-                  <p class="mm-section-sub" id="mmBudgetSummary">&nbsp;</p>
-                </div>
-                <button class="mm-view-all" id="mmBudgetDetailBtn" onclick="mmShowBudgetDetail()">Detail <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
-              </div>
-              <div class="mm-dash-card mm-budget-list" id="mmBudgetList"></div>
-            </section>
-
-            <!-- Category breakdown: where money came from / went, tap to drill down -->
-            <section class="mm-dash-section" id="mmExpenseSection">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Rincian kategori</h3>
-                  <p class="mm-section-sub" id="mmBreakdownSub">&nbsp;</p>
-                </div>
-                <div class="mm-expense-tabs" role="tablist">
-                  <button class="mm-expense-tab active" role="tab" aria-selected="true" data-tab="expense" onclick="mmSwitchChartTab(this,'expense')">Keluar</button>
-                  <button class="mm-expense-tab" role="tab" aria-selected="false" data-tab="income" onclick="mmSwitchChartTab(this,'income')">Masuk</button>
-                </div>
-              </div>
-              <div class="mm-dash-card mm-bd-card" id="mmBreakdown"></div>
-            </section>
-
-            <!-- Daily spending -->
-            <section class="mm-dash-section" id="mmDailySection">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Pengeluaran harian</h3>
-                  <p class="mm-section-sub" id="mmDailySub">&nbsp;</p>
-                </div>
-              </div>
-              <div class="mm-dash-card mm-daily-card">
-                <div class="mm-daily-chart" id="mmDailyChart"></div>
-                <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
-              </div>
-            </section>
-
-            <!-- Accounts -->
-            <section class="mm-dash-section" id="mmAccountsSection">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Akun</h3>
-                  <p class="mm-section-sub" id="mmAccountsSub">&nbsp;</p>
-                </div>
-                <button class="mm-view-all" onclick="mmShowPage('mmSettingsPage')">Kelola <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
-              </div>
-              <div class="mm-accounts-grid" id="mmAccountsScroll">
-                <div class="empty-state">No accounts yet.</div>
-              </div>
-            </section>
-
-            <!-- This month's transactions, grouped by day -->
-            <section class="mm-dash-section" id="mmTransactionsSection">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Transaksi bulan ini</h3>
-                  <p class="mm-section-sub" id="mmTxMonthCount"></p>
-                </div>
-                <button class="mm-view-all" onclick="mmShowPage('mmHistoryPage')">Semua <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
-              </div>
-              <div class="mm-dash-card mm-transaction-list" id="mmDashboardTransactions"></div>
-            </section>
-
           </section>
         </div>
 
@@ -7037,14 +7989,19 @@ html, body { overscroll-behavior: none; }
              edit the split, in one tap. Only the destructive section stays
              folded. -->
         <div id="mmSettingsPage" class="page settings-page">
-          <header class="settings-head">
-            <h2 class="page-title">Settings</h2>
+          <header class="settings-head lx-profile-head">
+            <span class="lx-avatar" id="mmProfileAvatar" aria-hidden="true">ME</span>
+            <div class="lx-profile-text">
+              <h2 class="page-title" id="mmProfileName">Profil</h2>
+              <p class="lx-page-sub">Akun, budget, kategori &amp; data</p>
+            </div>
           </header>
 
           <nav class="settings-nav" aria-label="Bagian settings">
             <a href="#mmSetAccounts" class="settings-nav-chip active" onclick="settingsJump(event,'mmSetAccounts')">Akun</a>
             <a href="#mmSetBudget" class="settings-nav-chip" onclick="settingsJump(event,'mmSetBudget')">Budget</a>
             <a href="#mmSetCategories" class="settings-nav-chip" onclick="settingsJump(event,'mmSetCategories')">Kategori</a>
+            <a href="#mmSetAi" class="settings-nav-chip" onclick="settingsJump(event,'mmSetAi')">AI</a>
             <a href="#mmSetData" class="settings-nav-chip" onclick="settingsJump(event,'mmSetData')">Data</a>
           </nav>
 
@@ -7097,6 +8054,27 @@ html, body { overscroll-behavior: none; }
             </div>
             <div class="set-card">
               <div id="mmCategoriesList" class="mm-categories-list"></div>
+            </div>
+          </section>
+
+          <!-- AI assistant: the Gemini key lives in this browser only -->
+          <section class="set-section" id="mmSetAi">
+            <div class="set-section-head">
+              <div>
+                <h3 class="set-section-title">AI Assistant</h3>
+                <p class="set-section-sub">Gemini API key, disimpan hanya di browser ini</p>
+              </div>
+              <button class="set-add-btn" onclick="mmOpenAiChat()"><i data-lucide="sparkles"></i>Buka</button>
+            </div>
+            <div class="set-card">
+              <div class="ai-key-row">
+                <input type="password" id="mmAiKeyInput" class="form-input" placeholder="Tempel API key Gemini" autocomplete="off" spellcheck="false" aria-label="Gemini API key"
+                       onkeydown="if(event.key==='Enter'){mmAiSaveKey('mmAiKeyInput');}">
+                <button type="button" class="btn-primary" onclick="mmAiSaveKey('mmAiKeyInput')">Simpan</button>
+              </div>
+              <p class="ai-key-status" id="mmAiKeyStatus"></p>
+              <p class="set-hint">Saat bertanya, ringkasan saldo, budget, dan transaksimu dikirim ke Google Gemini untuk dijawab.</p>
+              <p class="set-inline-links" id="mmAiKeyClear" hidden><button type="button" onclick="mmAiClearKey()">Hapus key dari browser ini</button></p>
             </div>
           </section>
 
@@ -7230,22 +8208,26 @@ html, body { overscroll-behavior: none; }
     </nav>
 
     <!-- ===== MONEY MANAGEMENT BOTTOM TABS ===== -->
-    <nav class="bottom-tabs mm-tabs" id="mmBottomTabs">
-      <button class="tab-item active" data-page="mmDashboardPage" onclick="mmShowPage('mmDashboardPage')">
-        <i data-lucide="layout-dashboard" class="tab-icon"></i>
-        <small>Dashboard</small>
+    <nav class="bottom-tabs mm-tabs" id="mmBottomTabs" aria-label="Navigasi utama">
+      <button class="tab-item active" aria-current="page" data-page="mmDashboardPage" aria-label="Home" onclick="mmShowPage('mmDashboardPage')">
+        <i data-lucide="house" class="tab-icon"></i>
+        <small>Home</small>
       </button>
-      <button class="tab-item" data-page="mmHistoryPage" onclick="mmShowPage('mmHistoryPage')">
-        <i data-lucide="clock" class="tab-icon"></i>
-        <small>History</small>
+      <button class="tab-item" data-page="mmInsightPage" aria-label="Analytics" onclick="mmShowPage('mmInsightPage')">
+        <i data-lucide="chart-pie" class="tab-icon"></i>
+        <small>Analytics</small>
       </button>
-      <button class="tab-item" data-page="mmInsightPage" onclick="mmShowPage('mmInsightPage')">
-        <i data-lucide="brain" class="tab-icon"></i>
-        <small>Insight</small>
+      <button class="tab-item" data-page="mmHistoryPage" aria-label="Transactions" onclick="mmShowPage('mmHistoryPage')">
+        <i data-lucide="arrow-left-right" class="tab-icon"></i>
+        <small>Transactions</small>
       </button>
-      <button class="tab-item" data-page="mmSettingsPage" onclick="mmShowPage('mmSettingsPage')">
-        <i data-lucide="settings" class="tab-icon"></i>
-        <small>Settings</small>
+      <button class="tab-item" data-page="mmBudgetPage" aria-label="Budget" onclick="mmShowPage('mmBudgetPage')">
+        <i data-lucide="wallet" class="tab-icon"></i>
+        <small>Budget</small>
+      </button>
+      <button class="tab-item" data-page="mmSettingsPage" aria-label="Profile" onclick="mmShowPage('mmSettingsPage')">
+        <i data-lucide="circle-user-round" class="tab-icon"></i>
+        <small>Profile</small>
       </button>
     </nav>
 
@@ -7505,6 +8487,34 @@ html, body { overscroll-behavior: none; }
     </div>
     <p class="mm-search-meta hidden" id="mmSearchMeta"></p>
     <div class="mm-search-results" id="mmSearchResults"></div>
+  </div>
+
+  <!-- ===== AI ASSISTANT =====
+       Full screen like search: a conversation needs the whole height, and
+       the keyboard takes half of it on a phone. -->
+  <div id="mmAiSheet" class="ai-chat hidden" role="dialog" aria-modal="true" aria-labelledby="mmAiTitle">
+    <header class="ai-bar">
+      <button class="mm-search-back" aria-label="Tutup asisten" onclick="mmCloseAiChat()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+      </button>
+      <div class="ai-bar-title">
+        <h2 id="mmAiTitle">Asisten Keuangan</h2>
+        <p>Gemini · membaca data keuanganmu</p>
+      </div>
+      <button class="ai-bar-btn" aria-label="Percakapan baru" title="Percakapan baru" onclick="mmAiNewChat()">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
+      </button>
+    </header>
+    <div class="ai-log" id="mmAiLog" aria-live="polite"></div>
+    <form class="ai-compose" id="mmAiForm" onsubmit="mmAiSubmit(event)">
+      <div class="ai-compose-field">
+        <textarea id="mmAiInput" rows="1" placeholder="Tanya soal keuanganmu…" aria-label="Pertanyaan" oninput="mmAiAutosize()" onkeydown="mmAiKey(event)"></textarea>
+        <button type="submit" class="ai-send" id="mmAiSend" aria-label="Kirim">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>
+        </button>
+      </div>
+      <p class="ai-fine">AI bisa keliru. Cek angka penting di halaman terkait.</p>
+    </form>
   </div>
 
   <!-- ===== LOGIN GATE =====
@@ -11006,14 +12016,21 @@ function mmShowPage(pageId) {
   document.querySelectorAll('#moneyWorkspace .page').forEach(p => p.classList.remove('active-page'));
   const page = document.getElementById(pageId);
   if (page) page.classList.add('active-page');
-  document.querySelectorAll('#mmBottomTabs .tab-item').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#mmBottomTabs .tab-item').forEach(b => { b.classList.remove('active'); b.removeAttribute('aria-current'); });
   const active = document.querySelector(`#mmBottomTabs .tab-item[data-page="${pageId}"]`);
-  if (active) active.classList.add('active');
+  if (active) { active.classList.add('active'); active.setAttribute('aria-current', 'page'); }
+  // A new tab starts at its top, not wherever the previous one was scrolled.
+  window.scrollTo(0, 0);
 
   // Only load data if not cached
   if (pageId === 'mmDashboardPage') mmLoadDashboard(true);
+  if (pageId === 'mmBudgetPage') {
+    if (MM_DASHBOARD) mmRenderBudgetPage();
+    else mmLoadDashboard(true);
+  }
   if (pageId === 'mmHistoryPage' && !document.getElementById('mmHistoryAllTime').innerHTML.trim()) mmLoadHistory();
   if (pageId === 'mmSettingsPage' && !document.getElementById('mmSettingsAccountsList').innerHTML.includes('mm-settings-acc-row')) mmLoadSettings();
+  if (pageId === 'mmSettingsPage' && typeof mmAiRenderKeyStatus === 'function') mmAiRenderKeyStatus();
   if (pageId === 'mmInsightPage') {
     // Only auto-load for current month on first open; never override a
     // month the user already navigated to from History.
@@ -11343,19 +12360,24 @@ function mmLoadDashboard(skipIfCached) {
 
 function mmRenderHeader() {
   const hour = new Date().getHours();
-  let greeting = 'Good evening,';
-  if (hour < 12) greeting = 'Good morning,';
-  else if (hour < 17) greeting = 'Good afternoon,';
+  let greeting = 'Selamat malam';
+  if (hour >= 4 && hour < 11) greeting = 'Selamat pagi';
+  else if (hour >= 11 && hour < 15) greeting = 'Selamat siang';
+  else if (hour >= 15 && hour < 18) greeting = 'Selamat sore';
   setText('mmGreeting', greeting);
 
   // User name — safeStorage so a browser that blocks storage still renders.
   const savedName = safeStorage.getItem('mm_user_name') || 'Mr Evan 🌿';
   setText('mmUserName', savedName);
+  // Home and the Profile tab show the same name, with initials as the avatar.
+  const plainName = savedName.replace(/[^\p{L}\p{N}\s.'-]/gu, '').trim() || 'Profil';
+  setText('mmProfileName', plainName);
+  const initials = plainName.split(/\s+/).filter(w => w && !/^(mr|mrs|ms)\.?$/i.test(w))
+    .map(w => w[0]).join('').slice(0, 2).toUpperCase() || plainName.slice(0, 2).toUpperCase();
+  setText('mmProfileAvatar', initials);
+  setText('mmHomeAvatar', initials);
 
-  const now = new Date();
-  const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-  const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  setText('mmDateText', days[now.getDay()] + ', ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear());
+  setText('mmDateText', new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date()));
 }
 
 function mmRenderDashboard(data) {
@@ -11371,26 +12393,49 @@ function mmRenderDashboard(data) {
   const diff = (data.netWorth || 0) - (data.prevNetWorth || 0);
   if (badge) {
     const isUp = diff >= 0;
+    const arrow = lucideIconSvg(isUp ? 'trending-up' : 'trending-down', 13);
     if (data.prevNetWorth && data.prevNetWorth > 0) {
       const changePct = Math.abs(diff / data.prevNetWorth * 100).toFixed(1).replace('.', ',');
-      badge.textContent = (isUp ? '↑ ' : '↓ ') + changePct + '%';
+      badge.innerHTML = arrow + changePct + '%';
     } else {
-      badge.textContent = isUp ? '↑' : '↓';
+      badge.innerHTML = arrow;
     }
     badge.className = 'mm-change-badge ' + (isUp ? 'up' : 'down');
   }
   if (changeText) {
-    changeText.textContent = (diff >= 0 ? '+' : '-') + mmFormatIDRShort(Math.abs(diff)) + ' vs akhir bulan lalu';
+    changeText.textContent = (diff >= 0 ? '+' : '−') + mmFormatIDRShort(Math.abs(diff)) + ' vs akhir bulan lalu';
+  }
+
+  // The eye shows the current state, not a fixed glyph.
+  const eye = document.getElementById('mmBalanceEye');
+  if (eye) {
+    const hidden = typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN;
+    eye.innerHTML = lucideIconSvg(hidden ? 'eye-off' : 'eye', 16);
+    eye.setAttribute('aria-pressed', hidden ? 'true' : 'false');
   }
 
   mmRenderSparkline(data);
-  mmRenderCashflow(data);
-  mmRenderPulse(data);
-  mmRenderDaily(data);
   mmRenderAccountCards(data.accounts || [], data.netWorth || 0);
+  mmRenderToday(data);
+  mmRenderAlerts(data);
   mmRenderBudgetCard(data.allocationCards || [], data.totalIncome || 0, data.carryover || 0);
-  mmRenderChart(mmCurrentChartType || 'expense');
+  mmRenderCashflow(data);
+  mmRenderDaily(data);
+  mmRenderChart();
   mmRenderDashboardTransactions();
+  mmRenderBudgetPage();
+}
+
+/* "↑ 12% vs Okt" — direction, size and what it is compared with. goodWhenUp
+   decides the colour: more income is good, more spending is not. */
+function mmDeltaHtml(now, before, label, goodWhenUp) {
+  if (!(before > 0)) return `<span class="lx-delta-muted">—</span>`;
+  const change = (now - before) / before;
+  const pct = Math.abs(Math.round(change * 100));
+  if (pct === 0) return `<span class="lx-delta-muted">= ${escapeHtml(label)}</span>`;
+  const up = change > 0;
+  const good = up === goodWhenUp;
+  return `<span class="lx-delta-chip ${good ? 'is-good' : 'is-bad'}" title="${up ? 'Naik' : 'Turun'} ${pct}% dibanding ${escapeHtml(label)}">${lucideIconSvg(up ? 'arrow-up-right' : 'arrow-down-right', 12)}${pct}%</span>`;
 }
 
 /* === MONTH CONTEXT ===
@@ -11418,32 +12463,34 @@ function mmInvestThisMonth(txs) {
   }, 0);
 }
 
-/* === CASH FLOW (inside the hero) === */
+/* === THE MONTH: in, out, left === */
 function mmRenderCashflow(data) {
   const ctx = mmMonthContext();
   const income = data.totalIncome || 0;
   const expense = data.totalExpense || 0;
   const saving = data.saving || 0;
 
-  setText('mmCashflowTitle', 'Arus kas ' + ctx.monthName);
+  const prev = data.prevMonth || { income: 0, expense: 0, expenseToDate: 0 };
+  const prevDate = new Date(ctx.now.getFullYear(), ctx.now.getMonth() - 1, 1);
+  const prevName = new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(prevDate);
+
+  setText('mmCashflowTitle', ctx.monthName.charAt(0).toUpperCase() + ctx.monthName.slice(1));
+  setText('mmCashflowSub', `Hari ke-${ctx.day} dari ${ctx.daysInMonth} · dibanding ${prevName}`);
   setText('mmTotalIncome', mmFormatIDRShort(income));
   setText('mmTotalExpense', mmFormatIDRShort(expense));
-  setText('mmTotalSaving', mmFormatIDRShort(saving));
+  setText('mmTotalSaving', (saving < 0 ? '−' : '') + mmFormatIDRShort(Math.abs(saving)).replace('-', ''));
   const savingEl = document.getElementById('mmTotalSaving');
   if (savingEl) savingEl.style.color = saving >= 0 ? 'var(--success)' : 'var(--error)';
 
+  // Income against all of last month (it usually lands once); spending
+  // against the same stretch of days last month, so mid-month is fair.
+  const inDelta = document.getElementById('mmIncomeDelta');
+  if (inDelta) inDelta.innerHTML = mmDeltaHtml(income, prev.income, prevName, true);
+  const outDelta = document.getElementById('mmExpenseDelta');
+  if (outDelta) outDelta.innerHTML = mmDeltaHtml(expense, prev.expenseToDate, prevName + ' (tanggal sama)', false);
+
   const chip = document.getElementById('mmSavingRate');
-  const fill = document.getElementById('mmCashflowFill');
-  const bar = document.getElementById('mmCashflowBar');
   const used = income > 0 ? expense / income : (expense > 0 ? 1 : 0);
-  if (fill) {
-    fill.style.width = Math.min(used * 100, 100) + '%';
-    fill.classList.toggle('is-over', used > 1);
-    fill.classList.toggle('is-warn', used > 0.85 && used <= 1);
-  }
-  if (bar) bar.setAttribute('aria-label', income > 0
-    ? Math.round(used * 100) + '% pemasukan sudah terpakai'
-    : 'Belum ada pemasukan bulan ini');
   if (chip) {
     if (income <= 0) {
       chip.textContent = 'Belum ada pemasukan';
@@ -11452,26 +12499,20 @@ function mmRenderCashflow(data) {
       chip.textContent = 'Defisit';
       chip.className = 'mm-rate-chip bad';
     } else {
-      chip.textContent = Math.round(used * 100) + '% terpakai';
+      chip.textContent = Math.round((1 - used) * 100) + '% tersisa';
       chip.className = 'mm-rate-chip ' + (used > 0.85 ? 'warn' : 'good');
     }
   }
 }
 
-/* === PULSE TILES + ALERTS === */
-function mmRenderPulse(data) {
-  const grid = document.getElementById('mmPulseGrid');
-  const alertsEl = document.getElementById('mmAlerts');
-  if (!grid) return;
+/* === TODAY ===
+   Safe to spend. The budget pool already includes last month's leftovers,
+   so what is still free in the spending posts is capped by the money
+   actually held in the accounts — the figure can never promise more than
+   the balance shows. Today's share is fixed before today's own spending,
+   so buying lunch does not shrink the allowance it was paid from. */
+function mmAllowance(data) {
   const ctx = mmMonthContext();
-  const income = data.totalIncome || 0;
-  const expense = data.totalExpense || 0;
-  const prev = data.prevMonth || { income: 0, expense: 0, expenseToDate: 0, days: 30 };
-
-  // 1. Safe to spend per day. The budget pool already includes last month's
-  // leftovers, so what is still free in the spending posts is capped by the
-  // money actually held in the accounts — the figure can never promise more
-  // than the balance shows.
   const balance = Math.max(data.netWorth || 0, 0);
   const spendCards = (data.allocationCards || []).filter(c => (c.target || 0) > 0 && !MM_NON_SPEND_RE.test(c.category || ''));
   const spendRoom = spendCards.length
@@ -11479,33 +12520,104 @@ function mmRenderPulse(data) {
     : balance;
   const safe = Math.min(spendRoom, balance);
   const capped = spendRoom > balance;
-  const perDay = safe / Math.max(ctx.daysLeft, 1);
+  const today = localISODate();
+  const spentToday = (data.monthTransactions || [])
+    .filter(tx => tx.type === 'Expense' && tx.date === today)
+    .reduce((s, tx) => s + (tx.amount || 0), 0);
+  const days = Math.max(ctx.daysLeft, 1);
+  const todayBudget = (safe + spentToday) / days;
+  const spendTarget = spendCards.reduce((s, c) => s + (c.target || 0), 0);
+  const spendSpent = spendCards.reduce((s, c) => s + (c.spent || 0), 0);
+  return { ctx, balance, safe, capped, spentToday, todayBudget, spendTarget, spendSpent };
+}
 
-  // 2. Average per day, against last month over the same number of days.
+function mmRenderToday(data) {
+  const box = document.getElementById('mmTodayCard');
+  if (!box) return;
+  const a = mmAllowance(data);
+  const ctx = a.ctx;
+  const left = a.todayBudget - a.spentToday;
+  const used = a.todayBudget > 0 ? a.spentToday / a.todayBudget : (a.spentToday > 0 ? 2 : 0);
+  const tone = (a.balance <= 0 || a.todayBudget <= 0 || used > 1) ? 'bad' : used >= 0.85 ? 'warn' : 'good';
+
+  let label, value, sub;
+  if (a.balance <= 0) {
+    label = 'Jatah hari ini'; value = 'Saldo habis';
+    sub = 'Catat pemasukan supaya ada yang bisa dibagi.';
+  } else if (a.todayBudget <= 0) {
+    label = 'Jatah hari ini'; value = 'Budget habis';
+    sub = `Budget belanja bulan ini sudah terpakai semua · ${ctx.daysLeft} hari lagi`;
+  } else if (left >= 0) {
+    label = 'Masih bisa dipakai hari ini'; value = mmFormatIDR(left);
+    sub = `Jatah ${mmFormatIDRShort(a.todayBudget)} · terpakai ${mmFormatIDRShort(a.spentToday)}${a.capped ? ' · dibatasi saldo' : ''}`;
+  } else {
+    label = 'Lewat jatah hari ini'; value = '−' + mmFormatIDR(-left);
+    sub = `Jatah ${mmFormatIDRShort(a.todayBudget)} · terpakai ${mmFormatIDRShort(a.spentToday)}`;
+  }
+
+  // Ring: share of today's allowance already spent.
+  const r = 24, circ = 2 * Math.PI * r;
+  const frac = Math.min(Math.max(used, 0), 1);
+  const ringPct = a.todayBudget > 0 ? Math.min(Math.round(used * 100), 999) + '%' : '–';
+
+  // Pace: spending posts used vs how much of the month has gone.
+  let pace = '';
+  if (a.spendTarget > 0) {
+    const bp = a.spendSpent / a.spendTarget;
+    const tp = ctx.day / ctx.daysInMonth;
+    let status, ptone;
+    if (bp > tp + 0.08) { status = 'Lebih cepat dari waktunya'; ptone = 'warn'; }
+    else if (bp < tp - 0.08) { status = 'Lebih hemat dari jadwal'; ptone = 'good'; }
+    else { status = 'Sesuai jalur'; ptone = 'good'; }
+    if (bp > 1) { status = 'Budget belanja terlampaui'; ptone = 'bad'; }
+    pace = `
+      <div class="hm-pace is-${ptone}">
+        <div class="hm-pace-top">
+          <span>Belanja <strong>${Math.round(bp * 100)}%</strong> terpakai</span>
+          <span class="hm-pace-status">${escapeHtml(status)}</span>
+        </div>
+        <div class="hm-pace-track" role="img" aria-label="${Math.round(bp * 100)}% budget belanja terpakai, ${Math.round(tp * 100)}% bulan berjalan">
+          <span class="hm-pace-fill" style="--w:${Math.min(bp, 1) * 100}%"></span>
+          <span class="hm-pace-mark" style="left:${tp * 100}%"></span>
+        </div>
+        <div class="hm-pace-foot"><span>1 ${escapeHtml(ctx.monthName.slice(0, 3))}</span><span>hari ini · ${Math.round(tp * 100)}% bulan</span><span>${ctx.daysInMonth}</span></div>
+      </div>`;
+  }
+
+  box.innerHTML = `
+    <button type="button" class="hm-today-main is-${tone}" onclick="mmShowPage('mmInsightPage')">
+      <span class="hm-ring" aria-hidden="true">
+        <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="${r}" class="hm-ring-track"/>
+          <circle cx="28" cy="28" r="${r}" class="hm-ring-val" ${frac > 0 ? '' : 'stroke-opacity="0"'} stroke-dasharray="${(frac * circ).toFixed(1)} ${circ.toFixed(1)}" transform="rotate(-90 28 28)"/></svg>
+        <span>${ringPct}</span>
+      </span>
+      <span class="hm-today-text">
+        <span class="hm-k">${escapeHtml(label)}</span>
+        <strong class="hm-today-value">${escapeHtml(value)}</strong>
+        <span class="hm-today-sub">${escapeHtml(sub)}</span>
+      </span>
+      <span class="hm-chev" aria-hidden="true">${lucideIconSvg('chevron-right', 18)}</span>
+    </button>
+    ${pace}`;
+}
+
+/* === ALERTS ===
+   Things worth acting on, worst first, at most two. */
+function mmRenderAlerts(data) {
+  const alertsEl = document.getElementById('mmAlerts');
+  if (!alertsEl) return;
+  const ctx = mmMonthContext();
+  const income = data.totalIncome || 0;
+  const expense = data.totalExpense || 0;
+  const prev = data.prevMonth || { income: 0, expense: 0, expenseToDate: 0, days: 30 };
+
+  // Average per day, against last month over the same number of days.
   const avg = expense / Math.max(ctx.day, 1);
   const prevDaysSoFar = Math.min(ctx.day, prev.days || ctx.day);
   const prevAvg = prev.expenseToDate / Math.max(prevDaysSoFar, 1);
   const pace = prevAvg > 0 ? (avg - prevAvg) / prevAvg : null;
-
   const pct = (v) => Math.abs(Math.round(v * 100)) + '%';
 
-  let sub;
-  if (balance <= 0) sub = 'saldo akun sudah habis';
-  else if (safe <= 0) sub = 'budget belanja bulan ini sudah habis';
-  else sub = `${mmFormatIDRShort(safe)} untuk ${ctx.daysLeft} hari${capped ? ' · dibatasi saldo' : ''}`;
-
-  // One tile, one decision. Pace, projection and savings ratio live in Insight.
-  const tone = safe <= 0 ? 'bad' : (capped || perDay < avg * 0.6 ? 'warn' : 'good');
-  grid.innerHTML = `
-    <button type="button" class="mm-pulse-tile mm-pulse-wide is-${tone}" onclick="mmShowPage('mmInsightPage')">
-      <span class="mm-pulse-label">${lucideIconSvg('wallet', 14)}Aman dipakai</span>
-      <strong class="mm-pulse-value">${mmFormatIDRShort(perDay)}<small>/hari</small></strong>
-      <span class="mm-pulse-sub">${escapeHtml(sub)}</span>
-    </button>`;
-
-  if (!alertsEl) return;
-
-  // Things worth acting on, worst first, at most three.
   const alerts = [];
   (data.allocationCards || []).forEach(c => {
     const target = c.target || 0, spent = c.spent || 0;
@@ -11539,21 +12651,21 @@ function mmRenderPulse(data) {
     const attrs = a.cat
       ? `role="button" tabindex="0" onclick="mmShowCategoryDetail('${jsStr(a.cat)}')" onkeydown="if(event.key==='Enter'){this.click();}"`
       : '';
-    return `<div class="mm-alert is-${a.tone}" ${attrs}>${lucideIconSvg(a.icon, 16)}<span>${a.text}</span></div>`;
+    return `<div class="mm-alert is-${a.tone}" ${attrs}>${lucideIconSvg(a.icon, 16)}<span>${a.text}</span>${a.cat ? lucideIconSvg('chevron-right', 14) : ''}</div>`;
   }).join('');
 }
 
 /* === DAILY SPENDING CHART ===
    One bar per day of the month; days still to come stay as empty slots so
-   the month's shape is visible. A dashed line marks the average. Tap a bar
-   to read its day. */
+   the month's shape is visible. A dashed line marks the average. Tap a bar,
+   or drag across the plot, to read a day in the tooltip. */
 let MM_DAILY = [];
 
 function mmRenderDaily(data) {
   const chart = document.getElementById('mmDailyChart');
   if (!chart) return;
   const ctx = mmMonthContext();
-  const prev = data.prevMonth || { expenseToDate: 0 };
+  const stats = document.getElementById('mmDailyStats');
 
   const days = Array.from({ length: ctx.daysInMonth }, () => ({ amount: 0, count: 0 }));
   (data.monthTransactions || []).forEach(tx => {
@@ -11566,38 +12678,51 @@ function mmRenderDaily(data) {
   const spent = days.reduce((s, d) => s + d.amount, 0);
   const avg = spent / Math.max(ctx.day, 1);
   const max = Math.max(...days.map(d => d.amount), 1);
-  const diffPrev = prev.expenseToDate > 0 ? (spent - prev.expenseToDate) / prev.expenseToDate : null;
 
-  setText('mmDailySub', `Rata-rata ${mmFormatIDRShort(avg)}/hari` + (diffPrev === null ? '' :
-    ` · ${diffPrev > 0 ? '↑' : '↓'} ${Math.abs(Math.round(diffPrev * 100))}% vs bulan lalu`));
+  setText('mmDailySub', `rata-rata ${mmFormatIDRShort(avg)}/hari`);
 
   if (spent <= 0) {
+    if (stats) stats.innerHTML = '';
     chart.innerHTML = mmEmpty('bar-chart-3', 'Belum ada pengeluaran bulan ini', '');
     setText('mmDailyFoot', '');
     return;
   }
 
-  const avgPct = Math.min(avg / max * 100, 100);
+  let peak = 0;
+  days.forEach((d, i) => { if (d.amount > days[peak].amount) peak = i; });
+  const peakDate = localISODate(new Date(ctx.now.getFullYear(), ctx.now.getMonth(), peak + 1));
+
+  // Three numbers that summarise the month: typical day, worst day, when.
+  if (stats) {
+    stats.innerHTML = `
+      <div class="lx-stat"><span>Rata-rata/hari</span><strong>${mmFormatIDRShort(avg)}</strong></div>
+      <div class="lx-stat"><span>Tertinggi</span><strong class="expense-color">${mmFormatIDRShort(days[peak].amount)}</strong></div>
+      <div class="lx-stat"><span>Tanggal</span><strong>${escapeHtml(mmDayLabel(peakDate))}</strong></div>`;
+  }
+
+  // The tallest bar stops at 80% so a tooltip above it stays in the card.
+  const SCALE = 80;
+  const avgPct = Math.min(avg / max * SCALE, SCALE);
   const bars = days.map((d, i) => {
     const day = i + 1;
     const cls = day > ctx.day ? 'is-future' : (day === ctx.day ? 'is-today' : '') + (d.amount > avg * 1.5 ? ' is-high' : '');
-    const h = d.amount > 0 ? Math.max(d.amount / max * 100, 4) : 0;
+    const h = d.amount > 0 ? Math.max(d.amount / max * SCALE, 3) : 0;
+    d.h = h;
     const label = `${day} ${ctx.monthName}: ${d.amount > 0 ? mmFormatIDR(d.amount) : 'tidak ada pengeluaran'}`;
-    return `<button type="button" class="mm-daily-bar ${cls}" style="--h:${h}%" aria-label="${escapeHtml(label)}" ${day > ctx.day ? 'disabled' : ''} onclick="mmSelectDailyBar(${i})"><span></span></button>`;
+    return `<button type="button" class="mm-daily-bar ${cls}" style="--h:${h}%;--i:${i}" aria-label="${escapeHtml(label)}" ${day > ctx.day ? 'disabled' : ''} onclick="mmSelectDailyBar(${i})"><span></span></button>`;
   }).join('');
   const ticks = [1, 8, 15, 22, ctx.daysInMonth].map(d =>
     `<span style="left:${(d - 0.5) / ctx.daysInMonth * 100}%">${d}</span>`).join('');
 
   chart.innerHTML = `
-    <div class="mm-daily-plot">
+    <div class="mm-daily-plot" id="mmDailyPlot">
       <div class="mm-daily-avg" style="bottom:${avgPct}%"><span>rata-rata</span></div>
       ${bars}
+      <div class="lx-tip hidden" id="mmDailyTip" role="presentation"></div>
     </div>
     <div class="mm-daily-ticks">${ticks}</div>`;
 
-  // Default caption: the heaviest day.
-  let peak = 0;
-  days.forEach((d, i) => { if (d.amount > days[peak].amount) peak = i; });
+  mmBindDailyScrub();
   mmDailyCaption(peak, 'Tertinggi');
 }
 
@@ -11613,124 +12738,279 @@ function mmDailyCaption(i, prefix) {
 }
 
 function mmSelectDailyBar(i) {
+  const ctx = mmMonthContext();
+  if (i < 0 || i >= MM_DAILY.length || i + 1 > ctx.day) return;
   document.querySelectorAll('.mm-daily-bar').forEach((b, j) => b.classList.toggle('is-selected', j === i));
   mmDailyCaption(i, '');
+
+  // Tooltip above the bar, clamped so it never leaves the card.
+  const tip = document.getElementById('mmDailyTip');
+  const plot = document.getElementById('mmDailyPlot');
+  if (!tip || !plot) return;
+  const d = MM_DAILY[i];
+  const date = localISODate(new Date(ctx.now.getFullYear(), ctx.now.getMonth(), i + 1));
+  tip.innerHTML = `<span>${escapeHtml(mmDayLabel(date))}</span><strong>${d.amount > 0 ? mmFormatIDR(d.amount) : 'Rp 0'}</strong>`;
+  tip.style.top = (100 - (d.h || 0)) + '%';
+  tip.classList.remove('hidden');
+  const w = plot.clientWidth;
+  const center = (i + 0.5) / MM_DAILY.length * w;
+  const half = tip.offsetWidth / 2;
+  tip.style.left = Math.min(Math.max(center, half), w - half) + 'px';
 }
 
-/* === SPARKLINE ===
+// Drag across the plot to scrub day by day — bars are only ~10px wide on a
+// phone, too narrow to hit one by one.
+function mmBindDailyScrub() {
+  const plot = document.getElementById('mmDailyPlot');
+  if (!plot) return;
+  let active = false;
+  const pick = (e) => {
+    const r = plot.getBoundingClientRect();
+    const i = Math.floor((e.clientX - r.left) / r.width * MM_DAILY.length);
+    mmSelectDailyBar(Math.min(Math.max(i, 0), MM_DAILY.length - 1));
+  };
+  plot.addEventListener('pointerdown', e => { active = true; pick(e); });
+  plot.addEventListener('pointermove', e => { if (active || e.pointerType === 'mouse') pick(e); });
+  ['pointerup', 'pointercancel'].forEach(t => plot.addEventListener(t, () => { active = false; }));
+  plot.addEventListener('pointerleave', () => {
+    active = false;
+    const tip = document.getElementById('mmDailyTip');
+    if (tip) tip.classList.add('hidden');
+  });
+}
+
+/* === BALANCE TREND ===
    Inline SVG, not <canvas>: an accelerated canvas is its own GPU layer and
    drags the text above it into layers too, and Android dropped those tiles
-   (white rectangles) at the end of a fast scroll. SVG is ordinary paint. */
+   (white rectangles) at the end of a fast scroll. SVG is ordinary paint.
+   The line is a smooth curve through the real month-end balances; it never
+   invents a shape when there is not enough history. */
+function mmSmoothPath(pts) {
+  if (pts.length < 2) return '';
+  let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    // Catmull-Rom → cubic Bézier, tension 1/6.
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
+let MM_TREND_DRAWN = '';
+
 function mmRenderSparkline(data) {
   const svg = document.getElementById('mmNetworthSparkline');
+  const wrap = document.getElementById('mmTrendWrap');
+  const labels = document.getElementById('mmTrendLabels');
   if (!svg) return;
 
   // Month-end net worth for the last 6 months, computed in mmGetDashboard.
-  // Never fabricate a shape: if there is not enough history to draw a real
-  // line, draw nothing rather than an invented upward slope.
-  const points = ((data && data.netWorthTrend) || []).map(p => p.netWorth);
+  const trend = (data && data.netWorthTrend) || [];
+  const points = trend.map(p => p.netWorth);
   if (points.length < 2) {
     svg.innerHTML = '';
-    svg.style.display = 'none';
+    if (wrap) wrap.style.display = 'none';
     return;
   }
-  svg.style.display = '';
+  if (wrap) wrap.style.display = '';
 
-  const w = 200, h = 80;
+  const w = 320, h = 72;
   const min = Math.min(...points);
   const max = Math.max(...points);
   const range = max - min || 1;
-  const padTop = h * 0.15;
-  const padBot = h * 0.05;
+  // Inset so the end dot and the month labels sit inside the screen edge.
+  const padTop = 10, padBot = 6, padX = 26;
   const usableH = h - padTop - padBot;
   const xy = points.map((val, i) => [
-    (i / (points.length - 1)) * w,
+    padX + (i / (points.length - 1)) * (w - padX * 2),
     padTop + usableH - ((val - min) / range) * usableH
   ]);
-  const line = xy.map(([x, y], i) => (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1)).join(' ');
+  const line = mmSmoothPath(xy);
+  const last = xy[xy.length - 1];
 
   svg.innerHTML =
     '<defs><linearGradient id="mmSparkFill" x1="0" y1="0" x2="0" y2="1">' +
-      '<stop offset="0" stop-color="rgba(96,165,250,0.30)"/>' +
-      '<stop offset="1" stop-color="rgba(96,165,250,0)"/>' +
+      '<stop offset="0" stop-color="rgba(32,201,151,0.22)"/>' +
+      '<stop offset="1" stop-color="rgba(32,201,151,0)"/>' +
     '</linearGradient></defs>' +
-    '<path d="' + line + ' L' + w + ' ' + h + ' L0 ' + h + ' Z" fill="url(#mmSparkFill)"/>' +
-    '<path d="' + line + '" fill="none" stroke="#93c5fd" stroke-width="2" ' +
+    '<path class="lx-trend-area" d="' + line + ` L${last[0].toFixed(1)} ${h} L${xy[0][0].toFixed(1)} ${h} Z" fill="url(#mmSparkFill)"/>` +
+    '<path class="lx-trend-line" pathLength="1" d="' + line + '" fill="none" stroke="#20C997" stroke-width="2" ' +
       'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
+
+  // Endpoint dot sits in HTML so it stays round on a stretched viewBox.
+  if (wrap) {
+    let dot = wrap.querySelector('.lx-trend-dot');
+    if (!dot) { dot = document.createElement('span'); dot.className = 'lx-trend-dot'; wrap.appendChild(dot); }
+    dot.style.left = (last[0] / w * 100) + '%';
+    const drawnH = svg.getBoundingClientRect().height || 88;
+    dot.style.top = (last[1] / h * drawnH) + 'px';
+  }
+
+  if (labels) {
+    labels.innerHTML = trend.map((p, i) => {
+      const parts = String(p.month || '').split('-').map(Number);
+      const name = parts.length === 2
+        ? new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(new Date(parts[0], parts[1] - 1, 1))
+        : '';
+      return `<span style="left:${(xy[i][0] / w * 100).toFixed(2)}%">${escapeHtml(name)}</span>`;
+    }).join('');
+  }
+
+  // Draw the line in once per distinct data set, not on every re-render.
+  const key = points.join(',');
+  if (MM_TREND_DRAWN !== key) {
+    MM_TREND_DRAWN = key;
+    svg.classList.remove('is-drawn');
+    void svg.getBoundingClientRect();
+    svg.classList.add('is-drawn');
+  }
 }
 
-/* === ACCOUNT CARDS ===
-   A two-column grid instead of a sideways scroller: every account visible at
-   once, each with its share of the total so concentration is obvious. */
-function mmRenderAccountCards(accounts, netWorth) {
-  const container = document.getElementById('mmAccountsScroll');
-  if (!container) return;
+/* === ACCOUNTS ===
+   Chips under the balance: what the total is made of, largest first. Tap
+   one for its transactions; the last chip goes to account settings. */
+const MM_ACC_TYPE_COLORS = {
+  'Bank': '#60A5FA', 'E-Wallet': '#22D3EE', 'Cash': '#F5B942',
+  'Credit Card': '#F06478', 'Investment': '#20C997', 'Other': '#8997AA'
+};
 
-  const visible = accounts.filter(a => a.showOnDashboard).sort((a, b) => (b.balance || 0) - (a.balance || 0));
-  const sub = document.getElementById('mmAccountsSub');
+function mmRenderAccountCards(accounts) {
+  const box = document.getElementById('mmAccountsScroll');
+  if (!box) return;
+  const manage = `<button type="button" class="hm-chip is-manage" aria-label="Kelola akun" onclick="mmShowPage('mmSettingsPage')">${lucideIconSvg('sliders-horizontal', 15)}</button>`;
+
+  const visible = (accounts || []).filter(a => a.showOnDashboard).sort((a, b) => (b.balance || 0) - (a.balance || 0));
   if (!visible.length) {
-    if (sub) sub.innerHTML = '&nbsp;';
-    container.innerHTML = mmEmpty('wallet', 'Belum ada akun', 'Tambahkan rekening atau dompet di Settings supaya saldonya ikut terhitung.');
+    box.innerHTML = `<button type="button" class="hm-chip" onclick="mmShowPage('mmSettingsPage')">${lucideIconSvg('plus', 15)}<span class="hm-chip-name">Tambah akun</span></button>`;
     return;
   }
-
-  const typeColors = {
-    'Bank': '#60a5fa', 'E-Wallet': '#22d3ee', 'Cash': '#fbbf24',
-    'Credit Card': '#f472b6', 'Investment': '#818cf8', 'Other': '#94a3b8'
-  };
-  // Shares of what is actually held: an overdrawn account would otherwise
-  // push the others past 100%.
-  const total = visible.reduce((s, a) => s + Math.max(a.balance || 0, 0), 0);
-  if (sub) {
-    const top = visible[0];
-    const share = total > 0 ? Math.round((top.balance || 0) / total * 100) : 0;
-    sub.textContent = `${visible.length} akun · ${top.name} ${share}% dari total`;
-  }
-
-  // Empty accounts collapse into one line instead of a tile each.
-  const empty = visible.filter(a => !(a.balance || 0));
+  // Empty accounts stay off the strip; Settings still lists them.
   const shown = visible.filter(a => a.balance || 0);
-
-  container.innerHTML = shown.map(a => {
-    const color = typeColors[a.type] || typeColors['Other'];
-    const initials = (a.name || '').substring(0, 2).toUpperCase();
-    const share = total > 0 ? Math.max(Math.min((a.balance || 0) / total * 100, 100), 0) : 0;
+  const total = visible.reduce((s, a) => s + Math.max(a.balance || 0, 0), 0);
+  box.innerHTML = shown.map(a => {
+    const color = MM_ACC_TYPE_COLORS[a.type] || MM_ACC_TYPE_COLORS['Other'];
+    const share = total > 0 ? Math.round(Math.max(a.balance || 0, 0) / total * 100) : 0;
     return `
-      <button type="button" class="mm-acc-tile" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
-        <span class="mm-acc-top">
-          <span class="mm-acc-logo" style="background:${color}22;color:${color}">${a.icon ? mmAccountIconSvg(a.icon, 15) : initials}</span>
-          <span class="mm-acc-name">${escapeHtml(a.name)}</span>
-          <span class="mm-acc-share">${Math.round(share)}%</span>
-        </span>
-        <strong class="mm-acc-balance${(a.balance || 0) < 0 ? ' is-neg' : ''}">${mmFormatIDR(a.balance)}</strong>
-        <span class="mm-acc-bar"><span style="width:${share}%;background:${color}"></span></span>
+      <button type="button" class="hm-chip" aria-label="${escapeHtml(a.name)}, ${share}% dari total" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
+        <span class="hm-chip-ic" style="color:${color}">${a.icon ? mmAccountIconSvg(a.icon, 15) : lucideIconSvg('wallet', 15)}</span>
+        <span class="hm-chip-name">${escapeHtml(a.name)}</span>
+        <strong class="${(a.balance || 0) < 0 ? 'expense-color' : ''}">${mmFormatIDRShort(a.balance)}</strong>
       </button>`;
-  }).join('') + (empty.length
-    ? `<p class="mm-acc-empty">Saldo 0: ${empty.map(a => escapeHtml(a.name)).join(', ')}</p>`
-    : '');
+  }).join('') + manage;
 }
 
-/* === BUDGET CARD === */
+/* === BUDGET ===
+   One state per pos, decided once and used by the overview card and the
+   Budget page alike. Spending posts are judged against their limit; posts
+   that are money set aside (invest, savings) are targets, so going past
+   them is good news, not an overrun. */
+function mmBudgetState(c) {
+  const target = c.target || 0;
+  const spent = c.spent || 0;
+  const pct = target > 0 ? Math.round(spent / target * 100) : (spent > 0 ? 100 : 0);
+  const saving = MM_NON_SPEND_RE.test(c.category || '');
+  let state, label;
+  if (saving) {
+    state = pct >= 100 ? 'goal' : 'ok';
+    label = pct >= 100 ? 'Target tercapai' : 'Berjalan';
+  } else if (pct > 100) { state = 'over'; label = 'Lewat budget'; }
+  else if (pct >= 85) { state = 'warn'; label = 'Hampir habis'; }
+  else { state = 'ok'; label = 'Aman'; }
+  const remaining = target - spent;
+  let note;
+  if (saving) note = remaining > 0 ? `kurang ${mmFormatIDRShort(remaining)}` : `+${mmFormatIDRShort(-remaining)} dari target`;
+  else note = remaining >= 0 ? `sisa ${mmFormatIDRShort(remaining)}` : `lebih ${mmFormatIDRShort(-remaining)}`;
+  return { target, spent, remaining, pct, saving, state, label, note };
+}
+
 function mmBudgetBasisHtml() {
   const b = MM_BUDGET_BASIS;
   return `
-    <div class="mm-budget-basis">
-      <span class="mm-budget-basis-label">Dana bulan ini</span>
-      <strong>${mmFormatIDR(b.carryover + b.income)}</strong>
-      <span class="mm-budget-basis-parts">
-        <span>${lucideIconSvg('arrow-down-to-line', 12)}Sisa bulan lalu ${mmFormatIDRShort(b.carryover)}</span>
-        <span>${lucideIconSvg('plus', 12)}Pemasukan ${mmFormatIDRShort(b.income)}</span>
-      </span>
+    <p class="lx-budget-basis">
+      Dana bulan ini = sisa bulan lalu <strong>${mmFormatIDRShort(b.carryover)}</strong>
+      + pemasukan <strong>${mmFormatIDRShort(b.income)}</strong>
+    </p>`;
+}
+
+// Totals across the posts: budget, used, left, % used.
+function mmBudgetTotals(cards) {
+  const totalTarget = cards.reduce((s, c) => s + (c.target || 0), 0);
+  const totalSpent = cards.reduce((s, c) => s + (c.spent || 0), 0);
+  const left = totalTarget - totalSpent;
+  const pct = totalTarget > 0 ? Math.round(totalSpent / totalTarget * 100) : 0;
+  const state = pct > 100 ? 'over' : pct >= 85 ? 'warn' : 'ok';
+  return { totalTarget, totalSpent, left, pct, state };
+}
+
+function mmBudgetSummaryHtml(t) {
+  return `
+    <div class="lx-budget-sum">
+      <div class="lx-budget-sum-top">
+        <div>
+          <span class="lx-k">Sisa budget</span>
+          <strong class="lx-budget-left ${t.left < 0 ? 'expense-color' : ''}">${t.left < 0 ? '−' : ''}${mmFormatIDR(Math.abs(t.left))}</strong>
+        </div>
+        <span class="lx-budget-pct is-${t.state}">${t.pct}%<small>terpakai</small></span>
+      </div>
+      <div class="lx-bar is-${t.state}" role="progressbar" aria-label="Budget terpakai" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(t.pct, 100)}">
+        <span style="--w:${Math.min(t.pct, 100)}%"></span>
+      </div>
+      <div class="lx-budget-sum-foot">
+        <span>Terpakai <strong>${mmFormatIDR(t.totalSpent)}</strong></span>
+        <span>Total <strong>${mmFormatIDR(t.totalTarget)}</strong></span>
+      </div>
     </div>`;
 }
 
+function mmBudgetRowHtml(c, detailed) {
+  const b = mmBudgetState(c);
+  const color = mmCategoryColor(c.category);
+  return `
+    <button type="button" class="mm-budget-row is-${b.state}" onclick="mmShowCategoryDetail('${jsStr(c.category)}')">
+      <span class="mm-budget-row-icon" style="color:${color}">${mmCategoryEmoji(c.category)}</span>
+      <span class="mm-budget-row-body">
+        <span class="mm-budget-row-top">
+          <span class="mm-budget-row-name">${escapeHtml(c.category)}${detailed && c.percent ? ` <small>${c.percent}% dana</small>` : ''}</span>
+          <span class="mm-budget-row-pct">${b.pct}%</span>
+        </span>
+        <span class="lx-bar is-${b.state}" aria-hidden="true"><span style="--w:${Math.min(b.pct, 100)}%"></span></span>
+        <span class="mm-budget-row-foot">
+          <span>${mmFormatIDRShort(b.spent)} <span class="lx-of">dari ${mmFormatIDRShort(b.target)}</span></span>
+          <span class="mm-budget-row-note"><span class="lx-state-dot" aria-hidden="true"></span>${escapeHtml(b.label)} · ${escapeHtml(b.note)}</span>
+        </span>
+      </span>
+    </button>`;
+}
+
+// Home tile: a ring around the post's icon, its %, name and what is left.
+function mmBudgetTileHtml(c) {
+  const b = mmBudgetState(c);
+  const color = mmCategoryColor(c.category);
+  const r = 21, circ = 2 * Math.PI * r;
+  const frac = Math.min(b.pct, 100) / 100;
+  const note = b.state === 'goal' ? 'Target tercapai' : b.note;
+  return `
+    <button type="button" class="hm-btile is-${b.state}" onclick="mmShowCategoryDetail('${jsStr(c.category)}')">
+      <span class="hm-btile-top">
+        <span class="hm-bring" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="${r}" class="hm-ring-track"/>
+            <circle cx="24" cy="24" r="${r}" class="hm-ring-val" ${frac > 0 ? '' : 'stroke-opacity="0"'} stroke-dasharray="${(frac * circ).toFixed(1)} ${circ.toFixed(1)}" transform="rotate(-90 24 24)"/></svg>
+          <span style="color:${color}">${mmCategoryEmoji(c.category)}</span>
+        </span>
+        <span class="hm-btile-pct">${b.pct}%</span>
+      </span>
+      <span class="hm-btile-name">${escapeHtml(c.category)}</span>
+      <span class="hm-btile-note">${escapeHtml(note)}</span>
+    </button>`;
+}
+
 function mmRenderBudgetCard(allocationCards, totalIncome, carryover) {
-  // Keep the full allocation list for the detail sheet
+  // Keep the full allocation list for the Budget page and detail sheet
   MM_ALLOC_CARDS = allocationCards || [];
   MM_BUDGET_BASIS = { income: totalIncome || 0, carryover: carryover || 0 };
 
-  // Every pos in one compact list — the old card showed only "Living", so
-  // overspending anywhere else was invisible from the dashboard.
   const list = document.getElementById('mmBudgetList');
   const summary = document.getElementById('mmBudgetSummary');
   if (!list) return;
@@ -11738,42 +13018,60 @@ function mmRenderBudgetCard(allocationCards, totalIncome, carryover) {
   const cards = MM_ALLOC_CARDS.filter(c => (c.target || 0) > 0 || (c.spent || 0) > 0);
   if (!cards.length) {
     if (summary) summary.textContent = 'Belum ada dana bulan ini';
-    list.innerHTML = mmEmpty('circle-dollar', 'Budget belum terbentuk', 'Budget dibentuk dari sisa saldo bulan lalu ditambah pemasukan, lalu dibagi sesuai persentase di Settings.', `<button class="mm-empty-action" onclick="mmShowActionSheet('income')">Catat pemasukan</button>`);
+    list.innerHTML = `<div class="hm-card">${mmEmpty('circle-dollar', 'Budget belum terbentuk', 'Budget dibentuk dari sisa saldo bulan lalu ditambah pemasukan, lalu dibagi sesuai persentase di Settings.', `<button class="mm-empty-action" onclick="mmShowActionSheet('income')">Catat pemasukan</button>`)}</div>`;
     return;
   }
 
-  const totalTarget = cards.reduce((s, c) => s + (c.target || 0), 0);
-  const totalSpent = cards.reduce((s, c) => s + (c.spent || 0), 0);
-  const totalPct = totalTarget > 0 ? Math.round(totalSpent / totalTarget * 100) : 0;
-  if (summary) summary.textContent = `${mmFormatIDR(totalSpent)} terpakai dari ${mmFormatIDR(totalTarget)} · ${totalPct}%`;
+  const t = mmBudgetTotals(cards);
+  if (summary) summary.textContent = `${t.left < 0 ? 'Lewat ' : 'Sisa '}${mmFormatIDRShort(Math.abs(t.left))} dari ${mmFormatIDRShort(t.totalTarget)} · ${t.pct}% terpakai`;
+  list.innerHTML = cards.map(mmBudgetTileHtml).join('');
+}
 
-  // Where the pool comes from, stated once above the posts.
-  const basis = mmBudgetBasisHtml();
+/* Budget tab: the same posts in full, plus what each is allowed to grow to. */
+function mmRenderBudgetPage() {
+  const box = document.getElementById('mmBudgetPageContent');
+  if (!box) return;
+  const ctx = mmMonthContext();
+  setText('mmBudgetPageSub', `${ctx.monthName.charAt(0).toUpperCase() + ctx.monthName.slice(1)} ${ctx.now.getFullYear()} · ${ctx.daysLeft - 1} hari lagi`);
 
-  list.innerHTML = basis + cards.map(c => {
-    const target = c.target || 0;
-    const spent = c.spent || 0;
-    const remaining = target - spent;
-    const pct = target > 0 ? Math.round(spent / target * 100) : (spent > 0 ? 100 : 0);
-    const state = pct > 100 ? 'over' : pct >= 85 ? 'warn' : 'ok';
-    const color = mmCategoryColor(c.category);
-    const note = remaining >= 0 ? `sisa ${mmFormatIDRShort(remaining)}` : `lebih ${mmFormatIDRShort(-remaining)}`;
-    return `
-      <button type="button" class="mm-budget-row is-${state}" onclick="mmShowCategoryDetail('${jsStr(c.category)}')">
-        <span class="mm-budget-row-icon" style="background:${color}22;color:${color}">${mmCategoryEmoji(c.category)}</span>
-        <span class="mm-budget-row-body">
-          <span class="mm-budget-row-top">
-            <span class="mm-budget-row-name">${escapeHtml(c.category)}</span>
-            <span class="mm-budget-row-pct">${pct}%</span>
-          </span>
-          <span class="mm-budget-bar"><span class="mm-budget-bar-fill" style="width:${Math.min(pct, 100)}%"></span></span>
-          <span class="mm-budget-row-foot">
-            <span>${mmFormatIDRShort(spent)} / ${mmFormatIDRShort(target).replace('Rp ', '')}</span>
-            <span class="mm-budget-row-note">${note}</span>
-          </span>
-        </span>
-      </button>`;
-  }).join('');
+  const cards = (MM_ALLOC_CARDS && MM_ALLOC_CARDS.length) ? MM_ALLOC_CARDS
+    : ((MM_DASHBOARD && MM_DASHBOARD.allocationCards) || []);
+  const active = cards.filter(c => (c.target || 0) > 0 || (c.spent || 0) > 0);
+  if (!active.length) {
+    box.innerHTML = `<div class="mm-dash-card">${mmEmpty('circle-dollar', 'Budget belum terbentuk',
+      'Budget dibentuk dari sisa saldo bulan lalu ditambah pemasukan, lalu dibagi sesuai persentase di Settings.',
+      `<button class="mm-empty-action" onclick="mmShowActionSheet('income')">Catat pemasukan</button>`)}</div>`;
+    return;
+  }
+
+  const t = mmBudgetTotals(active);
+  const spend = active.filter(c => !MM_NON_SPEND_RE.test(c.category || ''));
+  const counts = { ok: 0, warn: 0, over: 0 };
+  spend.forEach(c => { const s = mmBudgetState(c).state; if (counts[s] !== undefined) counts[s]++; });
+
+  box.innerHTML = `
+    <div class="mm-dash-card lx-budget-hero">
+      ${mmBudgetSummaryHtml(t)}
+      <div class="lx-budget-legend">
+        <span class="is-ok"><span class="lx-state-dot"></span>${counts.ok} aman</span>
+        <span class="is-warn"><span class="lx-state-dot"></span>${counts.warn} hampir habis</span>
+        <span class="is-over"><span class="lx-state-dot"></span>${counts.over} lewat budget</span>
+      </div>
+      ${mmBudgetBasisHtml()}
+    </div>
+    <div class="mm-section-header lx-sub-head"><div><h3>Per pos</h3><p class="mm-section-sub">Ketuk untuk melihat transaksinya</p></div></div>
+    <div class="mm-dash-card mm-budget-list">
+      <div class="lx-budget-rows">${active.map(c => mmBudgetRowHtml(c, true)).join('')}</div>
+    </div>
+    <button type="button" class="btn-ghost btn-full lx-page-action" onclick="mmOpenBudgetSettings()">${lucideIconSvg('sliders-horizontal', 16)} Atur pembagian budget</button>`;
+}
+
+function mmOpenBudgetSettings() {
+  mmShowPage('mmSettingsPage');
+  setTimeout(() => {
+    const s = document.getElementById('mmSetBudget');
+    if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 80);
 }
 
 /* Bottom sheet: full budget breakdown across all allocation categories */
@@ -11790,67 +13088,19 @@ function mmShowBudgetDetail() {
     return;
   }
 
-  const totalTarget = cards.reduce((s, c) => s + (c.target || 0), 0);
-  const totalSpent = cards.reduce((s, c) => s + (c.spent || 0), 0);
-
-  let html = '<h3 class="sheet-title">Budget bulan ini</h3>';
-  html += `<p class="sheet-desc">${mmFormatIDR(totalSpent)} terpakai dari ${mmFormatIDR(totalTarget)}</p>`;
-  html += mmBudgetBasisHtml();
-  html += '<div class="mm-budget-detail-list">';
-  html += cards.map(c => {
-    const target = c.target || 0;
-    const spent = c.spent || 0;
-    const remaining = target - spent;
-    const pct = target > 0 ? Math.round((spent / target) * 100) : 0;
-    const over = pct > 100;
-    const barBg = over ? 'linear-gradient(90deg,#ef4444,#f59e0b)' : (c.color || 'var(--accent)');
-    return `
-      <div class="mm-budget-detail-row">
-        <div class="mm-budget-detail-head">
-          <span class="mm-budget-detail-name">${mmCategoryEmoji(c.category)} ${escapeHtml(c.category)} <small>${c.percent || 0}%</small></span>
-          <strong>${mmFormatIDR(spent)} <span>/ ${mmFormatIDR(target)}</span></strong>
-        </div>
-        <div class="mm-budget-bar"><div class="mm-budget-bar-fill" style="width:${Math.min(pct, 100)}%;background:${barBg}"></div></div>
-        <div class="mm-budget-detail-foot">
-          <span>${pct}% used</span>
-          <span style="color:${remaining >= 0 ? 'var(--accent)' : 'var(--error)'}">${mmFormatIDR(Math.abs(remaining))} ${remaining >= 0 ? 'left' : 'over'}</span>
-        </div>
-      </div>`;
-  }).join('');
-  html += '</div>';
-
-  content.innerHTML = html;
+  const t = mmBudgetTotals(cards);
+  content.innerHTML = '<h3 class="sheet-title">Budget bulan ini</h3>'
+    + mmBudgetSummaryHtml(t)
+    + '<div class="lx-budget-rows">' + cards.map(c => mmBudgetRowHtml(c, true)).join('') + '</div>'
+    + mmBudgetBasisHtml();
   sheet.classList.remove('hidden');
 }
 
-/* === CATEGORY BREAKDOWN ===
-   Every category of the month for money out or in, largest first. Tapping a
-   row opens its sub-categories in place; "Lihat transaksi" lists the entries
-   behind it. A single stacked bar shows the proportions at a glance. */
-let mmCurrentChartType = 'expense';
-let MM_BREAKDOWN_OPEN = '';   // "<type>|<category>" of the open row
-const MM_BD_COLORS = ['#22d3ee', '#fbbf24', '#f472b6', '#818cf8', '#fb923c', '#a78bfa', '#2dd4bf', '#60a5fa', '#e879f9', '#94a3b8'];
-
-function mmSwitchChartTab(btn, type) {
-  document.querySelectorAll('.mm-expense-tab').forEach(t => {
-    const on = t === btn;
-    t.classList.toggle('active', on);
-    t.setAttribute('aria-selected', on ? 'true' : 'false');
-  });
-  MM_BREAKDOWN_OPEN = '';
-  mmRenderChart(type);
-}
-
-function mmToggleBreakdown(type, category) {
-  const key = type + '|' + category;
-  MM_BREAKDOWN_OPEN = MM_BREAKDOWN_OPEN === key ? '' : key;
-  mmRenderChart(mmCurrentChartType);
-}
-
-function mmBreakdownEntries(type) {
+function mmBreakdownEntries(type, txs) {
   const want = type === 'income' ? 'Income' : 'Expense';
   const map = {};
-  ((MM_DASHBOARD && MM_DASHBOARD.monthTransactions) || []).forEach(tx => {
+  const source = txs || ((MM_DASHBOARD && MM_DASHBOARD.monthTransactions) || []);
+  source.forEach(tx => {
     if (tx.type !== want) return;
     const name = tx.category || 'Tanpa kategori';
     const c = map[name] || (map[name] = { name, amount: 0, count: 0, subs: {} });
@@ -11869,111 +13119,93 @@ function mmBreakdownEntries(type) {
   return list;
 }
 
-function mmRenderChart(type) {
-  mmCurrentChartType = type;
+
+/* === WHERE IT WENT ===
+   This month's spending by category: one proportional bar, then the top
+   four with the rest folded into "Lainnya". Tap a category for its
+   transactions; the full breakdown lives in Analytics. */
+const MM_BD_COLORS = ['#20C997', '#60A5FA', '#F5B942', '#F06478', '#A78BFA', '#22D3EE', '#FB923C', '#8997AA'];
+
+function mmRenderChart() {
   const box = document.getElementById('mmBreakdown');
-  const sub = document.getElementById('mmBreakdownSub');
   if (!box) return;
-
-  const isIncome = type === 'income';
-  const entries = MM_DASHBOARD ? mmBreakdownEntries(type) : [];
+  const entries = MM_DASHBOARD ? mmBreakdownEntries('expense') : [];
   const total = entries.reduce((s, e) => s + e.amount, 0);
+  if (total <= 0) { box.innerHTML = ''; box.hidden = true; return; }
+  box.hidden = false;
 
-  if (total <= 0) {
-    if (sub) sub.textContent = '';
-    box.innerHTML = mmEmpty('circle-dollar',
-      isIncome ? 'Belum ada pemasukan bulan ini' : 'Belum ada pengeluaran bulan ini',
-      isIncome ? 'Catat pemasukan supaya terlihat berasal dari mana saja.' : 'Catat pengeluaran supaya terlihat ke mana uangnya pergi.',
-      `<button class="mm-empty-action" onclick="mmShowActionSheet('${isIncome ? 'income' : 'expense'}')">${isIncome ? 'Catat pemasukan' : 'Catat pengeluaran'}</button>`);
-    return;
+  const TOP = 4;
+  const rows = entries.slice(0, TOP);
+  const rest = entries.slice(TOP);
+  if (rest.length) {
+    rows.push({ name: 'Lainnya', other: rest.length, color: '#8997AA',
+      amount: rest.reduce((s, e) => s + e.amount, 0), count: rest.reduce((s, e) => s + e.count, 0) });
   }
 
-  if (sub) sub.textContent = `${entries.length} kategori · ${entries.reduce((s, e) => s + e.count, 0)} transaksi`;
-
-  const stack = entries.map(e =>
-    `<span style="width:${(e.amount / total * 100).toFixed(2)}%;background:${e.color}" title="${escapeHtml(e.name)}"></span>`).join('');
-
-  const rows = entries.map(e => {
-    const key = type + '|' + e.name;
-    const open = MM_BREAKDOWN_OPEN === key;
+  const stack = rows.map(e =>
+    `<span style="flex:${e.amount};background:${e.color}"></span>`).join('');
+  const list = rows.map(e => {
     const pct = Math.round(e.amount / total * 100);
-    const subs = Object.entries(e.subs).sort((a, b) => b[1] - a[1]);
-    const subRows = subs.map(([name, amount]) => `
-        <div class="mm-bd-sub">
-          <span>${escapeHtml(name)}</span>
-          <span class="mm-bd-sub-pct">${Math.round(amount / e.amount * 100)}%</span>
-          <strong>${mmFormatIDR(amount)}</strong>
-        </div>`).join('');
-    return `
-      <div class="mm-bd-item ${open ? 'is-open' : ''}">
-        <button type="button" class="mm-bd-row" aria-expanded="${open}" onclick="mmToggleBreakdown('${type}','${jsStr(e.name)}')">
-          <span class="mm-budget-row-icon" style="background:${e.color}22;color:${e.color}">${mmCategoryEmoji(e.name, isIncome ? 'Income' : undefined)}</span>
-          <span class="mm-bd-main">
-            <span class="mm-bd-top">
-              <span class="mm-bd-name">${escapeHtml(e.name)}</span>
-              <strong>${mmFormatIDR(e.amount)}</strong>
-            </span>
-            <span class="mm-bd-meta">
-              <span>${e.count} transaksi · ${pct}%</span>
-              <span class="mm-bd-chev" aria-hidden="true">${lucideIconSvg('chevron-down', 14)}</span>
-            </span>
-            <span class="mm-bd-bar" aria-hidden="true"><span style="width:${Math.max(pct, 2)}%;background:${e.color}"></span></span>
-          </span>
-        </button>
-        ${open ? `
-        <div class="mm-bd-detail">
-          ${subRows}
-          <button type="button" class="mm-bd-more" onclick="mmShowCategoryDetail('${jsStr(e.name)}','${type}')">Lihat ${e.count} transaksi ${lucideIconSvg('chevron-right', 14)}</button>
-        </div>` : ''}
-      </div>`;
+    const inner = `
+        <span class="hm-cat-dot" style="background:${e.color}" aria-hidden="true"></span>
+        <span class="hm-cat-name">${escapeHtml(e.name)}<small>${e.other ? e.other + ' kategori · ' : ''}${e.count} transaksi</small></span>
+        <span class="hm-cat-pct">${pct}%</span>
+        <strong class="hm-cat-amt">${mmFormatIDR(e.amount)}</strong>`;
+    return e.other
+      ? `<div class="hm-cat">${inner}<span class="hm-chev"></span></div>`
+      : `<button type="button" class="hm-cat" onclick="mmShowCategoryDetail('${jsStr(e.name)}','expense')">${inner}<span class="hm-chev" aria-hidden="true">${lucideIconSvg('chevron-right', 16)}</span></button>`;
   }).join('');
 
   box.innerHTML = `
-    <div class="mm-bd-total">
-      <span>${isIncome ? 'Total pemasukan' : 'Total pengeluaran'}</span>
-      <strong class="${isIncome ? 'income-color' : 'expense-color'}">${mmFormatIDR(total)}</strong>
-    </div>
-    <div class="mm-bd-stack" role="img" aria-label="Porsi tiap kategori dari total">${stack}</div>
-    <div class="mm-bd-list">${rows}</div>`;
+    <div class="hm-block-head"><span>Ke mana uangnya</span><span>${entries.length} kategori</span></div>
+    <div class="hm-stack" role="img" aria-label="${escapeHtml(rows.map(e => `${e.name} ${Math.round(e.amount / total * 100)}%`).join(', '))}">${stack}</div>
+    <div class="hm-cats">${list}</div>`;
 }
 
-/* === DASHBOARD TRANSACTIONS === */
+/* === LATEST TRANSACTIONS ===
+   The newest handful, grouped by day with that day's net. Everything else
+   is one tap away in Transactions. */
+const MM_TX_PREVIEW = 6;
+
 function mmRenderDashboardTransactions() {
   const container = document.getElementById('mmDashboardTransactions');
   if (!container) return;
+  const count = document.getElementById('mmTxMonthCount');
 
   const txs = (MM_DASHBOARD && MM_DASHBOARD.monthTransactions) || [];
   if (!txs.length) {
-    const count = document.getElementById('mmTxMonthCount');
     if (count) count.textContent = '';
     container.innerHTML = mmEmpty('arrow-right-left', 'Belum ada transaksi bulan ini', 'Mulai dari yang barusan kamu belanjakan.', `<button class="mm-empty-action" onclick="mmShowActionSheet('expense')">Catat pengeluaran</button>`);
     return;
   }
 
-  // The whole month, newest first, grouped by day with that day's net —
-  // the dashboard used to stop at the latest few and leave the rest of the
-  // month one tap away in History.
   const sorted = [...txs].sort((a, b) =>
     (b.date || '').localeCompare(a.date || '') || ((b.rowNumber || 0) - (a.rowNumber || 0)));
+  const shown = sorted.slice(0, MM_TX_PREVIEW);
 
   const groups = [];
-  sorted.forEach(tx => {
+  shown.forEach(tx => {
     const last = groups[groups.length - 1];
     if (last && last.date === tx.date) last.items.push(tx);
     else groups.push({ date: tx.date, items: [tx] });
   });
 
-  const count = document.getElementById('mmTxMonthCount');
-  if (count) count.textContent = sorted.length + ' transaksi';
+  // Day net counts every transaction of that day, not only the ones shown.
+  const dayNet = {};
+  sorted.forEach(tx => {
+    dayNet[tx.date] = (dayNet[tx.date] || 0) + (tx.type === 'Income' ? tx.amount : tx.type === 'Expense' ? -tx.amount : 0);
+  });
+
+  if (count) count.textContent = `${sorted.length} transaksi bulan ini`;
 
   container.innerHTML = groups.map(g => {
-    const net = g.items.reduce((sum, tx) =>
-      sum + (tx.type === 'Income' ? tx.amount : tx.type === 'Expense' ? -tx.amount : 0), 0);
+    const net = dayNet[g.date] || 0;
     const netClass = net > 0 ? 'income-color' : net < 0 ? 'expense-color' : '';
-    const netText = net === 0 ? '' : (net > 0 ? '+' : '-') + mmFormatIDR(Math.abs(net));
+    const netText = net === 0 ? '' : (net > 0 ? '+' : '−') + mmFormatIDR(Math.abs(net));
     const rows = g.items.map(tx => {
-      const prefix = tx.type === 'Income' ? '+' : tx.type === 'Expense' ? '-' : '';
-      const colorClass = tx.type === 'Income' ? 'income-color' : tx.type === 'Expense' ? 'expense-color' : 'transfer-color';
+      const isIn = tx.type === 'Income', isOut = tx.type === 'Expense';
+      const prefix = isIn ? '+' : isOut ? '−' : '';
+      const colorClass = isIn ? 'income-color' : isOut ? 'expense-color' : 'transfer-color';
       const catColor = mmCategoryColor(tx.category, tx.type);
       const catIcon = mmCategoryEmoji(tx.category, tx.type);
       const label = tx.notes || tx.subcategory || tx.category || tx.type;
@@ -11982,7 +13214,7 @@ function mmRenderDashboardTransactions() {
         : [tx.subcategory || tx.category || tx.type, tx.account].filter(Boolean).join(' · ');
       return `
       <div class="mm-transaction-item" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
-        <div class="mm-tx-icon-dash" style="background:${catColor}18;color:${catColor}">${catIcon}</div>
+        <div class="mm-tx-icon-dash" style="color:${catColor}">${catIcon}</div>
         <div class="mm-tx-info-dash">
           <div class="mm-tx-name-dash">${escapeHtml(label)}</div>
           <div class="mm-tx-category-dash">${escapeHtml(meta)}</div>
@@ -11998,7 +13230,9 @@ function mmRenderDashboardTransactions() {
         </div>
         ${rows}
       </div>`;
-  }).join('');
+  }).join('') + (sorted.length > MM_TX_PREVIEW
+    ? `<button type="button" class="lx-more" onclick="mmShowPage('mmHistoryPage')">Lihat semua ${sorted.length} transaksi ${lucideIconSvg('chevron-right', 16)}</button>`
+    : '');
 }
 
 // "Hari ini", "Kemarin", else "Sab, 26 Sep". Parsed as a local date: new
@@ -13207,7 +14441,18 @@ function lucideIconSvg(name, size) {
     'pencil': '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
     'trash': '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
     'circle-dollar': '<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>',
-    'clock': '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'
+    'clock': '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+    'trending-down': '<polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/>',
+    'arrow-up-right': '<path d="M7 17 17 7"/><path d="M7 7h10v10"/>',
+    'arrow-down-right': '<path d="m7 7 10 10"/><path d="M17 7v10H7"/>',
+    'eye': '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
+    'eye-off': '<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/>',
+    'shield-check': '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+    'sparkles': '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+    'send': '<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>',
+    'square': '<rect width="14" height="14" x="5" y="5" rx="2" fill="currentColor" stroke="none"/>',
+    'square-pen': '<path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/>',
+    'sliders-horizontal': '<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>'
   };
 
   const inner = paths[name] || '<circle cx="12" cy="12" r="4"/>';
@@ -14721,6 +15966,474 @@ function txSaveRecent(payload) {
   });
 })();
 
+</script>
+
+  <script>
+/* === AI ASSISTANT ===
+   A chat that answers questions about the user's own money. Each request
+   sends a fresh snapshot of their data (balances, budget, this month's
+   transactions, monthly history) as the system instruction, so answers
+   always reflect what is on screen right now.
+
+   The Gemini key is never in the source: the app is public on GitHub Pages,
+   so a key in the bundle would be readable by anyone. It lives in this
+   browser's storage only, pasted in by the user. */
+const MM_AI_KEY_STORE = 'gemini_api_key';
+const MM_AI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/';
+// Tried in order: the first is the best fit; the others take over when it is
+// overloaded (503) or out of quota (429) — both common on the free tier.
+const MM_AI_MODELS = ['gemini-3-flash-preview', 'gemini-flash-latest', 'gemini-3.1-flash-lite-preview'];
+const MM_AI_SUGGESTIONS = [
+  'Bagaimana kondisi keuanganku bulan ini?',
+  'Kategori mana yang paling boros?',
+  'Berapa yang aman kubelanjakan per hari?',
+  'Bandingkan bulan ini dengan bulan lalu',
+  'Berapa yang bisa kutabung bulan ini?'
+];
+
+let MM_AI_HISTORY = [];   // Gemini "contents": {role, parts:[{text}]}
+let MM_AI_BUSY = false;
+let MM_AI_ABORT = null;
+let MM_AI_OPENER = null;  // focus returns here when the chat closes
+
+function mmAiGetKey() { return (safeStorage.getItem(MM_AI_KEY_STORE) || '').trim(); }
+
+/* ---------- open / close ---------- */
+function mmOpenAiChat() {
+  const sheet = document.getElementById('mmAiSheet');
+  if (!sheet) return;
+  MM_AI_OPENER = document.activeElement;
+  sheet.classList.remove('hidden');
+  document.body.classList.add('ai-open');
+  mmAiRender();
+  // Warm the full history in the background; the first answer needs it.
+  if (typeof mmLoadSearchData === 'function' && !MM_SEARCH_CACHE) mmLoadSearchData();
+  const input = document.getElementById('mmAiInput');
+  // Keyboard users land in the field; on a phone focus goes to the dialog's
+  // first control so the on-screen keyboard doesn't cover the suggestions.
+  setTimeout(() => {
+    if (input && mmAiGetKey() && window.matchMedia('(pointer: fine)').matches) input.focus();
+    else { const back = sheet.querySelector('.mm-search-back'); if (back) back.focus({ preventScroll: true }); }
+  }, 80);
+}
+
+function mmCloseAiChat() {
+  const sheet = document.getElementById('mmAiSheet');
+  if (sheet) sheet.classList.add('hidden');
+  document.body.classList.remove('ai-open');
+  const input = document.getElementById('mmAiInput');
+  if (input) input.blur();
+  if (MM_AI_OPENER && document.contains(MM_AI_OPENER)) MM_AI_OPENER.focus({ preventScroll: true });
+  MM_AI_OPENER = null;
+}
+
+function mmAiNewChat() {
+  if (MM_AI_ABORT) MM_AI_ABORT.abort();
+  MM_AI_HISTORY = [];
+  mmAiRender();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const sheet = document.getElementById('mmAiSheet');
+  if (sheet && !sheet.classList.contains('hidden')) mmCloseAiChat();
+});
+
+/* ---------- key management ---------- */
+function mmAiSaveKey(inputId) {
+  const input = document.getElementById(inputId);
+  const key = (input && input.value || '').trim();
+  if (key.length < 20) { showToast('API key terlihat tidak lengkap', 'error'); return; }
+  safeStorage.setItem(MM_AI_KEY_STORE, key);
+  if (input) input.value = '';
+  showToast('API key tersimpan di browser ini', 'success');
+  mmAiRenderKeyStatus();
+  mmAiRender();
+}
+
+function mmAiClearKey() {
+  safeStorage.removeItem(MM_AI_KEY_STORE);
+  showToast('API key dihapus dari browser ini', 'success');
+  mmAiRenderKeyStatus();
+  mmAiRender();
+}
+
+function mmAiRenderKeyStatus() {
+  const status = document.getElementById('mmAiKeyStatus');
+  const clear = document.getElementById('mmAiKeyClear');
+  const key = mmAiGetKey();
+  if (status) {
+    status.innerHTML = key
+      ? `<span class="ai-key-dot is-on"></span>Terpasang · berakhiran <strong>${escapeHtml(key.slice(-4))}</strong>`
+      : `<span class="ai-key-dot"></span>Belum ada key. Buat gratis di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.`;
+  }
+  if (clear) clear.hidden = !key;
+}
+
+/* ---------- rendering ---------- */
+function mmAiRender() {
+  const log = document.getElementById('mmAiLog');
+  const form = document.getElementById('mmAiForm');
+  if (!log) return;
+  const hasKey = !!mmAiGetKey();
+  if (form) form.hidden = !hasKey;
+
+  if (!hasKey) {
+    log.innerHTML = `
+      <div class="ai-intro">
+        <span class="ai-intro-mark" aria-hidden="true">${lucideIconSvg('sparkles', 26)}</span>
+        <h3>Pasang API key Gemini</h3>
+        <p>Asisten membaca saldo, budget, dan transaksimu lalu menjawab pertanyaan soal kondisi keuanganmu. Key disimpan hanya di browser ini, tidak ikut ke server.</p>
+        <div class="ai-key-row">
+          <input type="password" id="mmAiKeyInline" class="form-input" placeholder="Tempel API key di sini" autocomplete="off" spellcheck="false"
+                 onkeydown="if(event.key==='Enter'){mmAiSaveKey('mmAiKeyInline');}">
+          <button type="button" class="btn-primary" onclick="mmAiSaveKey('mmAiKeyInline')">Simpan</button>
+        </div>
+        <p class="ai-fine">Belum punya? Buat gratis di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</p>
+      </div>`;
+    return;
+  }
+
+  if (!MM_AI_HISTORY.length) {
+    log.innerHTML = `
+      <div class="ai-intro">
+        <span class="ai-intro-mark" aria-hidden="true">${lucideIconSvg('sparkles', 26)}</span>
+        <h3>Tanya soal keuanganmu</h3>
+        <p>Jawaban disusun dari saldo, budget, dan riwayat transaksimu, bukan angka karangan.</p>
+        <div class="ai-suggest">
+          ${MM_AI_SUGGESTIONS.map(s => `<button type="button" class="ai-chip" onclick="mmAiAsk('${jsStr(s)}')">${escapeHtml(s)}</button>`).join('')}
+        </div>
+      </div>`;
+    return;
+  }
+
+  log.innerHTML = MM_AI_HISTORY.map((m, i) => mmAiMessageHtml(m, i)).join('');
+  log.scrollTop = log.scrollHeight;
+}
+
+function mmAiMessageHtml(m, i) {
+  const text = (m.parts || []).map(p => p.text || '').join('');
+  if (m.role === 'user') return `<div class="ai-msg is-user"><div class="ai-bubble">${escapeHtml(text).replace(/\n/g, '<br>')}</div></div>`;
+  const body = m.error
+    ? `<div class="ai-error">${lucideIconSvg('alert-circle', 16)}<span>${escapeHtml(m.error)}</span>
+         <button type="button" onclick="mmAiRetry()">Coba lagi</button></div>`
+    : (text ? mmAiMarkdown(text) : '<span class="ai-typing" aria-label="Sedang menulis"><i></i><i></i><i></i></span>');
+  return `<div class="ai-msg is-model" data-i="${i}"><span class="ai-avatar" aria-hidden="true">${lucideIconSvg('sparkles', 14)}</span><div class="ai-answer">${body}</div></div>`;
+}
+
+// Re-renders only the answer being written, so a long chat does not
+// re-parse every earlier message on each streamed chunk.
+function mmAiUpdateLast() {
+  const log = document.getElementById('mmAiLog');
+  if (!log) return;
+  const i = MM_AI_HISTORY.length - 1;
+  const node = log.querySelector(`.ai-msg[data-i="${i}"]`);
+  if (!node) { mmAiRender(); return; }
+  const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 120;
+  node.outerHTML = mmAiMessageHtml(MM_AI_HISTORY[i], i);
+  if (nearBottom) log.scrollTop = log.scrollHeight;
+}
+
+function mmAiSetBusy(busy) {
+  MM_AI_BUSY = busy;
+  const log = document.getElementById('mmAiLog');
+  if (log) log.setAttribute('aria-busy', busy ? 'true' : 'false');
+  const send = document.getElementById('mmAiSend');
+  if (send) {
+    send.innerHTML = busy ? lucideIconSvg('square', 16) : lucideIconSvg('send', 18);
+    send.setAttribute('aria-label', busy ? 'Hentikan' : 'Kirim');
+    send.classList.toggle('is-stop', busy);
+  }
+}
+
+/* Minimal markdown: escape everything first, then add back the few
+   constructs Gemini uses — bold, italic, code, headings, lists, tables. */
+function mmAiInline(s) {
+  return s
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
+}
+
+function mmAiMarkdown(src) {
+  const lines = escapeHtml(src).split('\n');
+  let html = '', list = null, table = [];
+  const closeList = () => { if (list) { html += `</${list}>`; list = null; } };
+  const flushTable = () => {
+    if (!table.length) return;
+    const rows = table.filter(r => !/^\|?\s*:?-{2,}/.test(r));
+    const cells = r => r.replace(/^\||\|$/g, '').split('|').map(c => mmAiInline(c.trim()));
+    html += '<div class="ai-table"><table>' + rows.map((r, idx) =>
+      '<tr>' + cells(r).map(c => idx === 0 ? `<th>${c}</th>` : `<td>${c}</td>`).join('') + '</tr>').join('') + '</table></div>';
+    table = [];
+  };
+  lines.forEach(raw => {
+    const line = raw.trimEnd();
+    if (/^\s*\|.*\|\s*$/.test(line)) { closeList(); table.push(line.trim()); return; }
+    flushTable();
+    let m;
+    if (!line.trim()) { closeList(); return; }
+    if ((m = line.match(/^#{1,4}\s+(.*)$/))) { closeList(); html += `<h4>${mmAiInline(m[1])}</h4>`; return; }
+    if ((m = line.match(/^\s*[-*•]\s+(.*)$/))) {
+      if (list !== 'ul') { closeList(); html += '<ul>'; list = 'ul'; }
+      html += `<li>${mmAiInline(m[1])}</li>`; return;
+    }
+    if ((m = line.match(/^\s*\d+[.)]\s+(.*)$/))) {
+      if (list !== 'ol') { closeList(); html += '<ol>'; list = 'ol'; }
+      html += `<li>${mmAiInline(m[1])}</li>`; return;
+    }
+    closeList();
+    html += `<p>${mmAiInline(line)}</p>`;
+  });
+  closeList(); flushTable();
+  return html;
+}
+
+/* ---------- financial context ---------- */
+function mmAiRp(v) {
+  return 'Rp' + new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(Math.round(Number(v) || 0));
+}
+
+async function mmAiEnsureDashboard() {
+  if (MM_DASHBOARD) return MM_DASHBOARD;
+  try {
+    return await new Promise((resolve, reject) => {
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).mmGetDashboard();
+    });
+  } catch (e) { return null; }
+}
+
+async function mmAiBuildContext() {
+  const d = await mmAiEnsureDashboard();
+  let all = MM_SEARCH_CACHE;
+  if (!all && typeof mmLoadSearchData === 'function') all = await mmLoadSearchData();
+  all = all || [];
+
+  const out = [];
+  const now = new Date();
+  out.push(`Tanggal hari ini: ${new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now)} (${localISODate(now)}).`);
+
+  if (d) {
+    const ctx = mmMonthContext();
+    out.push(`\n## Ringkasan\n- Total saldo (akun yang tampil di dashboard): ${mmAiRp(d.netWorth)}\n- Saldo akhir bulan lalu: ${mmAiRp(d.prevNetWorth)}\n- Hari ke-${ctx.day} dari ${ctx.daysInMonth}, sisa ${ctx.daysLeft} hari termasuk hari ini`);
+
+    const accs = (d.accounts || []).slice().sort((a, b) => (b.balance || 0) - (a.balance || 0));
+    if (accs.length) out.push('\n## Akun\n' + accs.map(a =>
+      `- ${a.name} (${a.type || 'Lainnya'})${a.showOnDashboard ? '' : ' [tidak dihitung di total]'}: ${mmAiRp(a.balance)}`).join('\n'));
+
+    const pm = d.prevMonth || {};
+    out.push(`\n## Bulan ini (${ctx.monthName})\n- Pemasukan: ${mmAiRp(d.totalIncome)}\n- Pengeluaran: ${mmAiRp(d.totalExpense)}\n- Selisih (pemasukan − pengeluaran): ${mmAiRp(d.saving)}\n- Bulan lalu: pemasukan ${mmAiRp(pm.income)}, pengeluaran ${mmAiRp(pm.expense)}; pengeluaran bulan lalu sampai tanggal yang sama: ${mmAiRp(pm.expenseToDate)}`);
+
+    const a = mmAllowance(d);
+    out.push(`\n## Jatah belanja\n- Dana aman dibelanjakan sampai akhir bulan: ${mmAiRp(a.safe)}${a.capped ? ' (dibatasi oleh saldo yang ada)' : ''}\n- Jatah per hari: ${mmAiRp(a.todayBudget)}\n- Sudah dibelanjakan hari ini: ${mmAiRp(a.spentToday)}`);
+
+    const cards = (d.allocationCards || []).filter(c => (c.target || 0) > 0 || (c.spent || 0) > 0);
+    if (cards.length) {
+      out.push(`\n## Budget per pos\nDana budget = sisa saldo bulan lalu (${mmAiRp(d.carryover)}) + pemasukan bulan ini, dibagi sesuai persentase tiap pos. Pos tabungan/investasi/dana darurat adalah target menabung, bukan batas belanja.\n` +
+        cards.map(c => {
+          const pct = c.target > 0 ? Math.round(c.spent / c.target * 100) : 0;
+          if (MM_NON_SPEND_RE.test(c.category || '')) {
+            return `- ${c.category} (${c.percent}%, target menabung): terkumpul ${mmAiRp(c.spent)} dari target ${mmAiRp(c.target)} (${pct}%)`;
+          }
+          return `- ${c.category} (${c.percent}%): terpakai ${mmAiRp(c.spent)} dari ${mmAiRp(c.target)} (${pct}%), sisa ${mmAiRp(c.target - c.spent)}`;
+        }).join('\n'));
+    }
+
+    const trend = (d.netWorthTrend || []).slice(-12);
+    if (trend.length) out.push('\n## Tren saldo akhir bulan\n' + trend.map(t => `- ${t.month}: ${mmAiRp(t.netWorth)}`).join('\n'));
+  }
+
+  // Monthly history by category, from every transaction ever recorded.
+  const months = {};
+  all.forEach(tx => {
+    const m = String(tx.date || '').slice(0, 7);
+    if (!m) return;
+    const r = months[m] || (months[m] = { inc: 0, exp: 0, cats: {} });
+    if (tx.type === 'Income') r.inc += tx.amount || 0;
+    else if (tx.type === 'Expense') {
+      r.exp += tx.amount || 0;
+      const c = tx.category || 'Lainnya';
+      r.cats[c] = (r.cats[c] || 0) + (tx.amount || 0);
+    }
+  });
+  const keys = Object.keys(months).sort().slice(-12);
+  if (keys.length) {
+    out.push('\n## Riwayat bulanan (12 bulan terakhir)\n' + keys.map(k => {
+      const r = months[k];
+      const cats = Object.entries(r.cats).sort((x, y) => y[1] - x[1]).slice(0, 8).map(([c, v]) => `${c} ${mmAiRp(v)}`).join(', ');
+      return `- ${k}: masuk ${mmAiRp(r.inc)}, keluar ${mmAiRp(r.exp)}${cats ? ' — ' + cats : ''}`;
+    }).join('\n'));
+  }
+
+  // This month and last month in detail, newest first.
+  const pmStart = localISODate(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+  const recent = all.filter(tx => (tx.date || '') >= pmStart)
+    .sort((x, y) => (y.date || '').localeCompare(x.date || '')).slice(0, 300);
+  if (recent.length) {
+    out.push('\n## Transaksi bulan ini & bulan lalu (tanggal | jenis | kategori/sub | akun | nominal | catatan)\n' + recent.map(tx =>
+      `${tx.date} | ${tx.type} | ${[tx.category, tx.subcategory].filter(Boolean).join('/') || '-'} | ${tx.account || '-'}${tx.accountTo ? ' → ' + tx.accountTo : ''} | ${mmAiRp(tx.amount)} | ${(tx.notes || '').replace(/\s+/g, ' ').slice(0, 60)}`).join('\n'));
+  }
+
+  if (!d && !all.length) out.push('\n(Data keuangan belum berhasil dimuat.)');
+  return out.join('\n');
+}
+
+const MM_AI_RULES = `Kamu adalah asisten keuangan pribadi di aplikasi MoneyMate. Pengguna bertanya soal kondisi keuangannya sendiri.
+
+Aturan:
+- Jawab dalam bahasa Indonesia yang santai tapi jelas, sapa pengguna dengan "kamu".
+- Dasarkan setiap angka HANYA pada DATA KEUANGAN di bawah. Jangan mengarang angka. Jika data tidak cukup, katakan terus terang apa yang kurang.
+- Tulis nominal dalam format rupiah, contoh Rp1.250.000 atau Rp1,25 jt.
+- Ringkas: mulai dengan jawaban langsung (1–2 kalimat), lalu poin pendukung seperlunya. Maksimal sekitar 180 kata kecuali diminta lebih rinci.
+- Gunakan daftar berpoin untuk rincian; hindari tabel kecuali diminta membandingkan banyak angka.
+- Boleh memberi saran praktis (menghemat, mengatur budget, menabung), tapi jangan merekomendasikan membeli/menjual saham, kripto, atau produk investasi tertentu.
+- Transfer antar akun bukan pengeluaran. Pos tabungan/investasi/dana darurat adalah target menabung.`;
+
+/* ---------- sending ---------- */
+function mmAiAsk(text) {
+  const input = document.getElementById('mmAiInput');
+  if (input) input.value = text;
+  mmAiSubmit();
+}
+
+function mmAiSubmit(e) {
+  if (e) e.preventDefault();
+  if (MM_AI_BUSY) { if (MM_AI_ABORT) MM_AI_ABORT.abort(); return; }
+  const input = document.getElementById('mmAiInput');
+  const text = (input && input.value || '').trim();
+  if (!text) return;
+  input.value = '';
+  mmAiAutosize();
+  MM_AI_HISTORY.push({ role: 'user', parts: [{ text }] });
+  mmAiRun();
+}
+
+function mmAiRetry() {
+  if (MM_AI_BUSY) return;
+  const last = MM_AI_HISTORY[MM_AI_HISTORY.length - 1];
+  if (last && last.role === 'model') MM_AI_HISTORY.pop();
+  mmAiRun();
+}
+
+function mmAiKey(e) {
+  // Enter sends on a keyboard; on a phone the return key adds a line and
+  // the send button sends.
+  if (e.key === 'Enter' && !e.shiftKey && window.matchMedia('(pointer: fine)').matches) {
+    e.preventDefault();
+    mmAiSubmit();
+  }
+}
+
+function mmAiAutosize() {
+  const el = document.getElementById('mmAiInput');
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+  el.style.overflowY = el.scrollHeight > 140 ? 'auto' : 'hidden';
+}
+
+async function mmAiRun() {
+  const key = mmAiGetKey();
+  if (!key) { mmAiRender(); return; }
+  const answer = { role: 'model', parts: [{ text: '' }] };
+  MM_AI_HISTORY.push(answer);
+  mmAiRender();
+  mmAiSetBusy(true);
+  MM_AI_ABORT = new AbortController();
+
+  try {
+    const context = await mmAiBuildContext();
+    const body = {
+      systemInstruction: { parts: [{ text: MM_AI_RULES + '\n\n=== DATA KEUANGAN ===\n' + context }] },
+      // Only finished turns go back to the model; the empty answer slot and
+      // failed attempts stay local.
+      contents: MM_AI_HISTORY.filter(m => m !== answer && !m.error)
+        .map(m => ({ role: m.role, parts: [{ text: (m.parts || []).map(p => p.text || '').join('') }] })),
+      generationConfig: { temperature: 0.4, maxOutputTokens: 2048 }
+    };
+    await mmAiStream(key, body, answer);
+    if (!answer.parts[0].text.trim()) throw new Error('Tidak ada jawaban. Coba ulangi pertanyaannya.');
+  } catch (err) {
+    if (err && err.name === 'AbortError') {
+      if (!answer.parts[0].text) MM_AI_HISTORY.pop();
+    } else {
+      answer.error = mmAiErrorText(err);
+    }
+  } finally {
+    MM_AI_ABORT = null;
+    mmAiSetBusy(false);
+    mmAiRender();
+  }
+}
+
+// Streams from the first model that accepts the request; overload and quota
+// errors move on to the next one (after one short retry on the first).
+async function mmAiStream(key, body, answer) {
+  let lastErr = null;
+  const attempts = [MM_AI_MODELS[0], MM_AI_MODELS[0], ...MM_AI_MODELS.slice(1)];
+  for (let i = 0; i < attempts.length; i++) {
+    if (i === 1) await new Promise(r => setTimeout(r, 1200));
+    try {
+      await mmAiStreamOnce(attempts[i], key, body, answer);
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (err.name === 'AbortError' || answer.parts[0].text) throw err;
+      if (![429, 500, 503, 404].includes(err.status)) throw err;
+    }
+  }
+  throw lastErr;
+}
+
+async function mmAiStreamOnce(model, key, body, answer) {
+  const res = await fetch(`${MM_AI_ENDPOINT}${model}:streamGenerateContent?alt=sse`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+    body: JSON.stringify(body),
+    signal: MM_AI_ABORT ? MM_AI_ABORT.signal : undefined
+  });
+  if (!res.ok) {
+    let msg = '';
+    try { msg = ((await res.json()).error || {}).message || ''; } catch (e) {}
+    const err = new Error(msg || ('HTTP ' + res.status));
+    err.status = res.status;
+    throw err;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf('\n')) !== -1) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line.startsWith('data:')) continue;
+      let chunk;
+      try { chunk = JSON.parse(line.slice(5)); } catch (e) { continue; }
+      const parts = (((chunk.candidates || [])[0] || {}).content || {}).parts || [];
+      const add = parts.filter(p => !p.thought).map(p => p.text || '').join('');
+      if (add) {
+        answer.parts[0].text += add;
+        mmAiUpdateLast();
+      }
+    }
+  }
+}
+
+function mmAiErrorText(err) {
+  const s = err && err.status;
+  const msg = (err && err.message) || '';
+  if (s === 400 && /api key/i.test(msg)) return 'API key tidak valid. Periksa lagi di Profil → AI Assistant.';
+  if (s === 401 || s === 403) return 'API key ditolak. Pastikan key aktif dan Gemini API sudah diaktifkan.';
+  if (s === 429) return 'Kuota Gemini sedang habis. Tunggu sebentar lalu coba lagi.';
+  if (s === 503 || s === 500) return 'Server Gemini sedang sibuk. Coba lagi sebentar lagi.';
+  if (err instanceof TypeError) return 'Tidak bisa terhubung ke Gemini. Periksa koneksi internet.';
+  return msg || 'Terjadi kesalahan. Coba lagi.';
+}
 </script>
 
 </body>
