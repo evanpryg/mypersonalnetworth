@@ -174,9 +174,14 @@
         <button type="button" class="ws-drawer-btn mobile-only" onclick="toggleMobileNavDrawer(true)" aria-label="Buka menu navigasi">
           <i data-lucide="menu"></i>
         </button>
-        <div class="ws-title-wrap" onclick="switchWorkspace()" role="button" tabindex="0" title="Klik untuk berganti workspace">
-          <h1 id="workspaceTitle">Money Management</h1>
-          <span class="ws-subtitle" id="wsSubtitle">Dark Editorial Finance</span>
+        <div class="ws-title-wrap" onclick="switchWorkspace()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchWorkspace();}" role="button" tabindex="0" aria-label="Ganti workspace" title="Ketuk untuk berganti workspace">
+          <div class="ws-title-text">
+            <h1 id="workspaceTitle">Money Management</h1>
+            <span class="ws-subtitle-row">
+              <span class="ws-subtitle" id="wsSubtitle">Arus kas &amp; anggaran</span>
+              <i data-lucide="chevrons-up-down" class="ws-swap-icon" aria-hidden="true"></i>
+            </span>
+          </div>
         </div>
       </div>
       <div class="ws-header-actions">
@@ -529,14 +534,14 @@
             <!-- 2. TOTAL BALANCE: Angka besar, perubahan saldo, dan grafik perkembangan -->
             <section class="ed-section ed-hero-balance" id="mmNetworthCard">
               <div class="ed-balance-row-top">
-                <div class="ed-eyebrow">TOTAL NET BALANCE</div>
-                <div class="ed-balance-change">
-                  <span class="mm-change-badge up" id="mmChangeBadge">+0%</span>
-                  <span class="ed-change-note" id="mmChangeText">vs akhir bulan lalu</span>
-                </div>
+                <div class="ed-eyebrow">Total Net Balance</div>
               </div>
               <div class="ed-balance-main-row">
                 <h2 class="ed-balance-hero-val" id="mmNetWorthValue">Rp 0</h2>
+              </div>
+              <div class="ed-balance-change">
+                <span class="mm-change-badge up" id="mmChangeBadge">+0%</span>
+                <span class="ed-change-note" id="mmChangeText">vs akhir bulan lalu</span>
               </div>
 
               <!-- Quick Log Actions -->
@@ -603,7 +608,7 @@
                 <div class="ed-flow-card is-net">
                   <div class="ed-flow-top">
                     <span class="ed-flow-dot net"></span>
-                    <span class="ed-flow-label">Sisa Kas (Net)</span>
+                    <span class="ed-flow-label">Sisa Kas</span>
                   </div>
                   <strong class="ed-flow-val" id="mmTotalSaving">Rp 0</strong>
                   <div class="ed-flow-delta">
@@ -632,7 +637,7 @@
                   <h3 class="ed-sec-title">Ringkasan Rekening</h3>
                 </div>
                 <button type="button" class="ed-text-link" onclick="mmShowPage('mmAccountsPage')">
-                  Lihat Semua Akun <i data-lucide="arrow-right"></i>
+                  Semua Akun <i data-lucide="arrow-right"></i>
                 </button>
               </div>
               <div class="ed-accounts-strip" id="mmAccountsScroll" aria-label="Daftar Rekening"></div>
@@ -648,7 +653,7 @@
                 <div class="ed-sec-actions">
                   <span id="mmBudgetSummary" class="ed-sec-sub"></span>
                   <button type="button" class="ed-text-link" onclick="mmShowPage('mmBudgetPage')">
-                    Detail Budget <i data-lucide="arrow-right"></i>
+                    Detail <i data-lucide="arrow-right"></i>
                   </button>
                 </div>
               </div>
@@ -663,7 +668,7 @@
                   <h3 class="ed-sec-title">Insight &amp; Jatah Harian</h3>
                 </div>
                 <button type="button" class="ed-text-link" onclick="mmShowPage('mmInsightPage')">
-                  Buka Analisis <i data-lucide="arrow-right"></i>
+                  Analisis <i data-lucide="arrow-right"></i>
                 </button>
               </div>
               <div class="ed-insights-row">
@@ -682,7 +687,7 @@
                 <div class="ed-sec-actions">
                   <span id="mmTxMonthCount" class="ed-sec-sub"></span>
                   <button type="button" class="ed-text-link" onclick="mmShowPage('mmHistoryPage')">
-                    Semua Transaksi <i data-lucide="arrow-right"></i>
+                    Semua transaksi <i data-lucide="arrow-right"></i>
                   </button>
                 </div>
               </div>

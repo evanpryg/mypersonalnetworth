@@ -992,7 +992,7 @@ const MM_ACC_TYPE_COLORS = {
 function mmRenderAccountCards(accounts) {
   const box = document.getElementById('mmAccountsScroll');
   if (!box) return;
-  const manage = `<button type="button" class="hm-chip is-manage" aria-label="Kelola akun" onclick="mmShowPage('mmSettingsPage')">${lucideIconSvg('sliders-horizontal', 15)}</button>`;
+  const manage = `<button type="button" class="hm-chip is-manage" onclick="mmShowPage('mmSettingsPage')"><span class="hm-chip-ic">${lucideIconSvg('sliders-horizontal', 15)}</span><span class="hm-chip-name">Kelola akun</span></button>`;
 
   const visible = (accounts || []).filter(a => a.showOnDashboard).sort((a, b) => (b.balance || 0) - (a.balance || 0));
   if (!visible.length) {
