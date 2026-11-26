@@ -9635,6 +9635,231 @@ body {
   .hx-trend svg { height: 68px; }
 }
 
+/* ============================================================
+   ACTIVITY v2 - compact  (ui-ux-pro-max)
+   Namespace .ah-*; reuses Home's .hx-card / .hx-flow / .hx-tx / .hx-day
+   so both pages share one type scale: 12 / 13 / 15 / 18. Touch >= 44px.
+   Keep LAST so it wins over the older .ed-* / .mm-cal-* layers.
+   ============================================================ */
+.ah { gap: 12px; }
+.ah-stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+/* --- Top bar ------------------------------------------------------ */
+.ah-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.ah-top-text { min-width: 0; }
+.ah-title { font-size: 18px; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; }
+.ah-sub { margin-top: 1px; font-size: 12px; color: var(--text-secondary); }
+
+.ah-icon-btn {
+  flex: none; width: 44px; height: 44px; display: grid; place-items: center;
+  border-radius: 12px; color: var(--text-secondary);
+  transition: background var(--dur-fast), color var(--dur-fast), transform var(--dur-fast);
+}
+.ah-icon-btn svg { width: 20px; height: 20px; }
+.ah-icon-btn:active { background: var(--surface-2); color: var(--text); transform: scale(0.95); }
+.ah-icon-btn.is-bordered { background: var(--surface); border: 1px solid var(--border); }
+.ah button:focus-visible, .ah summary:focus-visible, .ah select:focus-visible, .ah input:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+/* --- Segmented tabs ------------------------------------------------ */
+.ah-seg.mm-history-tabs { margin-bottom: 0; }
+.ah-seg {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+}
+.ah-seg-btn {
+  min-height: 40px; padding: 0 8px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  white-space: nowrap; transition: background var(--dur-fast), color var(--dur-fast);
+}
+.ah-seg-btn.active { background: rgba(var(--accent-rgb), 0.16); color: var(--accent); }
+.ah-seg-btn:not(.active):active { background: var(--surface-2); }
+
+/* --- Month summary ------------------------------------------------- */
+.ah-monthbar { display: flex; align-items: center; padding: 2px 6px 2px 2px; border-bottom: 1px solid var(--border); }
+.ah-month { flex: 1; min-width: 0; text-align: center; font-size: 15px; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ah-insight {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  min-height: 44px; margin-left: 4px; padding: 0 6px 0 12px;
+  border-left: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--accent);
+}
+.ah-insight svg { width: 16px; height: 16px; }
+.ah-insight:active { opacity: 0.7; }
+.ah-sum { padding-bottom: 14px; }
+.ah-flowbar { margin: 12px 14px 12px; }
+.ah-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0 14px; }
+.ah-flow .hx-flow-item { padding: 0 0 0 14px; }
+.ah-flow .hx-flow-item:first-child { padding-left: 0; }
+.ah-flow .hx-flow-item dd:nth-of-type(1) { font-size: 15px; white-space: nowrap; }
+/* "Sisa" is the answer people look for: its own full-width row, larger. */
+.ah-flow .hx-flow-item.is-net {
+  grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between;
+  margin-top: 10px; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--border);
+}
+.ah-flow .hx-flow-item.is-net dt { font-size: 13px; }
+.ah-flow .hx-flow-item.is-net dd:nth-of-type(1) { font-size: 17px; }
+.ah-flow .hx-flow-item.is-net dd.positive { color: var(--success); }
+.ah-psum .ah-flow { padding: 0; }
+
+/* --- Filters ---------------------------------------------------------- */
+.ah-filters { display: flex; flex-direction: column; gap: 8px; }
+.ah-row { display: flex; gap: 8px; }
+.ah-search {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 0 12px; color: var(--text-muted);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  transition: border-color var(--dur-fast);
+}
+.ah-search:focus-within { border-color: var(--accent); color: var(--accent); }
+.ah-search svg { width: 18px; height: 18px; flex: none; }
+.ah-search input {
+  flex: 1; min-width: 0; height: 42px; padding: 0; border: 0; outline: 0; background: transparent;
+  color: var(--text); font: inherit; font-size: 14px; -webkit-appearance: none; appearance: none;
+}
+.ah-search input::placeholder { color: var(--text-muted); }
+.ah-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.ah-select {
+  flex: none; width: 38%; max-width: 160px; min-height: 44px; padding: 0 30px 0 12px;
+  -webkit-appearance: none; appearance: none; text-overflow: ellipsis;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2393A19B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center / 14px;
+  border: 1px solid var(--border); border-radius: 12px;
+  color: var(--text); font: inherit; font-size: 13px; cursor: pointer;
+}
+.ah-select option { background: var(--surface-2); color: var(--text); }
+
+.ah-chips {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+  margin: 0 calc(var(--hx-bleed) * -1); padding: 0 var(--hx-bleed);
+}
+.ah-chips::-webkit-scrollbar { display: none; }
+.ah-period .ah-chips { margin: 0; padding: 0; }
+.ah-chip {
+  position: relative; flex: none; min-height: 36px; padding: 0 14px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  background: var(--surface); border: 1px solid var(--border);
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+}
+.ah-chip::after { content: ''; position: absolute; inset: -4px -2px; }   /* 44px hit area, 36px look */
+.ah-chip.active { color: var(--accent); background: rgba(var(--accent-rgb), 0.14); border-color: rgba(var(--accent-rgb), 0.45); }
+.ah-chip:not(.active):active { background: var(--surface-2); }
+
+/* --- Collapsible cards ---------------------------------------------- */
+.ah-fold { overflow: hidden; }
+.ah-fold > summary { display: block; list-style: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ah-fold > summary::-webkit-details-marker { display: none; }
+.ah-fold > summary:active { background: var(--surface-2); }
+.ah-fold-row { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 14px; }
+.ah-fold-title { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.ah-fold-hint { flex: 1; min-width: 0; text-align: right; font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ah-fold-chev { width: 16px; height: 16px; flex: none; color: var(--text-muted); transition: transform var(--dur-fast); }
+.ah-fold[open] .ah-fold-chev { transform: rotate(180deg); }
+.ah-fold-body { padding: 0 10px 12px; border-top: 1px solid var(--border); }
+.ah-fold[open] > summary .ah-fold-row { border-bottom: 1px solid var(--border); }
+.ah-fold[open] > .ah-fold-body { border-top: 0; }
+
+/* Category recap */
+.ah-catbar { display: flex; gap: 2px; height: 6px; margin: -2px 14px 12px; border-radius: 999px; overflow: hidden; background: rgba(255, 255, 255, 0.06); }
+.ah-catbar span { min-width: 3px; }
+.ah-fold[open] .ah-catbar { display: none; }
+.ah-cats { padding: 4px 0; }
+.ah-cat + .ah-cat { border-top: 1px solid var(--border); }
+.ah-cat-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 14px; text-align: left;
+}
+button.ah-cat-row { transition: background var(--dur-fast); }
+button.ah-cat-row:active { background: var(--surface-2); }
+button.ah-cat-row > svg { color: var(--text-muted); transition: transform var(--dur-fast); }
+button.ah-cat-row.is-open > svg { transform: rotate(180deg); }
+.ah-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.ah-cat-name { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 6px; font-size: 13px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ah-cat-name small { font-size: 12px; font-weight: 400; color: var(--text-muted); }
+.ah-cat-pct { flex: none; width: 36px; text-align: right; font-size: 12px; color: var(--text-muted); }
+.ah-cat-amt { flex: none; min-width: 84px; text-align: right; font-size: 13px; font-weight: 650; }
+.ah-subs { padding: 0 14px 8px 32px; }
+.ah-sub-row { display: flex; justify-content: space-between; gap: 12px; min-height: 32px; align-items: center; font-size: 12px; color: var(--text-secondary); }
+.ah-sub-row strong { font-weight: 600; color: var(--text); }
+.mm-hist-category-wrap { margin: 0; }
+.mm-hist-category-wrap:empty { display: none; }
+
+/* Calendar */
+.ah-cal.mm-calendar-grid { gap: 2px; margin: 8px 0 0; }
+.ah-cal .mm-cal-header { padding: 4px 0; font-size: 12px; font-weight: 600; text-transform: none; }
+.ah-cal .mm-cal-day {
+  aspect-ratio: auto; min-height: 44px; gap: 4px; padding: 4px 0;
+  font: inherit; background: none; border: 1px solid transparent; border-radius: 10px;
+  color: var(--text-secondary);
+}
+.ah-cal .mm-cal-day.empty { pointer-events: none; }
+.ah-cal .mm-cal-day:not(.empty):active { background: var(--surface-2); }
+.ah-cal .mm-cal-num { font-size: 13px; font-weight: 600; color: inherit; }
+.ah-cal .mm-cal-day.today { color: var(--accent); background: rgba(var(--accent-rgb), 0.1); border-color: rgba(var(--accent-rgb), 0.35); }
+.ah-cal .mm-cal-day.selected { color: var(--on-accent); background: var(--accent-strong); border-color: var(--accent); box-shadow: none; }
+.ah-dots { display: flex; gap: 3px; height: 5px; }
+.ah-dot { width: 5px; height: 5px; border-radius: 50%; display: block; }
+.ah-dot.is-in { background: var(--income); }
+.ah-dot.is-out { background: var(--expense); }
+.ah-cal .mm-cal-day.selected .ah-dot { background: currentColor; opacity: 0.85; }
+
+/* --- Transaction list ------------------------------------------------- */
+.ah-list { scroll-margin-top: 72px; }
+.ah-link { min-height: 44px; }
+.ah-tx .hx-day-head { padding-top: 10px; }
+.ah-tx .hx-day-head .income-color { color: var(--success); }
+.ah-tx .hx-day-head .expense-color { color: var(--error); }
+.ah-tx .hx-tx-amt.income-color { color: var(--success); }
+.ah-tx .hx-tx-amt.expense-color { color: var(--error); }
+.ah-tx .hx-tx-amt.transfer-color { color: var(--info); }
+.ah-tx .hx-tx-ic svg { width: 16px; height: 16px; }
+.ah-tx .sk-list { padding: 4px 0; }
+.ah-tx .mm-empty, .ah-chart + .ah-months .mm-empty { padding: 24px 14px; }
+
+/* --- All time ----------------------------------------------------------- */
+.ah-chart { padding: 8px 4px 0; overflow: hidden; }
+.ah-chart .mm-history-chart-wrap { min-height: 160px; }
+.ah-months { overflow: hidden; }
+.ah-mrow {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px; align-items: center;
+  width: 100%; min-height: 48px; padding: 6px 14px; text-align: right; font-size: 13px;
+  transition: background var(--dur-fast);
+}
+.ah-mrow + .ah-mrow { border-top: 1px solid var(--border); }
+button.ah-mrow:active { background: var(--surface-2); }
+.ah-mhead { min-height: 36px; font-size: 12px; color: var(--text-muted); }
+.ah-mhead span:first-child, .ah-mname { text-align: left; }
+.ah-mname { font-weight: 600; white-space: nowrap; }
+.ah-min { color: var(--success); font-weight: 600; }
+.ah-mout { color: var(--error); font-weight: 600; }
+
+/* --- Period ------------------------------------------------------------- */
+.ah-period { display: flex; flex-direction: column; gap: 12px; padding: 12px 14px 14px; }
+.ah-period-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ah-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; color: var(--text-secondary); }
+.ah-field input {
+  width: 100%; min-width: 0; min-height: 44px; padding: 0 10px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+  color: var(--text); font: inherit; font-size: 14px; color-scheme: dark;
+}
+.ah-field input:focus { border-color: var(--accent); }
+.ah-primary {
+  min-height: 44px; border-radius: 12px; background: var(--accent); color: #07110D;
+  font-size: 14px; font-weight: 650; transition: opacity var(--dur-fast), transform var(--dur-fast);
+}
+.ah-primary:active { opacity: 0.88; transform: scale(0.99); }
+.ah-psum { padding: 12px 14px; }
+
+/* The bottom nav already carries "Catat"; the floating + only covers rows here. */
+body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
+
+@media (min-width: 720px) {
+  .ah-seg-btn:not(.active):hover, .ah-chip:not(.active):hover, .ah-icon-btn:hover, button.ah-mrow:hover, button.ah-cat-row:hover, .ah-fold > summary:hover { background: var(--surface-2); }
+  .ah-cal .mm-cal-day:not(.empty):not(.selected):hover { background: var(--surface-2); }
+  .ah-chips { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ah *, .ah *::before, .ah *::after { transition: none !important; animation: none !important; }
+}
+
 </style>
 
 
@@ -10323,122 +10548,138 @@ body {
           </section>
         </div>
 
-        <!-- ===== MM HISTORY / ACTIVITY PAGE ===== -->
+        <!-- ===== MM HISTORY / ACTIVITY PAGE (redesign — compact) =====
+             Satu pertanyaan per blok, urutan dari yang paling sering dipakai:
+             1. Top bar      — judul + unduh CSV
+             2. Segmented    — per bulan / semua waktu / rentang tanggal
+             3. Ringkasan    — navigasi bulan + masuk / keluar / sisa
+             4. Filter       — cari, jenis, akun
+             5. Rekap        — per kategori (dilipat)
+             6. Kalender     — aktivitas harian (dilipat)
+             7. Daftar       — transaksi, dikelompokkan per hari
+             Tombol "Catat" sudah ada di bottom nav, jadi tidak diulang di sini.
+             Semua id data (mmHist*, mmHistory*) dipertahankan; render ada di
+             Script_Keuangan.html. -->
         <div id="mmHistoryPage" class="page">
-          <section class="ed-page-wrap">
-            <header class="ed-page-header">
-              <div>
-                <span class="ed-eyebrow">ACTIVITY LOG</span>
-                <h2 class="ed-page-title">Riwayat Transaksi</h2>
-                <p class="ed-page-sub">Catatan seluruh arus pemasukan, pengeluaran, dan mutasi saldo.</p>
+          <div class="hx ah">
+
+            <header class="ah-top">
+              <div class="ah-top-text">
+                <h1 class="ah-title">Aktivitas</h1>
+                <p class="ah-sub">Arus kas &amp; mutasi saldo</p>
               </div>
-              <div class="ed-header-right">
-                <button type="button" class="btn-ghost" onclick="mmExportData('transactions')" title="Unduh CSV">
-                  <i data-lucide="download"></i>
-                  <span>Export CSV</span>
-                </button>
-                <button type="button" class="btn-primary" onclick="mmShowActionSheet('expense')">
-                  <i data-lucide="plus"></i>
-                  <span>Catat Transaksi</span>
-                </button>
-              </div>
+              <button type="button" class="ah-icon-btn is-bordered" onclick="mmExportData('transactions')" aria-label="Unduh CSV">
+                <i data-lucide="download"></i>
+              </button>
             </header>
 
-            <div class="tab-bar mm-history-tabs ed-tabs-bar">
-              <button class="tab-btn active" onclick="mmSwitchHistoryTab('month')">Bulan Ini</button>
-              <button class="tab-btn" onclick="mmSwitchHistoryTab('alltime')">Semua Waktu</button>
-              <button class="tab-btn" onclick="mmSwitchHistoryTab('period')">Rentang Tanggal</button>
+            <div class="ah-seg mm-history-tabs" role="tablist" aria-label="Rentang riwayat">
+              <button type="button" role="tab" class="ah-seg-btn active" data-tab="month" aria-selected="true" onclick="mmSwitchHistoryTab('month')">Per Bulan</button>
+              <button type="button" role="tab" class="ah-seg-btn" data-tab="alltime" aria-selected="false" onclick="mmSwitchHistoryTab('alltime')">Semua Waktu</button>
+              <button type="button" role="tab" class="ah-seg-btn" data-tab="period" aria-selected="false" onclick="mmSwitchHistoryTab('period')">Rentang</button>
             </div>
 
             <!-- Month View -->
-            <div id="mmHistoryMonth" class="mm-history-content">
-              <!-- Month Navigator -->
-              <div class="ed-month-nav">
-                <button class="ed-month-nav-btn" aria-label="Bulan sebelumnya" onclick="mmPrevMonth()"><i data-lucide="chevron-left"></i></button>
-                <strong class="ed-month-title" id="mmHistoryMonthLabel">-</strong>
-                <button class="ed-month-nav-btn" aria-label="Bulan berikutnya" onclick="mmNextMonth()"><i data-lucide="chevron-right"></i></button>
-                <button type="button" class="btn-ghost ed-insight-btn-pill" onclick="mmHistOpenInsight()">
-                  <i data-lucide="sparkles"></i> Insight Bulan Ini &rarr;
-                </button>
-              </div>
+            <div id="mmHistoryMonth" class="mm-history-content ah-stack">
 
-              <!-- Month Summary Bar -->
-              <div class="ed-month-summary">
-                <div class="ed-msum-card in">
-                  <span>Pemasukan</span>
-                  <strong class="positive" id="mmHistIncome">Rp 0</strong>
+              <section class="hx-card ah-sum" aria-label="Ringkasan bulan">
+                <div class="ah-monthbar">
+                  <button type="button" class="ah-icon-btn" aria-label="Bulan sebelumnya" onclick="mmPrevMonth()"><i data-lucide="chevron-left"></i></button>
+                  <strong class="ah-month" id="mmHistoryMonthLabel" aria-live="polite">-</strong>
+                  <button type="button" class="ah-icon-btn" aria-label="Bulan berikutnya" onclick="mmNextMonth()"><i data-lucide="chevron-right"></i></button>
+                  <button type="button" class="ah-insight" onclick="mmHistOpenInsight()"><i data-lucide="sparkles"></i>Insight</button>
                 </div>
-                <div class="ed-msum-card out">
-                  <span>Pengeluaran</span>
-                  <strong class="negative" id="mmHistExpense">Rp 0</strong>
+                <div class="hx-flowbar ah-flowbar" id="mmHistFlowBar" role="img" aria-label="Perbandingan pengeluaran terhadap pemasukan">
+                  <span class="hx-flowbar-fill" id="mmHistFlowFill"></span>
                 </div>
-                <div class="ed-msum-card net">
-                  <span>Sisa (Net)</span>
-                  <strong id="mmHistSaving">Rp 0</strong>
-                </div>
-              </div>
+                <dl class="hx-flow ah-flow">
+                  <div class="hx-flow-item is-in">
+                    <dt><span class="hx-dot"></span>Masuk</dt>
+                    <dd id="mmHistIncome">Rp 0</dd>
+                  </div>
+                  <div class="hx-flow-item is-out">
+                    <dt><span class="hx-dot"></span>Keluar</dt>
+                    <dd id="mmHistExpense">Rp 0</dd>
+                  </div>
+                  <div class="hx-flow-item is-net">
+                    <dt><span class="hx-dot"></span>Sisa</dt>
+                    <dd id="mmHistSaving">Rp 0</dd>
+                  </div>
+                </dl>
+              </section>
 
-              <!-- Filter Toolbar -->
-              <div class="ed-tx-filter-bar">
-                <div class="ed-tx-search-wrap">
-                  <i data-lucide="search"></i>
-                  <input type="text" id="mmHistSearchInput" placeholder="Cari transaksi bulan ini..." oninput="mmFilterMonthHistory()">
-                </div>
-                <div class="ed-tx-filter-selects">
-                  <select id="mmHistTypeFilter" class="ed-select" onchange="mmFilterMonthHistory()">
-                    <option value="All">Semua Tipe</option>
-                    <option value="Expense">Pengeluaran</option>
-                    <option value="Income">Pemasukan</option>
-                    <option value="Transfer">Transfer</option>
-                  </select>
-                  <select id="mmHistAccountFilter" class="ed-select" onchange="mmFilterMonthHistory()">
-                    <option value="All">Semua Akun</option>
+              <!-- Filters -->
+              <div class="ah-filters">
+                <div class="ah-row">
+                  <label class="ah-search">
+                    <i data-lucide="search"></i>
+                    <input type="search" id="mmHistSearchInput" placeholder="Cari transaksi" aria-label="Cari transaksi bulan ini" autocomplete="off" enterkeyhint="search" oninput="mmFilterMonthHistory()">
+                  </label>
+                  <select id="mmHistAccountFilter" class="ah-select" aria-label="Filter akun" onchange="mmFilterMonthHistory()">
+                    <option value="All">Semua akun</option>
                   </select>
                 </div>
+                <input type="hidden" id="mmHistTypeFilter" value="All">
+                <div class="ah-chips" role="group" aria-label="Filter jenis transaksi">
+                  <button type="button" class="ah-chip active" data-type="All" aria-pressed="true" onclick="mmHistSetType('All')">Semua</button>
+                  <button type="button" class="ah-chip" data-type="Expense" aria-pressed="false" onclick="mmHistSetType('Expense')">Keluar</button>
+                  <button type="button" class="ah-chip" data-type="Income" aria-pressed="false" onclick="mmHistSetType('Income')">Masuk</button>
+                  <button type="button" class="ah-chip" data-type="Transfer" aria-pressed="false" onclick="mmHistSetType('Transfer')">Transfer</button>
+                </div>
               </div>
 
-              <!-- Category breakdown -->
+              <!-- Category breakdown (rendered as a <details> card by JS) -->
               <div id="mmHistoryCategoryBreakdown" class="mm-hist-category-wrap"></div>
 
-              <!-- Calendar Day Grid -->
-              <div class="ed-calendar-card">
-                <div class="ed-cal-header-row">
-                  <span class="ed-cal-title">Aktivitas Harian</span>
-                  <button class="btn-ghost btn-mini" id="mmHistoryShowAllBtn" style="display:none;" onclick="mmHistShowAll()">Tampilkan Semua</button>
+              <!-- Calendar -->
+              <details class="hx-card ah-fold" id="mmHistCalFold">
+                <summary>
+                  <span class="ah-fold-row">
+                    <span class="ah-fold-title">Kalender harian</span>
+                    <span class="ah-fold-hint">Ketuk tanggal untuk memfilter</span>
+                    <i data-lucide="chevron-down" class="ah-fold-chev"></i>
+                  </span>
+                </summary>
+                <div class="ah-fold-body">
+                  <div id="mmHistoryCalendarGrid" class="mm-calendar-grid ah-cal"></div>
                 </div>
-                <div id="mmHistoryCalendarGrid" class="mm-calendar-grid"></div>
-              </div>
+              </details>
 
               <!-- Grouped Transaction List -->
-              <div class="ed-month-list-section">
-                <div class="ed-list-head-row">
-                  <strong id="mmHistoryListLabel">Daftar Transaksi</strong>
+              <section class="hx-block ah-list" id="mmHistListSection" aria-labelledby="mmHistoryListLabel">
+                <div class="hx-head">
+                  <div class="hx-head-text">
+                    <h3 class="hx-title" id="mmHistoryListLabel">Transaksi</h3>
+                    <p class="hx-sub" id="mmHistoryListSub" aria-live="polite"></p>
+                  </div>
+                  <button type="button" class="hx-link ah-link" id="mmHistoryShowAllBtn" style="display:none;" onclick="mmHistShowAll()">Semua tanggal</button>
                 </div>
-                <div id="mmHistoryMonthContent" class="ed-tx-container"></div>
-              </div>
+                <div id="mmHistoryMonthContent" class="hx-card hx-activity ah-tx"></div>
+              </section>
             </div>
 
             <!-- All Time View -->
-            <div id="mmHistoryAllTime" class="mm-history-content" style="display:none;"></div>
+            <div id="mmHistoryAllTime" class="mm-history-content ah-stack" style="display:none;"></div>
 
             <!-- Custom Period View -->
-            <div id="mmHistoryPeriod" class="mm-history-content" style="display:none;">
-              <div class="ed-period-picker">
-                <div class="ed-period-inputs">
-                  <div class="ed-period-field">
-                    <label>Dari Tanggal</label>
-                    <input type="date" id="mmPeriodStart" class="form-input">
-                  </div>
-                  <div class="ed-period-field">
-                    <label>Sampai Tanggal</label>
-                    <input type="date" id="mmPeriodEnd" class="form-input">
-                  </div>
+            <div id="mmHistoryPeriod" class="mm-history-content ah-stack" style="display:none;">
+              <form class="hx-card ah-period" onsubmit="event.preventDefault(); mmLoadPeriod();">
+                <div class="ah-period-grid">
+                  <label class="ah-field"><span>Dari</span><input type="date" id="mmPeriodStart"></label>
+                  <label class="ah-field"><span>Sampai</span><input type="date" id="mmPeriodEnd"></label>
                 </div>
-                <button class="btn-primary" onclick="mmLoadPeriod()">Filter Periode</button>
-              </div>
-              <div id="mmHistoryPeriodContent" class="ed-tx-container"></div>
+                <div class="ah-chips" role="group" aria-label="Rentang cepat">
+                  <button type="button" class="ah-chip" onclick="mmHistPreset(7)">7 hari</button>
+                  <button type="button" class="ah-chip" onclick="mmHistPreset(30)">30 hari</button>
+                  <button type="button" class="ah-chip" onclick="mmHistPreset(90)">90 hari</button>
+                  <button type="button" class="ah-chip" onclick="mmHistPreset('month')">Bulan ini</button>
+                </div>
+                <button type="submit" class="ah-primary">Tampilkan</button>
+              </form>
+              <div id="mmHistoryPeriodContent" class="ah-stack"></div>
             </div>
-          </section>
+
+          </div>
         </div>
 
         <!-- ===== MM SETTINGS PAGE =====
@@ -16038,96 +16279,124 @@ function mmDeleteTxFromDetail(rowNumber) {
 }
 
 
-/* === HISTORY === */
+/* === HISTORY (Activity page) ===
+   Tiga tampilan: per bulan (default), semua waktu, rentang tanggal.
+   Di tampilan bulan, ada tiga penyaring yang bekerja bersama: tanggal yang
+   diketuk di kalender, kotak cari, jenis & akun. Semuanya lewat satu fungsi
+   (mmHistRenderList) supaya tidak saling menimpa. */
 let MM_ALLTIME_CACHE = null;
 let MM_MONTH_CACHE = {};
+let MM_HIST_TAB = 'month';
+let MM_HIST_DAY = null;   // tanggal terpilih di kalender (1-31) atau null
 
 function mmLoadHistory() {
-  mmSwitchHistoryTab('alltime');
+  mmSwitchHistoryTab(MM_HIST_TAB || 'month');
 }
 
 function mmSwitchHistoryTab(tab) {
-  const tabs = document.querySelectorAll('.mm-history-tabs .tab-btn');
-  tabs.forEach(t => t.classList.remove('active'));
+  if (!['month', 'alltime', 'period'].includes(tab)) tab = 'month';
+  MM_HIST_TAB = tab;
 
-  document.querySelectorAll('.mm-history-content').forEach(c => c.style.display = 'none');
+  // Aktif ditentukan data-tab, bukan urutan tombol: urutan sebelumnya tidak
+  // cocok dengan label, jadi "Bulan Ini" menyorot tab yang salah.
+  document.querySelectorAll('.ah-seg-btn').forEach(b => {
+    const on = b.dataset.tab === tab;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+
+  document.querySelectorAll('.mm-history-content').forEach(c => { c.style.display = 'none'; });
+  const ids = { month: 'mmHistoryMonth', alltime: 'mmHistoryAllTime', period: 'mmHistoryPeriod' };
+  const pane = document.getElementById(ids[tab]);
+  if (pane) pane.style.display = '';
 
   if (tab === 'alltime') {
-    tabs[0]?.classList.add('active');
-    document.getElementById('mmHistoryAllTime').style.display = 'block';
     mmLoadAllTime();
   } else if (tab === 'month') {
-    tabs[1]?.classList.add('active');
-    document.getElementById('mmHistoryMonth').style.display = 'block';
     mmUpdateHistoryMonthLabel();
     mmLoadMonthHistory();
-  } else if (tab === 'period') {
-    tabs[2]?.classList.add('active');
-    document.getElementById('mmHistoryPeriod').style.display = 'block';
+  } else {
+    const start = document.getElementById('mmPeriodStart');
+    const end = document.getElementById('mmPeriodEnd');
+    const box = document.getElementById('mmHistoryPeriodContent');
+    if (start && end && !start.value && !end.value) mmHistPreset('month', true);
+    else if (box && !box.innerHTML.trim()) mmLoadPeriod();
   }
 }
 
+/* --- All time ------------------------------------------------------- */
 function mmLoadAllTime() {
   const container = document.getElementById('mmHistoryAllTime');
-
-  // Use cache if available
   if (MM_ALLTIME_CACHE) {
     mmRenderAllTime(MM_ALLTIME_CACHE, container);
     return;
   }
-
-  container.innerHTML = skRows(5);
+  container.innerHTML = '<div class="hx-card">' + skRows(5) + '</div>';
   google.script.run
     .withSuccessHandler(data => {
       MM_ALLTIME_CACHE = data;
       mmRenderAllTime(data, container);
     })
-    .withFailureHandler(err => { container.innerHTML = '<div class="empty-state">Failed to load.</div>'; })
+    .withFailureHandler(() => {
+      container.innerHTML = '<div class="hx-card">' + mmEmpty('alert-circle', 'Gagal memuat riwayat', 'Periksa koneksi, lalu buka tab ini lagi.') + '</div>';
+      if (window.lucide) lucide.createIcons();
+    })
     .mmGetAllTimeSummary();
 }
 
 function mmRenderAllTime(data, container) {
   if (!data || !data.length) {
-    container.innerHTML = mmEmpty('clock', 'Riwayat masih kosong', 'Semua transaksi yang kamu catat akan tampil di sini.');
+    container.innerHTML = '<div class="hx-card">' + mmEmpty('clock', 'Riwayat masih kosong', 'Semua transaksi yang kamu catat akan tampil di sini.') + '</div>';
+    if (window.lucide) lucide.createIcons();
     return;
   }
 
   const chartData = data.slice(-12);
-  let html = `<div id="mmHistoryAreaChart" class="mm-history-chart-wrap"></div>`;
-  html += `<div class="mm-alltime-table"><div class="mm-alltime-header"><span>Month</span><span>Income</span><span>Expense</span></div>`;
+  const short = (m) => {
+    const p = String(m).split('-');
+    return new Intl.DateTimeFormat('id-ID', { month: 'short', year: 'numeric' }).format(new Date(Number(p[0]), Number(p[1]) - 1, 1));
+  };
+
+  let html = '<div class="hx-card ah-chart"><div id="mmHistoryAreaChart" class="mm-history-chart-wrap"></div></div>';
+  html += '<div class="hx-card ah-months">'
+    + '<div class="ah-mrow ah-mhead"><span>Bulan</span><span>Masuk</span><span>Keluar</span></div>';
   html += [...data].reverse().map(item => {
-    const monthLabel = mmFormatMonthLabel(item.month);
-    return `<div class="mm-alltime-row clickable" onclick="mmSelectMonthFromAllTime('${item.month}')" title="Buka detail ${monthLabel}"><span>${monthLabel} <i data-lucide="chevron-right" class="alltime-arrow"></i></span><span class="positive">${mmFormatIDR(item.income)}</span><span class="negative">${mmFormatIDR(item.expense)}</span></div>`;
+    const label = short(item.month);
+    return `<button type="button" class="ah-mrow" onclick="mmSelectMonthFromAllTime('${item.month}')" aria-label="Buka detail ${escapeHtml(mmFormatMonthLabel(item.month))}">
+      <span class="ah-mname">${escapeHtml(label)}</span>
+      <span class="ah-min">${mmFormatIDR(item.income)}</span>
+      <span class="ah-mout">${mmFormatIDR(item.expense)}</span>
+    </button>`;
   }).join('');
   html += '</div>';
   container.innerHTML = html;
 
-  // ApexCharts area chart
-  if (typeof mmHistoryChart !== 'undefined' && mmHistoryChart) { mmHistoryChart.destroy(); }
+  if (typeof mmHistoryChart !== 'undefined' && mmHistoryChart) { mmHistoryChart.destroy(); mmHistoryChart = null; }
   const el = document.getElementById('mmHistoryAreaChart');
   if (!el || typeof ApexCharts === 'undefined') return;
 
   const options = {
-    series: [{ name: 'Income', data: chartData.map(d => d.income) }, { name: 'Expense', data: chartData.map(d => d.expense) }],
-    chart: { type: 'area', height: 200, background: 'transparent', toolbar: { show: false }, zoom: { enabled: false }, animations: { enabled: true, easing: 'easeinout', speed: 800 } },
-    colors: ['#34d399', '#f87171'],
-    stroke: { curve: 'smooth', width: 2.5 },
-    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0, stops: [0, 100] } },
-    grid: { show: true, borderColor: 'rgba(255,255,255,0.06)', strokeDashArray: 4, xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } }, padding: { top: 10, bottom: 0 } },
-    xaxis: { categories: chartData.map(d => mmFormatMonthLabel(d.month)), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { colors: '#94a3b8', fontSize: '10px', fontFamily: 'Inter' } } },
-    yaxis: { labels: { show: false }, max: function(max) { return max * 1.15; } },
-    markers: { size: 0, hover: { size: 5, sizeOffset: 2 } },
-    tooltip: { theme: 'dark', style: { fontSize: '12px', fontFamily: 'Inter' }, y: { formatter: function(val) { if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••'; return 'Rp' + Number(val).toLocaleString('id-ID'); } } },
-    legend: { show: true, position: 'top', horizontalAlign: 'center', fontSize: '11px', fontFamily: 'Inter', fontWeight: 600, labels: { colors: '#94a3b8' }, markers: { width: 8, height: 8, radius: 4 } },
+    series: [{ name: 'Masuk', data: chartData.map(d => d.income) }, { name: 'Keluar', data: chartData.map(d => d.expense) }],
+    chart: { type: 'area', height: 160, background: 'transparent', toolbar: { show: false }, zoom: { enabled: false }, animations: { enabled: true, easing: 'easeinout', speed: 600 } },
+    colors: ['#22B887', '#E77979'],
+    stroke: { curve: 'smooth', width: 2 },
+    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0, stops: [0, 100] } },
+    grid: { show: true, borderColor: 'rgba(255,255,255,0.06)', strokeDashArray: 4, xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } }, padding: { top: 0, bottom: 0, left: 20, right: 20 } },
+    xaxis: { categories: chartData.map(d => short(d.month)), axisBorder: { show: false }, axisTicks: { show: false }, labels: { rotate: 0, hideOverlappingLabels: true, style: { colors: '#93A19B', fontSize: '12px', fontFamily: 'Geist, Inter, sans-serif' } } },
+    yaxis: { labels: { show: false }, max: function (max) { return max * 1.15; } },
+    markers: { size: 0, hover: { size: 4, sizeOffset: 2 } },
+    tooltip: { theme: 'dark', style: { fontSize: '12px', fontFamily: 'Geist, Inter, sans-serif' }, y: { formatter: function (val) { return mmFormatIDR(val); } } },
+    legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '12px', fontFamily: 'Geist, Inter, sans-serif', fontWeight: 500, labels: { colors: '#93A19B' }, markers: { width: 8, height: 8, radius: 4 }, offsetY: 0 },
     dataLabels: { enabled: false }
   };
   mmHistoryChart = new ApexCharts(el, options);
   mmHistoryChart.render();
 }
 
+/* --- Month ---------------------------------------------------------- */
 function mmUpdateHistoryMonthLabel() {
   const label = document.getElementById('mmHistoryMonthLabel');
-  if (label) label.textContent = mmFormatMonthLabel(`${MM_HIST_YEAR}-${String(MM_HIST_MONTH).padStart(2,'0')}`);
+  if (label) label.textContent = mmFormatMonthLabel(`${MM_HIST_YEAR}-${String(MM_HIST_MONTH).padStart(2, '0')}`);
 }
 
 function mmPrevMonth() {
@@ -16147,34 +16416,43 @@ function mmNextMonth() {
 function mmLoadMonthHistory() {
   const cacheKey = `${MM_HIST_YEAR}-${MM_HIST_MONTH}`;
   const container = document.getElementById('mmHistoryMonthContent');
+  MM_HIST_DAY = null;
 
-  // Use cache if available
   if (MM_MONTH_CACHE[cacheKey]) {
     mmRenderMonthView(MM_MONTH_CACHE[cacheKey]);
     return;
   }
 
   const grid = document.getElementById('mmHistoryCalendarGrid');
+  const cat = document.getElementById('mmHistoryCategoryBreakdown');
   if (grid) grid.innerHTML = '';
+  if (cat) cat.innerHTML = '';
   if (container) container.innerHTML = skRows(5);
+  const wanted = cacheKey;
   google.script.run
     .withSuccessHandler(data => {
-      MM_MONTH_CACHE[cacheKey] = data;
-      mmRenderMonthView(data);
+      MM_MONTH_CACHE[wanted] = data;
+      // Pengguna bisa pindah bulan sebelum respons tiba; jangan timpa.
+      if (wanted === `${MM_HIST_YEAR}-${MM_HIST_MONTH}`) mmRenderMonthView(data);
     })
-    .withFailureHandler(err => { if (container) container.innerHTML = '<div class="empty-state">Failed to load.</div>'; })
+    .withFailureHandler(() => {
+      if (container) {
+        container.innerHTML = mmEmpty('alert-circle', 'Gagal memuat bulan ini', 'Periksa koneksi, lalu coba pindah bulan lagi.');
+        if (window.lucide) lucide.createIcons();
+      }
+    })
     .mmGetCalendarData(MM_HIST_YEAR, MM_HIST_MONTH);
 }
 
-/* Merged month view: totals + calendar + (default) full-month transaction list */
+/* Ringkasan + rekap kategori + kalender + daftar */
 function mmRenderMonthView(data) {
   if (!data || !data.days) {
     const c = document.getElementById('mmHistoryMonthContent');
-    if (c) c.innerHTML = '<div class="empty-state">No data.</div>';
+    if (c) c.innerHTML = mmEmpty('info', 'Belum ada data', 'Data bulan ini tidak tersedia.');
+    if (window.lucide) lucide.createIcons();
     return;
   }
 
-  // Totals aggregated from per-day data or server summary
   let totalIncome = data.totalIncome !== undefined ? data.totalIncome : 0;
   let totalExpense = data.totalExpense !== undefined ? data.totalExpense : 0;
   if (data.totalIncome === undefined) {
@@ -16188,16 +16466,25 @@ function mmRenderMonthView(data) {
   setText('mmHistExpense', mmFormatIDR(totalExpense));
   const savingEl = document.getElementById('mmHistSaving');
   if (savingEl) {
-    savingEl.textContent = (saving >= 0 ? '+' : '') + mmFormatIDR(saving);
-    savingEl.className = saving >= 0 ? 'positive' : 'negative';
+    savingEl.textContent = (saving > 0 ? '+' : '') + mmFormatIDR(saving);
+    savingEl.classList.toggle('positive', saving > 0);
+    savingEl.classList.toggle('negative', saving < 0);
   }
 
-  // Render category breakdown ("pengeluaran kategori ini berapa-berapanya")
-  mmRenderHistCategoryBreakdown(data);
+  // Batang pengeluaran terhadap pemasukan, sama seperti kartu "Bulan Ini" di Home.
+  const bar = document.getElementById('mmHistFlowBar');
+  const fill = document.getElementById('mmHistFlowFill');
+  if (bar && fill) {
+    const ratio = totalIncome > 0 ? totalExpense / totalIncome : (totalExpense > 0 ? 1 : 0);
+    fill.style.setProperty('--w', Math.min(100, Math.round(ratio * 100)) + '%');
+    bar.classList.remove('is-good', 'is-warn', 'is-bad');
+    bar.classList.add(ratio > 1 ? 'is-bad' : ratio > 0.85 ? 'is-warn' : 'is-good');
+  }
 
+  mmRenderHistCategoryBreakdown(data);
   mmRenderMonthCalendar(data);
   mmPopulateHistoryAccountFilter();
-  mmHistShowAll();
+  mmHistRenderList();
   if (window.lucide) lucide.createIcons();
 }
 
@@ -16205,81 +16492,68 @@ function mmRenderHistCategoryBreakdown(data) {
   const wrap = document.getElementById('mmHistoryCategoryBreakdown');
   if (!wrap) return;
 
+  // Pertahankan keadaan buka/tutup saat pindah bulan.
+  const wasOpen = !!(wrap.querySelector('details') && wrap.querySelector('details').open);
+
   const categories = data.categoryBreakdown || [];
   const totalExpense = data.totalExpense || 0;
 
-  if (!categories || categories.length === 0) {
-    if (data.isArchived) {
-      wrap.innerHTML = '<div class="mm-hist-archived-banner"><i data-lucide="archive"></i> Data bulan ini diarsipkan dan tidak ada rincian pengeluaran.</div>';
-    } else {
-      wrap.innerHTML = '';
-    }
+  if (!categories.length) {
+    wrap.innerHTML = data.isArchived
+      ? '<div class="mm-hist-archived-banner"><i data-lucide="archive"></i> Data bulan ini diarsipkan; rincian pengeluaran tidak tersedia.</div>'
+      : '';
     return;
   }
 
-  const colors = ['#22d3ee', '#fbbf24', '#f472b6', '#818cf8', '#fb923c', '#a78bfa', '#2dd4bf', '#60a5fa', '#e879f9', '#94a3b8'];
-  
-  let html = `
-    <div class="mm-hist-cat-card">
-      <div class="mm-hist-cat-head">
-        <div>
-          <h4>Rekap Pengeluaran Kategori</h4>
-          <span class="mm-hist-cat-sub">${categories.length} kategori · Total ${mmFormatIDR(totalExpense)}</span>
-        </div>
-        ${data.isArchived ? '<span class="mm-hist-archived-tag">Arsip</span>' : ''}
-      </div>
-      <div class="mm-hist-cat-list">`;
-
-  categories.forEach((cat, idx) => {
-    const color = (typeof mmCategoryColor === 'function' ? mmCategoryColor(cat.category) : null) || colors[idx % colors.length];
-    const pct = cat.percent ? Number(cat.percent).toFixed(1) : (totalExpense > 0 ? ((cat.amount / totalExpense) * 100).toFixed(1) : '0');
-    const hasSubs = cat.subcategories && cat.subcategories.length > 0;
-    const catId = `hist-cat-${idx}-${data.year}-${data.month}`;
-
-    html += `
-      <div class="mm-hist-cat-item ${hasSubs ? 'has-subs' : ''}" ${hasSubs ? `onclick="mmToggleHistSubcat('${catId}')" title="Klik untuk rincian subkategori"` : ''}>
-        <div class="mm-hist-cat-row">
-          <div class="mm-hist-cat-name-col">
-            <span class="mm-hist-cat-dot" style="background-color: ${color};"></span>
-            <span class="mm-hist-cat-title">${escapeHtml(cat.category)}</span>
-            ${hasSubs ? `<span class="mm-hist-sub-count">(${cat.subcategories.length} sub)</span>` : ''}
-          </div>
-          <div class="mm-hist-cat-amount-col">
-            <strong>${mmFormatIDR(cat.amount)}</strong>
-            <small>${pct}%</small>
-          </div>
-        </div>
-        <div class="mm-hist-cat-bar">
-          <div class="mm-hist-cat-fill" style="width: ${Math.min(pct, 100)}%; background-color: ${color};"></div>
-        </div>`;
-
-    if (hasSubs) {
-      html += `
-        <div id="${catId}" class="mm-hist-subcat-list" style="display: none;">
-          ${cat.subcategories.map(sub => `
-            <div class="mm-hist-subcat-row">
-              <span>${escapeHtml(sub.subcategory || 'General')}</span>
-              <span><strong>${mmFormatIDR(sub.amount)}</strong> <small>(${sub.percent ? Number(sub.percent).toFixed(0) : 0}%)</small></span>
-            </div>
-          `).join('')}
-        </div>`;
-    }
-
-    html += `</div>`;
+  const palette = ['#22d3ee', '#fbbf24', '#f472b6', '#818cf8', '#fb923c', '#a78bfa', '#2dd4bf', '#60a5fa', '#e879f9', '#94a3b8'];
+  const rows = categories.map((cat, idx) => {
+    const color = (typeof mmCategoryColor === 'function' ? mmCategoryColor(cat.category) : null) || palette[idx % palette.length];
+    const pct = cat.percent ? Number(cat.percent) : (totalExpense > 0 ? (cat.amount / totalExpense) * 100 : 0);
+    return { cat, color, pct, idx };
   });
 
-  html += `
-      </div>
-    </div>`;
+  const segs = rows.map(r => `<span style="flex:${Math.max(r.pct, 0.5)};background:${r.color}" title="${escapeHtml(r.cat.category)} ${r.pct.toFixed(0)}%"></span>`).join('');
+  const top = rows[0];
 
-  wrap.innerHTML = html;
+  const list = rows.map(r => {
+    const subs = r.cat.subcategories || [];
+    const hasSubs = subs.length > 0;
+    const id = `hist-cat-${r.idx}-${data.year}-${data.month}`;
+    const head = `
+      <span class="ah-cat-dot" style="background:${r.color}"></span>
+      <span class="ah-cat-name">${escapeHtml(r.cat.category)}${hasSubs ? `<small>${subs.length} sub</small>` : ''}</span>
+      <span class="ah-cat-pct">${r.pct.toFixed(0)}%</span>
+      <strong class="ah-cat-amt">${mmFormatIDR(r.cat.amount)}</strong>
+      ${hasSubs ? lucideIconSvg('chevron-down', 14) : ''}`;
+    const subHtml = hasSubs ? `
+      <div id="${id}" class="ah-subs" hidden>
+        ${subs.map(s => `<div class="ah-sub-row"><span>${escapeHtml(s.subcategory || 'Umum')}</span><strong>${mmFormatIDR(s.amount)}</strong></div>`).join('')}
+      </div>` : '';
+    return hasSubs
+      ? `<div class="ah-cat"><button type="button" class="ah-cat-row" aria-expanded="false" onclick="mmToggleHistSubcat('${id}', this)">${head}</button>${subHtml}</div>`
+      : `<div class="ah-cat"><div class="ah-cat-row">${head}</div></div>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <details class="hx-card ah-fold"${wasOpen ? ' open' : ''}>
+      <summary>
+        <span class="ah-fold-row">
+          <span class="ah-fold-title">Pengeluaran per kategori</span>
+          <span class="ah-fold-hint">${escapeHtml(top.cat.category)} ${top.pct.toFixed(0)}%${data.isArchived ? ' · arsip' : ''}</span>
+          ${lucideIconSvg('chevron-down', 16).replace('<svg', '<svg class="ah-fold-chev"')}
+        </span>
+        <span class="ah-catbar" aria-hidden="true">${segs}</span>
+      </summary>
+      <div class="ah-cats">${list}</div>
+    </details>`;
 }
 
-function mmToggleHistSubcat(id) {
+function mmToggleHistSubcat(id, btn) {
   const el = document.getElementById(id);
   if (!el) return;
-  const isHidden = el.style.display === 'none';
-  el.style.display = isHidden ? 'flex' : 'none';
+  el.hidden = !el.hidden;
+  if (btn) btn.setAttribute('aria-expanded', el.hidden ? 'false' : 'true');
+  if (btn) btn.classList.toggle('is-open', !el.hidden);
 }
 
 function mmHistOpenInsight() {
@@ -16300,240 +16574,281 @@ function mmSelectMonthFromAllTime(monthStr) {
   }
 }
 
+/* Kalender mulai Senin (kebiasaan di Indonesia). Sel hari memakai titik
+   hijau/merah untuk ada-tidaknya pemasukan/pengeluaran; nominalnya ada di
+   daftar saat tanggalnya diketuk. */
 function mmRenderMonthCalendar(data) {
   const grid = document.getElementById('mmHistoryCalendarGrid');
   if (!grid) return;
 
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNames = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
   let html = dayNames.map(d => `<div class="mm-cal-header">${d}</div>`).join('');
 
-  const firstDay = new Date(data.year, data.month - 1, 1).getDay();
-  const today = new Date();
-  const isCurrentMonth = today.getFullYear() === data.year && (today.getMonth() + 1) === data.month;
+  const lead = (new Date(data.year, data.month - 1, 1).getDay() + 6) % 7;
+  const now = new Date();
+  const isCurrentMonth = now.getFullYear() === data.year && (now.getMonth() + 1) === data.month;
+  const monthName = new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(data.year, data.month - 1, 1));
 
-  for (let i = 0; i < firstDay; i++) html += '<div class="mm-cal-day empty"></div>';
+  for (let i = 0; i < lead; i++) html += '<div class="mm-cal-day empty" aria-hidden="true"></div>';
 
   for (let d = 1; d <= data.endDay; d++) {
-    const dayData = data.days[d] || { income: 0, expense: 0, transactions: [] };
-    const isToday = isCurrentMonth && today.getDate() === d;
-    const net = (dayData.income || 0) - (dayData.expense || 0);
-    let netHtml = '';
-    if (net !== 0) {
-      const color = net > 0 ? 'var(--success)' : 'var(--error)';
-      const prefix = net > 0 ? '+' : '';
-      netHtml = `<span class="mm-cal-amount" style="color:${color}">${prefix}${mmFormatShort(net)}</span>`;
-    }
-    html += `<div class="mm-cal-day ${isToday ? 'today' : ''}" onclick="mmHistShowDay(${d})">
-      <span class="mm-cal-num">${d}</span>${netHtml}
-    </div>`;
+    const dd = data.days[d] || { income: 0, expense: 0, transactions: [] };
+    const isToday = isCurrentMonth && now.getDate() === d;
+    const n = (dd.transactions || []).length;
+    const dots = (dd.income > 0 ? '<i class="ah-dot is-in"></i>' : '') + (dd.expense > 0 ? '<i class="ah-dot is-out"></i>' : '');
+    const label = `${d} ${monthName}${n ? ', ' + n + ' transaksi' : ', tidak ada transaksi'}`;
+    html += `<button type="button" class="mm-cal-day${isToday ? ' today' : ''}${MM_HIST_DAY === d ? ' selected' : ''}" data-day="${d}" aria-pressed="${MM_HIST_DAY === d}" aria-label="${label}" onclick="mmHistShowDay(${d})">
+      <span class="mm-cal-num">${d}</span><span class="ah-dots">${dots}</span>
+    </button>`;
   }
 
   grid.innerHTML = html;
 }
 
-/* Show all transactions for the currently loaded month (default view) */
-function mmHistShowAll() {
-  const cacheKey = `${MM_HIST_YEAR}-${MM_HIST_MONTH}`;
-  const data = MM_MONTH_CACHE[cacheKey];
-  const container = document.getElementById('mmHistoryMonthContent');
-  if (!data || !container) return;
-
-  document.querySelectorAll('#mmHistoryCalendarGrid .mm-cal-day.selected').forEach(el => el.classList.remove('selected'));
-  setText('mmHistoryListLabel', 'Transactions this month');
-  const btn = document.getElementById('mmHistoryShowAllBtn');
-  if (btn) btn.style.display = 'none';
-
-  let all = [];
-  if (data.days) {
-    Object.keys(data.days).forEach(d => { all = all.concat(data.days[d].transactions || []); });
-  }
-  if (all.length === 0 && data.isArchived) {
-    container.innerHTML = '<div class="empty-state" style="padding:16px 8px;font-size:13px;color:var(--text-muted);">Transaksi detail bulan ini sudah diarsipkan. Rekap pengeluaran per kategori dapat dilihat pada kartu di atas.</div>';
-    return;
-  }
-  all.sort((a, b) => new Date(b.date) - new Date(a.date));
-  container.innerHTML = mmRenderTransactionList(all);
+function mmHistSyncCalendar() {
+  document.querySelectorAll('#mmHistoryCalendarGrid .mm-cal-day[data-day]').forEach(el => {
+    const on = Number(el.dataset.day) === MM_HIST_DAY;
+    el.classList.toggle('selected', on);
+    el.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
 }
 
-/* Show transactions for a single day when its calendar cell is tapped */
+/* Semua tanggal bulan ini */
+function mmHistShowAll() {
+  MM_HIST_DAY = null;
+  mmHistSyncCalendar();
+  mmHistRenderList();
+}
+
+/* Ketuk tanggal = saring ke tanggal itu; ketuk lagi = batal. */
 function mmHistShowDay(day) {
-  const cacheKey = `${MM_HIST_YEAR}-${MM_HIST_MONTH}`;
-  const data = MM_MONTH_CACHE[cacheKey];
-  const container = document.getElementById('mmHistoryMonthContent');
-  if (!data || !container) return;
+  MM_HIST_DAY = (MM_HIST_DAY === day) ? null : day;
+  mmHistSyncCalendar();
+  mmHistRenderList();
 
-  const dayData = data.days[day] || { transactions: [] };
+  if (MM_HIST_DAY) {
+    // Kalender ada di atas daftar: tutup dan bawa daftar ke layar, kalau tidak
+    // hasil ketukan tidak terlihat.
+    const fold = document.getElementById('mmHistCalFold');
+    if (fold) fold.open = false;
+    const target = document.getElementById('mmHistListSection');
+    if (target) {
+      const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      target.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+    }
+  }
+}
 
-  // Highlight selected cell
-  document.querySelectorAll('#mmHistoryCalendarGrid .mm-cal-day.selected').forEach(el => el.classList.remove('selected'));
-  document.querySelectorAll('#mmHistoryCalendarGrid .mm-cal-day:not(.empty)').forEach(el => {
-    const n = el.querySelector('.mm-cal-num');
-    if (n && parseInt(n.textContent, 10) === day) el.classList.add('selected');
+/* Jenis transaksi (chip) */
+function mmHistSetType(type) {
+  const input = document.getElementById('mmHistTypeFilter');
+  if (input) input.value = type;
+  document.querySelectorAll('.ah-chips .ah-chip[data-type]').forEach(b => {
+    const on = b.dataset.type === type;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
+  mmHistRenderList();
+}
 
-  const label = mmFormatMonthLabel(`${MM_HIST_YEAR}-${String(MM_HIST_MONTH).padStart(2, '0')}`);
-  setText('mmHistoryListLabel', `${day} ${label}`);
+function mmHistResetFilters() {
+  const s = document.getElementById('mmHistSearchInput');
+  const a = document.getElementById('mmHistAccountFilter');
+  if (s) s.value = '';
+  if (a) a.value = 'All';
+  MM_HIST_DAY = null;
+  mmHistSyncCalendar();
+  mmHistSetType('All');
+}
+
+function mmFilterMonthHistory() { mmHistRenderList(); }
+
+/* Satu-satunya tempat yang menggambar daftar bulan: tanggal + cari + jenis + akun. */
+function mmHistRenderList() {
+  const container = document.getElementById('mmHistoryMonthContent');
+  if (!container) return;
+  const data = MM_MONTH_CACHE[`${MM_HIST_YEAR}-${MM_HIST_MONTH}`];
+  if (!data || !data.days) return;
+
+  const query = ((document.getElementById('mmHistSearchInput') || {}).value || '').trim().toLowerCase();
+  const type = (document.getElementById('mmHistTypeFilter') || {}).value || 'All';
+  const acc = (document.getElementById('mmHistAccountFilter') || {}).value || 'All';
+
+  let all = [];
+  if (MM_HIST_DAY) {
+    all = ((data.days[MM_HIST_DAY] || {}).transactions || []).slice();
+  } else {
+    Object.keys(data.days).forEach(d => { all = all.concat(data.days[d].transactions || []); });
+  }
+  const monthHasTx = MM_HIST_DAY ? true : all.length > 0;
+
+  if (query) {
+    const terms = query.split(/\s+/).filter(Boolean);
+    all = all.filter(tx => {
+      const hay = [tx.notes, tx.category, tx.subcategory, tx.account, tx.accountTo, tx.amount, tx.type].join(' ').toLowerCase();
+      return terms.every(t => hay.includes(t));
+    });
+  }
+  if (type !== 'All') all = all.filter(tx => tx.type === type);
+  if (acc !== 'All') all = all.filter(tx => tx.account === acc || tx.accountTo === acc);
+
+  const filtering = !!(query || type !== 'All' || acc !== 'All' || MM_HIST_DAY);
+
+  // Judul + sub + tombol "Semua tanggal"
+  const monthName = new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(MM_HIST_YEAR, MM_HIST_MONTH - 1, 1));
+  setText('mmHistoryListLabel', MM_HIST_DAY ? `${MM_HIST_DAY} ${monthName}` : 'Transaksi');
   const btn = document.getElementById('mmHistoryShowAllBtn');
-  if (btn) btn.style.display = '';
+  if (btn) btn.style.display = MM_HIST_DAY ? '' : 'none';
 
-  const txs = (dayData.transactions || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-  container.innerHTML = mmRenderTransactionList(txs);
+  const net = all.reduce((s, t) => s + (t.type === 'Income' ? Number(t.amount) : t.type === 'Expense' ? -Number(t.amount) : 0), 0);
+  const sub = document.getElementById('mmHistoryListSub');
+  if (sub) {
+    sub.textContent = all.length
+      ? `${all.length} transaksi` + (filtering && net !== 0 ? ` · net ${net > 0 ? '+' : '−'}${mmFormatIDR(Math.abs(net))}` : '')
+      : '';
+  }
+
+  if (!all.length) {
+    if (!monthHasTx && data.isArchived) {
+      container.innerHTML = mmEmpty('info', 'Transaksi diarsipkan', 'Rincian bulan ini sudah diarsipkan. Lihat rekap per kategori di atas.');
+    } else if (filtering) {
+      container.innerHTML = mmEmpty('search', 'Tidak ada yang cocok', 'Ubah kata kunci atau filter.',
+        '<button type="button" class="mm-empty-action" onclick="mmHistResetFilters()">Reset filter</button>');
+    } else {
+      container.innerHTML = mmEmpty('arrow-right-left', 'Belum ada transaksi bulan ini', 'Mulai dari yang barusan kamu belanjakan.',
+        '<button type="button" class="mm-empty-action" onclick="mmShowActionSheet(\'expense\')">Catat pengeluaran</button>');
+    }
+  } else {
+    container.innerHTML = mmRenderTransactionList(all);
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+/* --- Period --------------------------------------------------------- */
+function mmHistPreset(range, quiet) {
+  const end = new Date();
+  const start = new Date();
+  if (range === 'month') start.setDate(1);
+  else start.setDate(start.getDate() - (Number(range) - 1));
+  const s = document.getElementById('mmPeriodStart');
+  const e = document.getElementById('mmPeriodEnd');
+  if (s) s.value = localISODate(start);
+  if (e) e.value = localISODate(end);
+  mmLoadPeriod(quiet);
 }
 
 function mmLoadPeriod() {
-  const start = document.getElementById('mmPeriodStart').value;
-  const end = document.getElementById('mmPeriodEnd').value;
+  let start = document.getElementById('mmPeriodStart').value;
+  let end = document.getElementById('mmPeriodEnd').value;
   if (!start || !end) {
-    showToast('Select start and end date.', 'error');
+    showToast('Pilih tanggal awal dan akhir.', 'error');
     return;
   }
+  if (start > end) {   // tertukar: balik saja daripada menolak
+    const t = start; start = end; end = t;
+    document.getElementById('mmPeriodStart').value = start;
+    document.getElementById('mmPeriodEnd').value = end;
+  }
   const container = document.getElementById('mmHistoryPeriodContent');
-  container.innerHTML = skRows(5);
+  container.innerHTML = '<div class="hx-card">' + skRows(5) + '</div>';
   google.script.run
     .withSuccessHandler(data => mmRenderPeriod(data, container))
-    .withFailureHandler(err => { container.innerHTML = '<div class="empty-state">Failed to load.</div>'; })
+    .withFailureHandler(() => {
+      container.innerHTML = '<div class="hx-card">' + mmEmpty('alert-circle', 'Gagal memuat', 'Periksa koneksi, lalu coba lagi.') + '</div>';
+      if (window.lucide) lucide.createIcons();
+    })
     .mmGetTransactions({ startDate: start, endDate: end });
 }
 
 function mmRenderPeriod(data, container) {
   if (!data || !data.length) {
-    container.innerHTML = '<div class="empty-state">No transactions in this period.</div>';
+    container.innerHTML = '<div class="hx-card">' + mmEmpty('clock', 'Tidak ada transaksi', 'Belum ada catatan pada rentang tanggal ini.') + '</div>';
+    if (window.lucide) lucide.createIcons();
     return;
   }
   let totalIn = 0, totalOut = 0;
   data.forEach(tx => {
-    if (tx.type === 'Income') totalIn += tx.amount;
-    if (tx.type === 'Expense') totalOut += tx.amount;
+    if (tx.type === 'Income') totalIn += Number(tx.amount) || 0;
+    if (tx.type === 'Expense') totalOut += Number(tx.amount) || 0;
   });
-  let html = `
-    <div class="mm-month-summary">
-      <div class="item"><span>Income</span><strong class="positive">${mmFormatIDR(totalIn)}</strong></div>
-      <div class="item"><span>Expense</span><strong class="negative">${mmFormatIDR(totalOut)}</strong></div>
-      <div class="item"><span>Net</span><strong>${mmFormatIDR(totalIn - totalOut)}</strong></div>
-    </div>`;
-  html += mmRenderTransactionList(data);
-  container.innerHTML = html;
+  const net = totalIn - totalOut;
+  container.innerHTML = `
+    <section class="hx-card ah-psum" aria-label="Ringkasan rentang">
+      <dl class="hx-flow ah-flow">
+        <div class="hx-flow-item is-in"><dt><span class="hx-dot"></span>Masuk</dt><dd>${mmFormatIDR(totalIn)}</dd></div>
+        <div class="hx-flow-item is-out"><dt><span class="hx-dot"></span>Keluar</dt><dd>${mmFormatIDR(totalOut)}</dd></div>
+        <div class="hx-flow-item is-net"><dt><span class="hx-dot"></span>Sisa</dt><dd class="${net > 0 ? 'positive' : net < 0 ? 'negative' : ''}">${net > 0 ? '+' : ''}${mmFormatIDR(net)}</dd></div>
+      </dl>
+    </section>
+    <section class="hx-block">
+      <div class="hx-head"><div class="hx-head-text"><h3 class="hx-title">Transaksi</h3><p class="hx-sub">${data.length} transaksi</p></div></div>
+      <div class="hx-card hx-activity ah-tx">${mmRenderTransactionList(data)}</div>
+    </section>`;
+  if (window.lucide) lucide.createIcons();
 }
 
+/* Baris transaksi dikelompokkan per hari — pola yang sama dengan "Aktivitas
+   Terbaru" di Home (hx-day / hx-tx), tanpa chip jenis: warna & tanda +/− sudah
+   menyampaikannya. */
 function mmRenderTransactionList(transactions) {
-  if (!transactions || !transactions.length) return '<div class="empty-state">Belum ada transaksi.</div>';
+  if (!transactions || !transactions.length) return mmEmpty('arrow-right-left', 'Belum ada transaksi', '');
 
-  // Group by date
-  const groups = {};
-  transactions.forEach(tx => {
-    const d = tx.date || 'Lainnya';
-    if (!groups[d]) groups[d] = { date: d, items: [], net: 0 };
-    groups[d].items.push(tx);
-    if (tx.type === 'Income') groups[d].net += (Number(tx.amount) || 0);
-    else if (tx.type === 'Expense') groups[d].net -= (Number(tx.amount) || 0);
+  const sorted = [...transactions].sort((a, b) =>
+    (b.date || '').localeCompare(a.date || '') || ((b.rowNumber || 0) - (a.rowNumber || 0)));
+
+  const groups = [];
+  sorted.forEach(tx => {
+    const last = groups[groups.length - 1];
+    if (last && last.date === tx.date) last.items.push(tx);
+    else groups.push({ date: tx.date, items: [tx] });
   });
 
-  return Object.values(groups).map(g => {
-    const formattedDate = mmFormatDate(g.date);
-    const netFormatted = (g.net >= 0 ? '+' : '') + mmFormatIDR(g.net);
-    const netClass = g.net > 0 ? 'positive' : (g.net < 0 ? 'negative' : 'neutral');
+  return groups.map(g => {
+    const net = g.items.reduce((s, t) => s + (t.type === 'Income' ? Number(t.amount) : t.type === 'Expense' ? -Number(t.amount) : 0), 0);
+    const netClass = net > 0 ? 'income-color' : net < 0 ? 'expense-color' : '';
+    const netText = net === 0 ? '' : (net > 0 ? '+' : '−') + mmFormatIDR(Math.abs(net));
+
+    const rows = g.items.map(tx => {
+      const isIn = tx.type === 'Income', isOut = tx.type === 'Expense';
+      const prefix = isIn ? '+' : isOut ? '−' : '';
+      const colorClass = isIn ? 'income-color' : isOut ? 'expense-color' : 'transfer-color';
+      const label = tx.notes || tx.subcategory || tx.category || tx.type;
+      const meta = tx.type === 'Transfer'
+        ? (tx.account || '') + (tx.accountTo ? ' → ' + tx.accountTo : '')
+        : [tx.subcategory || tx.category || tx.type, tx.account].filter(Boolean).join(' · ');
+      return `
+      <div class="hx-tx" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
+        <div class="hx-tx-ic" style="--c:${mmCategoryColor(tx.category, tx.type)}">${mmCategoryEmoji(tx.category, tx.type)}</div>
+        <div class="hx-tx-info">
+          <div class="hx-tx-name">${escapeHtml(label)}</div>
+          <div class="hx-tx-meta">${escapeHtml(meta)}</div>
+        </div>
+        <div class="hx-tx-amt ${colorClass}">${prefix}${mmFormatIDR(tx.amount)}</div>
+      </div>`;
+    }).join('');
 
     return `
-      <div class="ed-tx-group">
-        <div class="ed-tx-group-header">
-          <span class="ed-tx-group-date">${formattedDate}</span>
-          <span class="ed-tx-group-net ${netClass}">Net: ${netFormatted}</span>
+      <div class="hx-day">
+        <div class="hx-day-head">
+          <span>${mmDayLabel(g.date)}</span>
+          <strong class="${netClass}">${netText}</strong>
         </div>
-        <div class="ed-tx-group-items">
-          ${g.items.map(tx => {
-            let amtClass = 'income-amt';
-            let prefix = '+';
-            let subtitle = escapeHtml(tx.account || '');
-
-            if (tx.type === 'Expense') {
-              amtClass = 'expense-amt';
-              prefix = '-';
-              subtitle = `${escapeHtml(tx.account || '')} · ${escapeHtml(tx.category || '')}${tx.subcategory ? ' / ' + escapeHtml(tx.subcategory) : ''}`;
-            } else if (tx.type === 'Transfer') {
-              amtClass = 'transfer-amt';
-              prefix = '';
-              subtitle = `${escapeHtml(tx.account || '')} → ${escapeHtml(tx.accountTo || '')}`;
-            } else {
-              subtitle = `${escapeHtml(tx.account || '')}${tx.category ? ' · ' + escapeHtml(tx.category) : ''}`;
-            }
-
-            const catColor = mmCategoryColor(tx.category, tx.type);
-            const catIcon = mmCategoryEmoji(tx.category, tx.type);
-
-            return `
-              <div class="ed-tx-row mm-tx-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
-                <div class="ed-tx-left">
-                  <div class="ed-tx-icon" style="color:${catColor}">${catIcon}</div>
-                  <div class="ed-tx-details">
-                    <span class="ed-tx-title">${escapeHtml(tx.notes || tx.category || tx.type)}</span>
-                    <span class="ed-tx-sub">${subtitle}</span>
-                  </div>
-                </div>
-                <div class="ed-tx-right">
-                  <span class="ed-tx-amount ${amtClass}">${prefix}${mmFormatIDR(tx.amount)}</span>
-                  <span class="ed-tx-tag is-${tx.type.toLowerCase()}">${tx.type}</span>
-                </div>
-              </div>`;
-          }).join('')}
-        </div>
+        ${rows}
       </div>`;
   }).join('');
-}
-
-/* === ACTIVITY SEARCH & FILTERS === */
-function mmFilterMonthHistory() {
-  const searchInput = document.getElementById('mmHistSearchInput');
-  const typeFilter = document.getElementById('mmHistTypeFilter');
-  const accFilter = document.getElementById('mmHistAccountFilter');
-  const container = document.getElementById('mmHistoryMonthContent');
-  if (!container) return;
-
-  const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
-  const selectedType = typeFilter ? typeFilter.value : 'All';
-  const selectedAcc = accFilter ? accFilter.value : 'All';
-
-  const cacheKey = `${MM_HIST_YEAR}-${MM_HIST_MONTH}`;
-  const data = MM_MONTH_CACHE[cacheKey];
-  if (!data || !data.days) return;
-
-  let all = [];
-  Object.keys(data.days).forEach(d => { all = all.concat(data.days[d].transactions || []); });
-
-  if (query) {
-    all = all.filter(tx => {
-      const notes = (tx.notes || '').toLowerCase();
-      const cat = (tx.category || '').toLowerCase();
-      const sub = (tx.subcategory || '').toLowerCase();
-      const acc = (tx.account || '').toLowerCase();
-      const accTo = (tx.accountTo || '').toLowerCase();
-      const amtStr = String(tx.amount || '');
-      return notes.includes(query) || cat.includes(query) || sub.includes(query) || acc.includes(query) || accTo.includes(query) || amtStr.includes(query);
-    });
-  }
-
-  if (selectedType !== 'All') {
-    all = all.filter(tx => tx.type === selectedType);
-  }
-
-  if (selectedAcc !== 'All') {
-    all = all.filter(tx => tx.account === selectedAcc || tx.accountTo === selectedAcc);
-  }
-
-  all.sort((a, b) => new Date(b.date) - new Date(a.date));
-  container.innerHTML = mmRenderTransactionList(all);
 }
 
 function mmPopulateHistoryAccountFilter() {
   const select = document.getElementById('mmHistAccountFilter');
   if (!select) return;
   const currentVal = select.value;
-  let opts = '<option value="All">Semua Akun</option>';
+  let opts = '<option value="All">Semua akun</option>';
   const accounts = (MM_DASHBOARD && MM_DASHBOARD.accounts) || MM_ACCOUNTS || [];
   accounts.forEach(a => {
     opts += `<option value="${escapeHtml(a.name)}">${escapeHtml(a.name)}</option>`;
   });
   select.innerHTML = opts;
-  if (currentVal) select.value = currentVal;
+  if (currentVal && [...select.options].some(o => o.value === currentVal)) select.value = currentVal;
 }
 
 /* === CALENDAR HELPERS === */
@@ -17171,6 +17486,7 @@ function lucideIconSvg(name, size) {
     'tag': '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>',
     'chevron-right': '<path d="m9 18 6-6-6-6"/>',
     'chevron-down': '<path d="m6 9 6 6 6-6"/>',
+    'search': '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
     'plus': '<path d="M5 12h14"/><path d="M12 5v14"/>',
     'arrow-down-to-line': '<path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/>',
     'credit-card': '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',
