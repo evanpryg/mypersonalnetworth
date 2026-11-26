@@ -2278,12 +2278,10 @@ select.form-input:focus {
 }
 .mm-change-vs { font-size: 12px; }
 #mmNetworthSparkline {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 55%;
-  height: 75%;
-  opacity: 0.55;
+  display: block;
+  width: 100%;
+  height: 68px;
+  opacity: 1;
   pointer-events: none;
 }
 
@@ -4915,7 +4913,7 @@ select.form-input:focus {
 .mm-date-display { font-size: 12px; opacity: 1; gap: 6px; }
 
 .mm-networth-card { margin: 8px 16px 22px; padding: 18px 18px 14px; }
-#mmNetworthSparkline { top: 40px; bottom: auto; height: 84px; width: 48%; }
+/* sparkline rendered in dedicated trend card */
 
 .mm-hero-stats {
   position: relative;
@@ -5686,7 +5684,7 @@ html, body { overscroll-behavior: none; }
 .mm-networth-amount { font-size: 30px; margin: 4px 0 6px; }
 .mm-networth-change { flex-wrap: wrap; row-gap: 4px; }
 .mm-change-vs { font-variant-numeric: tabular-nums; }
-#mmNetworthSparkline { top: 30px; height: 52px; width: 40%; right: 0; left: auto; opacity: 0.85; }
+/* sparkline contained in trend section */
 .mm-networth-change { max-width: 100%; }
 .mm-acc-empty { grid-column: 1 / -1; margin: 2px 4px 0; font-size: 12px; color: var(--text-muted); }
 
@@ -7878,18 +7876,19 @@ body {
 
 .tab-item-add {
   position: relative;
-  top: -8px;
+  top: -4px;
 }
 
 .tab-add-bubble {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: var(--accent);
   color: #090F12;
   display: grid;
   place-items: center;
-  box-shadow: 0 4px 16px rgba(0, 184, 138, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   margin-bottom: 2px;
   transition: transform 0.15s ease;
 }
@@ -7899,10 +7898,10 @@ body {
 }
 
 .tab-add-icon {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   color: #090F12;
-  stroke-width: 2.5;
+  stroke-width: 2.2;
 }
 
 /* Responsive Desktop Layout (>= 1024px) */
@@ -8027,8 +8026,16 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 24px;
+  padding-bottom: 18px;
+  margin-bottom: 20px;
   border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 600px) {
+  .ed-dash-header {
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+  }
 }
 
 .ed-dash-meta {
@@ -8133,45 +8140,67 @@ body {
 .ed-quick-tx-bar {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 8px;
+  margin-bottom: 20px;
 }
 
 .ed-quick-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: var(--surface);
+  gap: 6px;
+  height: 38px;
+  padding: 0 10px;
+  background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: var(--radius-btn);
+  border-radius: 9999px;
   color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .ed-quick-btn:hover {
-  background: var(--surface-2);
+  background: var(--surface-3);
   border-color: #3b4e57;
   transform: translateY(-1px);
+}
+
+.ed-quick-btn:active {
+  transform: scale(0.97);
+}
+
+.ed-quick-btn .ed-qbtn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ed-quick-btn .ed-qbtn-icon svg {
+  width: 15px;
+  height: 15px;
 }
 
 .ed-quick-btn.is-out .ed-qbtn-icon { color: var(--expense); }
 .ed-quick-btn.is-in .ed-qbtn-icon { color: var(--income); }
 .ed-quick-btn.is-tx .ed-qbtn-icon { color: var(--info); }
 
+.ed-sparkline-wrap,
 .ed-sparkline-box {
+  position: relative !important;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px 20px 12px;
+  padding: 14px 16px 12px;
   cursor: pointer;
   transition: border-color 0.15s ease;
+  overflow: hidden;
+  margin-bottom: 20px;
 }
 
+.ed-sparkline-wrap:hover,
 .ed-sparkline-box:hover {
   border-color: #3b4e57;
 }
@@ -8180,48 +8209,70 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .ed-sparkline-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .ed-sparkline-more {
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--accent);
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
 
+#mmNetworthSparkline {
+  position: relative !important;
+  top: 0 !important;
+  bottom: auto !important;
+  left: 0 !important;
+  right: auto !important;
+  display: block !important;
+  width: 100% !important;
+  height: 68px !important;
+  overflow: hidden !important;
+  opacity: 1 !important;
+  margin: 4px 0 2px !important;
+}
+
 /* 3. Cashflow */
 .ed-flow-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  gap: 12px;
   margin-bottom: 16px;
 }
 
 @media (max-width: 720px) {
   .ed-flow-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
   }
 }
 
 .ed-flow-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px;
+  border-radius: var(--radius-sm);
+  padding: 14px 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .ed-flow-card {
+    padding: 10px 8px;
+  }
 }
 
 .ed-flow-top {
@@ -8249,10 +8300,23 @@ body {
 }
 
 .ed-flow-val {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
   margin: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 480px) {
+  .ed-flow-label {
+    font-size: 10px;
+  }
+  .ed-flow-val {
+    font-size: 15px;
+    letter-spacing: -0.02em;
+  }
 }
 
 .ed-flow-delta {
@@ -9519,7 +9583,7 @@ body {
         <div id="mmDashboardPage" class="page active-page">
           <section class="ed-dashboard-wrap">
 
-            <!-- 1. HEADER: Greeting, Nama Pengguna, Tanggal & Actions -->
+            <!-- 1. HEADER: Greeting, Nama Pengguna, Tanggal & Profile -->
             <header class="ed-dash-header">
               <div class="ed-dash-header-left">
                 <div class="ed-dash-meta">
@@ -9530,17 +9594,6 @@ body {
                 <h1 class="ed-dash-user" id="mmUserName">Mr Evan</h1>
               </div>
               <div class="ed-dash-header-actions">
-                <button type="button" class="ed-header-btn" onclick="mmOpenAiChat()" aria-label="Tanya Asisten AI" title="AI Assistant">
-                  <i data-lucide="sparkles"></i>
-                  <span class="ed-btn-label">AI</span>
-                </button>
-                <button type="button" class="ed-header-btn" onclick="mmOpenSearch()" aria-label="Cari Transaksi" title="Cari Transaksi">
-                  <i data-lucide="search"></i>
-                  <span class="ed-btn-label">Cari</span>
-                </button>
-                <button type="button" class="ed-header-btn" id="mmBalanceEye" onclick="toggleAmountVisibility()" aria-label="Sembunyikan nominal" title="Sensor nominal">
-                  <i data-lucide="eye"></i>
-                </button>
                 <button type="button" class="ed-avatar-btn" id="mmHomeAvatar" onclick="mmShowPage('mmSettingsPage')" aria-label="Buka profil">
                   <span>E</span>
                 </button>
@@ -14343,7 +14396,8 @@ function mmRenderHeader() {
   setText('mmGreeting', greeting);
 
   // User name — safeStorage so a browser that blocks storage still renders.
-  const savedName = safeStorage.getItem('mm_user_name') || 'Mr Evan 🌿';
+  let savedName = safeStorage.getItem('mm_user_name') || 'Mr Evan';
+  savedName = savedName.replace(/[🌿🌱🍃]/gu, '').trim() || 'Mr Evan';
   setText('mmUserName', savedName);
   // Home and the Profile tab show the same name, with initials as the avatar.
   const plainName = savedName.replace(/[^\p{L}\p{N}\s.'-]/gu, '').trim() || 'Profil';
@@ -14912,20 +14966,18 @@ function mmRenderSparkline(data) {
 
   svg.innerHTML =
     '<defs><linearGradient id="mmSparkFill" x1="0" y1="0" x2="0" y2="1">' +
-      '<stop offset="0" stop-color="rgba(32,201,151,0.22)"/>' +
-      '<stop offset="1" stop-color="rgba(32,201,151,0)"/>' +
+      '<stop offset="0" stop-color="rgba(0,184,138,0.22)"/>' +
+      '<stop offset="1" stop-color="rgba(0,184,138,0)"/>' +
     '</linearGradient></defs>' +
     '<path class="lx-trend-area" d="' + line + ` L${last[0].toFixed(1)} ${h} L${xy[0][0].toFixed(1)} ${h} Z" fill="url(#mmSparkFill)"/>` +
-    '<path class="lx-trend-line" pathLength="1" d="' + line + '" fill="none" stroke="#20C997" stroke-width="2" ' +
-      'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
+    '<path class="lx-trend-line" pathLength="1" d="' + line + '" fill="none" stroke="#00B88A" stroke-width="2.2" ' +
+      'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
+    `<circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4" fill="#00B88A" stroke="#090F12" stroke-width="2"/>`;
 
-  // Endpoint dot sits in HTML so it stays round on a stretched viewBox.
+  // Remove any obsolete absolute dot that might have floated outside the chart
   if (wrap) {
-    let dot = wrap.querySelector('.lx-trend-dot');
-    if (!dot) { dot = document.createElement('span'); dot.className = 'lx-trend-dot'; wrap.appendChild(dot); }
-    dot.style.left = (last[0] / w * 100) + '%';
-    const drawnH = svg.getBoundingClientRect().height || 88;
-    dot.style.top = (last[1] / h * drawnH) + 'px';
+    const oldDot = wrap.querySelector('.lx-trend-dot');
+    if (oldDot) oldDot.remove();
   }
 
   if (labels) {
