@@ -502,199 +502,156 @@
     <div id="moneyWorkspace" class="workspace active">
       <main class="main-content">
 
-        <!-- ===== MM DASHBOARD / HOME =====
-             Redesigned to Dark Editorial Finance with 7 strictly ordered sections:
-             1. Header (greeting, name, date, actions)
-             2. Total balance (hero, diff, sparkline, quick log actions)
-             3. Cashflow (monthly income, expense, net, daily trend)
-             4. Accounts overview (balances per account)
-             5. Budget overview (progress per category)
-             6. Financial insights (daily allowance, health alerts)
-             7. Recent transactions (latest records) -->
+        <!-- ===== MM HOME (redesign v3 — "Pocket Ledger") =====
+             Mobile-first, one question per block:
+             1. Top bar        — siapa & kapan
+             2. Hero           — berapa total uangku (+ tren 6 bulan)
+             3. Actions        — catat sesuatu (3 aksi, 56px)
+             4. Today          — berapa yang boleh kupakai hari ini (+ peringatan)
+             5. Month          — bulan ini: masuk / keluar / sisa + belanja harian
+             6. Accounts       — uangku ada di mana
+             7. Budget         — pos mana yang aman / hampir habis
+             8. Activity       — apa yang baru terjadi
+             Desktop (>=1024): dua kolom — kiri: 2-5, kanan: 6-8.
+             Semua id data (mm*) dipertahankan; render ada di Script_Keuangan.html. -->
         <div id="mmDashboardPage" class="page active-page">
-          <section class="ed-dashboard-wrap">
+          <div class="hx">
 
-            <!-- 1. HEADER: Greeting, Nama Pengguna, Tanggal & Profile -->
-            <header class="ed-dash-header">
-              <div class="ed-dash-header-left">
-                <div class="ed-dash-meta">
-                  <span id="mmGreeting">Selamat datang</span>
-                  <span class="ed-dot-sep">·</span>
-                  <span id="mmDateText"></span>
-                </div>
-                <h1 class="ed-dash-user" id="mmUserName">Mr Evan</h1>
+            <!-- 1. TOP BAR -->
+            <header class="hx-top">
+              <div class="hx-top-text">
+                <p class="hx-top-meta"><span id="mmGreeting">Selamat datang</span><span aria-hidden="true"> · </span><span id="mmDateText"></span></p>
+                <h1 class="hx-top-name" id="mmUserName">Mr Evan</h1>
               </div>
-              <div class="ed-dash-header-actions">
-                <button type="button" class="ed-avatar-btn" id="mmHomeAvatar" onclick="mmShowPage('mmSettingsPage')" aria-label="Buka profil">
-                  <span>E</span>
-                </button>
-              </div>
+              <button type="button" class="hx-avatar" id="mmHomeAvatar" onclick="mmShowPage('mmSettingsPage')" aria-label="Buka profil">E</button>
             </header>
 
-            <!-- 2. TOTAL BALANCE: Angka besar, perubahan saldo, dan grafik perkembangan -->
-            <section class="ed-section ed-hero-balance" id="mmNetworthCard">
-              <div class="ed-balance-row-top">
-                <div class="ed-eyebrow">Total Net Balance</div>
-              </div>
-              <div class="ed-balance-main-row">
-                <h2 class="ed-balance-hero-val" id="mmNetWorthValue">Rp 0</h2>
-              </div>
-              <div class="ed-balance-change">
-                <span class="mm-change-badge up" id="mmChangeBadge">+0%</span>
-                <span class="ed-change-note" id="mmChangeText">vs akhir bulan lalu</span>
-              </div>
+            <div class="hx-cols">
+              <div class="hx-col hx-col-main">
 
-              <!-- Quick Log Actions -->
-              <div class="ed-quick-tx-bar" aria-label="Catat Transaksi Cepat">
-                <button type="button" class="ed-quick-btn is-out" onclick="mmShowActionSheet('expense')">
-                  <span class="ed-qbtn-icon"><i data-lucide="arrow-up-right"></i></span>
-                  <span class="ed-qbtn-text">Pengeluaran</span>
-                </button>
-                <button type="button" class="ed-quick-btn is-in" onclick="mmShowActionSheet('income')">
-                  <span class="ed-qbtn-icon"><i data-lucide="arrow-down-left"></i></span>
-                  <span class="ed-qbtn-text">Pemasukan</span>
-                </button>
-                <button type="button" class="ed-quick-btn is-tx" onclick="mmShowActionSheet('transfer')">
-                  <span class="ed-qbtn-icon"><i data-lucide="arrow-right-left"></i></span>
-                  <span class="ed-qbtn-text">Transfer</span>
-                </button>
-              </div>
-
-              <!-- Sparkline & Net Worth Trend -->
-              <div class="ed-sparkline-box" id="mmTrendWrap" onclick="mmShowPage('mmInsightPage')" role="button" tabindex="0" title="Klik untuk lihat analitik lengkap">
-                <div class="ed-sparkline-head">
-                  <span class="ed-sparkline-title">Tren Pertumbuhan Saldo</span>
-                  <span class="ed-sparkline-more">Analitik <i data-lucide="arrow-right"></i></span>
-                </div>
-                <svg id="mmNetworthSparkline" viewBox="0 0 320 72" preserveAspectRatio="none" aria-hidden="true"></svg>
-                <div class="hm-trend-labels" id="mmTrendLabels" aria-hidden="true"></div>
-              </div>
-            </section>
-
-            <!-- 3. CASHFLOW: Total Income dan Expenses bulan berjalan -->
-            <section class="ed-section ed-cashflow-section" id="mmMonthSection">
-              <div class="ed-sec-head">
-                <div>
-                  <div class="ed-eyebrow">MONTHLY CASHFLOW</div>
-                  <h3 class="ed-sec-title" id="mmCashflowTitle">Bulan Ini</h3>
-                </div>
-                <div class="ed-sec-actions">
-                  <span id="mmCashflowSub" class="ed-sec-sub"></span>
-                  <button type="button" class="ed-text-link" onclick="mmShowPage('mmInsightPage')">
-                    Detail <i data-lucide="arrow-right"></i>
+                <!-- 2. HERO: total saldo + tren -->
+                <section class="hx-hero" id="mmNetworthCard" aria-labelledby="hxHeroLabel">
+                  <span class="hx-hero-glow" aria-hidden="true"></span>
+                  <p class="hx-label" id="hxHeroLabel">Total saldo bersih</p>
+                  <h2 class="hx-amount" id="mmNetWorthValue">Rp 0</h2>
+                  <p class="hx-change">
+                    <span class="mm-change-badge up" id="mmChangeBadge">+0%</span>
+                    <span class="hx-change-note" id="mmChangeText">vs akhir bulan lalu</span>
+                  </p>
+                  <button type="button" class="hx-trend" id="mmTrendWrap" onclick="mmShowPage('mmInsightPage')" aria-label="Tren saldo 6 bulan terakhir, buka analitik">
+                    <svg id="mmNetworthSparkline" viewBox="0 0 320 72" preserveAspectRatio="none" aria-hidden="true"></svg>
+                    <span class="hx-trend-labels" id="mmTrendLabels" aria-hidden="true"></span>
                   </button>
-                </div>
-              </div>
+                </section>
 
-              <div class="ed-flow-grid">
-                <div class="ed-flow-card is-in">
-                  <div class="ed-flow-top">
-                    <span class="ed-flow-dot in"></span>
-                    <span class="ed-flow-label">Pemasukan</span>
-                  </div>
-                  <strong class="ed-flow-val" id="mmTotalIncome">Rp 0</strong>
-                  <div class="ed-flow-delta" id="mmIncomeDelta"></div>
-                </div>
-
-                <div class="ed-flow-card is-out">
-                  <div class="ed-flow-top">
-                    <span class="ed-flow-dot out"></span>
-                    <span class="ed-flow-label">Pengeluaran</span>
-                  </div>
-                  <strong class="ed-flow-val" id="mmTotalExpense">Rp 0</strong>
-                  <div class="ed-flow-delta" id="mmExpenseDelta"></div>
-                </div>
-
-                <div class="ed-flow-card is-net">
-                  <div class="ed-flow-top">
-                    <span class="ed-flow-dot net"></span>
-                    <span class="ed-flow-label">Sisa Kas</span>
-                  </div>
-                  <strong class="ed-flow-val" id="mmTotalSaving">Rp 0</strong>
-                  <div class="ed-flow-delta">
-                    <span class="mm-rate-chip" id="mmSavingRate"></span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Daily Spending Histogram -->
-              <div class="ed-daily-box">
-                <div class="ed-daily-head">
-                  <span class="ed-daily-label">Distribusi Belanja Harian</span>
-                  <span class="ed-daily-sub" id="mmDailySub"></span>
-                </div>
-                <div class="mm-daily-chart" id="mmDailyChart"></div>
-                <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
-                <div id="mmBreakdown" style="display:none;"></div>
-              </div>
-            </section>
-
-            <!-- 4. ACCOUNTS OVERVIEW: Ringkasan saldo setiap rekening -->
-            <section class="ed-section ed-accounts-section">
-              <div class="ed-sec-head">
-                <div>
-                  <div class="ed-eyebrow">ACCOUNTS &amp; LIQUIDITY</div>
-                  <h3 class="ed-sec-title">Ringkasan Rekening</h3>
-                </div>
-                <button type="button" class="ed-text-link" onclick="mmShowPage('mmAccountsPage')">
-                  Semua Akun <i data-lucide="arrow-right"></i>
-                </button>
-              </div>
-              <div class="ed-accounts-strip" id="mmAccountsScroll" aria-label="Daftar Rekening"></div>
-            </section>
-
-            <!-- 5. BUDGET OVERVIEW: Total anggaran, terpakai, tersisa, dan pos kategori -->
-            <section class="ed-section ed-budget-section" id="mmBudgetSection">
-              <div class="ed-sec-head">
-                <div>
-                  <div class="ed-eyebrow">BUDGET TRACKING</div>
-                  <h3 class="ed-sec-title">Anggaran Bulanan</h3>
-                </div>
-                <div class="ed-sec-actions">
-                  <span id="mmBudgetSummary" class="ed-sec-sub"></span>
-                  <button type="button" class="ed-text-link" onclick="mmShowPage('mmBudgetPage')">
-                    Detail <i data-lucide="arrow-right"></i>
+                <!-- 3. ACTIONS -->
+                <nav class="hx-actions" aria-label="Catat transaksi cepat">
+                  <button type="button" class="hx-act is-out" onclick="mmShowActionSheet('expense')">
+                    <span class="hx-act-ic"><i data-lucide="arrow-up-right"></i></span>
+                    <span class="hx-act-tx">Keluar</span>
                   </button>
-                </div>
-              </div>
-              <div class="ed-budget-grid" id="mmBudgetList"></div>
-            </section>
-
-            <!-- 6. FINANCIAL INSIGHTS: Insight pengeluaran dan jatah hari ini -->
-            <section class="ed-section ed-insights-section">
-              <div class="ed-sec-head">
-                <div>
-                  <div class="ed-eyebrow">FINANCIAL INTELLIGENCE</div>
-                  <h3 class="ed-sec-title">Insight &amp; Jatah Harian</h3>
-                </div>
-                <button type="button" class="ed-text-link" onclick="mmShowPage('mmInsightPage')">
-                  Analisis <i data-lucide="arrow-right"></i>
-                </button>
-              </div>
-              <div class="ed-insights-row">
-                <div class="ed-today-card" id="mmTodayCard" aria-label="Jatah hari ini"></div>
-                <div class="mm-alerts ed-alerts-card" id="mmAlerts"></div>
-              </div>
-            </section>
-
-            <!-- 7. RECENT TRANSACTIONS: 5-7 transaksi terakhir -->
-            <section class="ed-section ed-recent-section" id="mmTransactionsSection">
-              <div class="ed-sec-head">
-                <div>
-                  <div class="ed-eyebrow">RECENT ACTIVITY</div>
-                  <h3 class="ed-sec-title">Aktivitas Terkini</h3>
-                </div>
-                <div class="ed-sec-actions">
-                  <span id="mmTxMonthCount" class="ed-sec-sub"></span>
-                  <button type="button" class="ed-text-link" onclick="mmShowPage('mmHistoryPage')">
-                    Semua transaksi <i data-lucide="arrow-right"></i>
+                  <button type="button" class="hx-act is-in" onclick="mmShowActionSheet('income')">
+                    <span class="hx-act-ic"><i data-lucide="arrow-down-left"></i></span>
+                    <span class="hx-act-tx">Masuk</span>
                   </button>
-                </div>
-              </div>
-              <div class="ed-recent-list" id="mmDashboardTransactions"></div>
-            </section>
+                  <button type="button" class="hx-act is-tf" onclick="mmShowActionSheet('transfer')">
+                    <span class="hx-act-ic"><i data-lucide="arrow-right-left"></i></span>
+                    <span class="hx-act-tx">Transfer</span>
+                  </button>
+                </nav>
 
-          </section>
+                <!-- 4. TODAY: jatah harian + peringatan -->
+                <section class="hx-block hx-today-block" aria-label="Jatah hari ini">
+                  <div class="hx-card hx-today" id="mmTodayCard"></div>
+                  <div class="hx-alerts mm-alerts" id="mmAlerts"></div>
+                </section>
+
+                <!-- 5. MONTH -->
+                <section class="hx-block" id="mmMonthSection" aria-labelledby="mmCashflowTitle">
+                  <div class="hx-head">
+                    <div class="hx-head-text">
+                      <h3 class="hx-title" id="mmCashflowTitle">Bulan Ini</h3>
+                      <p class="hx-sub" id="mmCashflowSub"></p>
+                    </div>
+                    <button type="button" class="hx-link" onclick="mmShowPage('mmInsightPage')">Detail <i data-lucide="chevron-right"></i></button>
+                  </div>
+
+                  <div class="hx-card hx-month">
+                    <div class="hx-flowbar" id="mmFlowBar" role="img" aria-label="Perbandingan pengeluaran terhadap pemasukan">
+                      <span class="hx-flowbar-fill" id="mmFlowFill"></span>
+                    </div>
+                    <dl class="hx-flow">
+                      <div class="hx-flow-item is-in">
+                        <dt><span class="hx-dot"></span>Masuk</dt>
+                        <dd id="mmTotalIncome">Rp 0</dd>
+                        <dd class="hx-flow-delta" id="mmIncomeDelta"></dd>
+                      </div>
+                      <div class="hx-flow-item is-out">
+                        <dt><span class="hx-dot"></span>Keluar</dt>
+                        <dd id="mmTotalExpense">Rp 0</dd>
+                        <dd class="hx-flow-delta" id="mmExpenseDelta"></dd>
+                      </div>
+                      <div class="hx-flow-item is-net">
+                        <dt><span class="hx-dot"></span>Sisa</dt>
+                        <dd id="mmTotalSaving">Rp 0</dd>
+                        <dd class="hx-flow-delta"><span class="mm-rate-chip" id="mmSavingRate"></span></dd>
+                      </div>
+                    </dl>
+
+                    <div class="hx-daily">
+                      <div class="hx-daily-head">
+                        <span>Belanja harian</span>
+                        <span id="mmDailySub"></span>
+                      </div>
+                      <div class="mm-daily-chart" id="mmDailyChart"></div>
+                      <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
+                    </div>
+                    <div id="mmBreakdown" style="display:none;"></div>
+                  </div>
+                </section>
+
+              </div>
+
+              <div class="hx-col hx-col-side">
+
+                <!-- 6. ACCOUNTS -->
+                <section class="hx-block" aria-labelledby="hxAcctTitle">
+                  <div class="hx-head">
+                    <div class="hx-head-text">
+                      <h3 class="hx-title" id="hxAcctTitle">Rekening</h3>
+                    </div>
+                    <button type="button" class="hx-link" onclick="mmShowPage('mmAccountsPage')">Semua <i data-lucide="chevron-right"></i></button>
+                  </div>
+                  <div class="hx-accts" id="mmAccountsScroll" aria-label="Daftar rekening"></div>
+                </section>
+
+                <!-- 7. BUDGET -->
+                <section class="hx-block" id="mmBudgetSection" aria-labelledby="hxBudgetTitle">
+                  <div class="hx-head">
+                    <div class="hx-head-text">
+                      <h3 class="hx-title" id="hxBudgetTitle">Anggaran</h3>
+                      <p class="hx-sub" id="mmBudgetSummary"></p>
+                    </div>
+                    <button type="button" class="hx-link" onclick="mmShowPage('mmBudgetPage')">Detail <i data-lucide="chevron-right"></i></button>
+                  </div>
+                  <div class="hx-card hx-budget" id="mmBudgetList"></div>
+                </section>
+
+                <!-- 8. ACTIVITY -->
+                <section class="hx-block" id="mmTransactionsSection" aria-labelledby="hxActTitle">
+                  <div class="hx-head">
+                    <div class="hx-head-text">
+                      <h3 class="hx-title" id="hxActTitle">Aktivitas Terbaru</h3>
+                      <p class="hx-sub" id="mmTxMonthCount"></p>
+                    </div>
+                    <button type="button" class="hx-link" onclick="mmShowPage('mmHistoryPage')">Semua <i data-lucide="chevron-right"></i></button>
+                  </div>
+                  <div class="hx-card hx-activity" id="mmDashboardTransactions"></div>
+                </section>
+
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- ===== MM BUDGET PAGE ===== -->

@@ -606,6 +606,18 @@ function mmRenderCashflow(data) {
 
   const chip = document.getElementById('mmSavingRate');
   const used = income > 0 ? expense / income : (expense > 0 ? 1 : 0);
+
+  // One bar for the whole month: how much of what came in has gone out.
+  const flowBar = document.getElementById('mmFlowBar');
+  const flowFill = document.getElementById('mmFlowFill');
+  if (flowBar && flowFill) {
+    flowFill.style.setProperty('--w', (Math.min(used, 1) * 100).toFixed(1) + '%');
+    const tone = (income <= 0 && expense <= 0) ? '' : saving < 0 ? ' is-bad' : used > 0.85 ? ' is-warn' : ' is-good';
+    flowBar.className = 'hx-flowbar' + tone;
+    flowBar.setAttribute('aria-label', income > 0
+      ? `${Math.round(used * 100)}% pemasukan bulan ini sudah dipakai`
+      : 'Belum ada pemasukan bulan ini');
+  }
   if (chip) {
     if (income <= 0) {
       chip.textContent = 'Belum ada pemasukan';
@@ -686,32 +698,32 @@ function mmRenderToday(data) {
     else { status = 'Sesuai jalur'; ptone = 'good'; }
     if (bp > 1) { status = 'Budget belanja terlampaui'; ptone = 'bad'; }
     pace = `
-      <div class="hm-pace is-${ptone}">
-        <div class="hm-pace-top">
+      <div class="hx-pace is-${ptone}">
+        <div class="hx-pace-top">
           <span>Belanja <strong>${Math.round(bp * 100)}%</strong> terpakai</span>
-          <span class="hm-pace-status">${escapeHtml(status)}</span>
+          <span class="hx-pace-status">${escapeHtml(status)}</span>
         </div>
-        <div class="hm-pace-track" role="img" aria-label="${Math.round(bp * 100)}% budget belanja terpakai, ${Math.round(tp * 100)}% bulan berjalan">
-          <span class="hm-pace-fill" style="--w:${Math.min(bp, 1) * 100}%"></span>
-          <span class="hm-pace-mark" style="left:${tp * 100}%"></span>
+        <div class="hx-pace-track" role="img" aria-label="${Math.round(bp * 100)}% budget belanja terpakai, ${Math.round(tp * 100)}% bulan berjalan">
+          <span class="hx-pace-fill" style="--w:${Math.min(bp, 1) * 100}%"></span>
+          <span class="hx-pace-mark" style="left:${tp * 100}%"></span>
         </div>
-        <div class="hm-pace-foot"><span>1 ${escapeHtml(ctx.monthName.slice(0, 3))}</span><span>hari ini · ${Math.round(tp * 100)}% bulan</span><span>${ctx.daysInMonth}</span></div>
+        <div class="hx-pace-foot"><span>1 ${escapeHtml(ctx.monthName.slice(0, 3))}</span><span>hari ini · ${Math.round(tp * 100)}% bulan</span><span>${ctx.daysInMonth}</span></div>
       </div>`;
   }
 
   box.innerHTML = `
-    <button type="button" class="hm-today-main is-${tone}" onclick="mmShowPage('mmInsightPage')">
-      <span class="hm-ring" aria-hidden="true">
-        <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="${r}" class="hm-ring-track"/>
-          <circle cx="28" cy="28" r="${r}" class="hm-ring-val" ${frac > 0 ? '' : 'stroke-opacity="0"'} stroke-dasharray="${(frac * circ).toFixed(1)} ${circ.toFixed(1)}" transform="rotate(-90 28 28)"/></svg>
+    <button type="button" class="hx-today-main is-${tone}" onclick="mmShowPage('mmInsightPage')">
+      <span class="hx-ring" aria-hidden="true">
+        <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="${r}" class="hx-ring-track"/>
+          <circle cx="28" cy="28" r="${r}" class="hx-ring-val" ${frac > 0 ? '' : 'stroke-opacity="0"'} stroke-dasharray="${(frac * circ).toFixed(1)} ${circ.toFixed(1)}" transform="rotate(-90 28 28)"/></svg>
         <span>${ringPct}</span>
       </span>
-      <span class="hm-today-text">
-        <span class="hm-k">${escapeHtml(label)}</span>
-        <strong class="hm-today-value">${escapeHtml(value)}</strong>
-        <span class="hm-today-sub">${escapeHtml(sub)}</span>
+      <span class="hx-today-text">
+        <span class="hx-k">${escapeHtml(label)}</span>
+        <strong class="hx-today-value">${escapeHtml(value)}</strong>
+        <span class="hx-today-sub">${escapeHtml(sub)}</span>
       </span>
-      <span class="hm-chev" aria-hidden="true">${lucideIconSvg('chevron-right', 18)}</span>
+      <span class="hx-chev" aria-hidden="true">${lucideIconSvg('chevron-right', 18)}</span>
     </button>
     ${pace}`;
 }
@@ -953,7 +965,11 @@ function mmRenderSparkline(data) {
     '<path class="lx-trend-area" d="' + line + ` L${last[0].toFixed(1)} ${h} L${xy[0][0].toFixed(1)} ${h} Z" fill="url(#mmSparkFill)"/>` +
     '<path class="lx-trend-line" pathLength="1" d="' + line + '" fill="none" stroke="#00B88A" stroke-width="2.2" ' +
       'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
-    `<circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4" fill="#00B88A" stroke="#090F12" stroke-width="2"/>`;
+    // End marker: a zero-length round-capped stroke stays a true circle even
+    // though the SVG stretches (preserveAspectRatio="none"); a <circle> would
+    // squash into an ellipse on wide screens.
+    `<path class="lx-trend-dot-ring" d="M${last[0].toFixed(1)} ${last[1].toFixed(1)}h0.01" stroke="#0F1D21" stroke-width="14" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` +
+    `<path class="lx-trend-dot-core" d="M${last[0].toFixed(1)} ${last[1].toFixed(1)}h0.01" stroke="#00B88A" stroke-width="8" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
 
   // Remove any obsolete absolute dot that might have floated outside the chart
   if (wrap) {
@@ -992,11 +1008,11 @@ const MM_ACC_TYPE_COLORS = {
 function mmRenderAccountCards(accounts) {
   const box = document.getElementById('mmAccountsScroll');
   if (!box) return;
-  const manage = `<button type="button" class="hm-chip is-manage" onclick="mmShowPage('mmSettingsPage')"><span class="hm-chip-ic">${lucideIconSvg('sliders-horizontal', 15)}</span><span class="hm-chip-name">Kelola akun</span></button>`;
+  const manage = `<button type="button" class="hx-acct is-ghost" onclick="mmShowPage('mmSettingsPage')"><span class="hx-acct-ic">${lucideIconSvg('sliders-horizontal', 18)}</span><span class="hx-acct-name">Kelola rekening</span></button>`;
 
   const visible = (accounts || []).filter(a => a.showOnDashboard).sort((a, b) => (b.balance || 0) - (a.balance || 0));
   if (!visible.length) {
-    box.innerHTML = `<button type="button" class="hm-chip" onclick="mmShowPage('mmSettingsPage')">${lucideIconSvg('plus', 15)}<span class="hm-chip-name">Tambah akun</span></button>`;
+    box.innerHTML = `<button type="button" class="hx-acct is-ghost" onclick="mmShowPage('mmSettingsPage')"><span class="hx-acct-ic">${lucideIconSvg('plus', 18)}</span><span class="hx-acct-name">Tambah rekening</span></button>`;
     return;
   }
   // Empty accounts stay off the strip; Settings still lists them.
@@ -1004,12 +1020,16 @@ function mmRenderAccountCards(accounts) {
   const total = visible.reduce((s, a) => s + Math.max(a.balance || 0, 0), 0);
   box.innerHTML = shown.map(a => {
     const color = MM_ACC_TYPE_COLORS[a.type] || MM_ACC_TYPE_COLORS['Other'];
-    const share = total > 0 ? Math.round(Math.max(a.balance || 0, 0) / total * 100) : 0;
+    const bal = a.balance || 0;
+    const share = total > 0 ? Math.round(Math.max(bal, 0) / total * 100) : 0;
     return `
-      <button type="button" class="hm-chip" aria-label="${escapeHtml(a.name)}, ${share}% dari total" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
-        <span class="hm-chip-ic" style="color:${color}">${a.icon ? mmAccountIconSvg(a.icon, 15) : lucideIconSvg('wallet', 15)}</span>
-        <span class="hm-chip-name">${escapeHtml(a.name)}</span>
-        <strong class="${(a.balance || 0) < 0 ? 'expense-color' : ''}">${mmFormatIDRShort(a.balance)}</strong>
+      <button type="button" class="hx-acct" style="--c:${color}" aria-label="${escapeHtml(a.name)}, saldo ${escapeHtml(mmFormatIDR(bal))}, ${share}% dari total" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
+        <span class="hx-acct-top">
+          <span class="hx-acct-ic">${a.icon ? mmAccountIconSvg(a.icon, 18) : lucideIconSvg('wallet', 18)}</span>
+          <span class="hx-acct-share">${share}%</span>
+        </span>
+        <span class="hx-acct-name">${escapeHtml(a.name)}</span>
+        <strong class="hx-acct-bal ${bal < 0 ? 'expense-color' : ''}">${mmFormatIDRShort(bal)}</strong>
       </button>`;
   }).join('') + manage;
 }
@@ -1097,28 +1117,26 @@ function mmBudgetRowHtml(c, detailed) {
     </button>`;
 }
 
-// Home budget tile: horizontal progress bar card, clear spent vs target, status badge
+// Home budget row: icon, name, used %, thin bar, "spent / target" and what is left.
 function mmBudgetTileHtml(c) {
   const b = mmBudgetState(c);
   const color = mmCategoryColor(c.category);
   const note = b.state === 'goal' ? 'Target tercapai' : b.note;
   const pct = Math.min(b.pct, 100);
   return `
-    <button type="button" class="ed-budget-card is-${b.state}" onclick="mmShowCategoryDetail('${jsStr(c.category)}')">
-      <div class="ed-bcard-head">
-        <div class="ed-bcard-title-wrap">
-          <span class="ed-bcard-icon" style="color:${color}">${mmCategoryEmoji(c.category)}</span>
-          <span class="ed-bcard-name">${escapeHtml(c.category)}</span>
-        </div>
-        <span class="ed-bcard-badge is-${b.state}">${b.pct}%</span>
-      </div>
-      <div class="ed-bcard-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
-        <div class="ed-bcard-fill is-${b.state}" style="width:${pct}%"></div>
-      </div>
-      <div class="ed-bcard-foot">
-        <span class="ed-bcard-spent">${mmFormatIDRShort(b.spent)} <span class="ed-bcard-target">/ ${mmFormatIDRShort(b.target)}</span></span>
-        <span class="ed-bcard-note is-${b.state}">${escapeHtml(note)}</span>
-      </div>
+    <button type="button" class="hx-bgt is-${b.state}" onclick="mmShowCategoryDetail('${jsStr(c.category)}')">
+      <span class="hx-bgt-ic" style="--c:${color}">${mmCategoryEmoji(c.category)}</span>
+      <span class="hx-bgt-body">
+        <span class="hx-bgt-top">
+          <span class="hx-bgt-name">${escapeHtml(c.category)}</span>
+          <span class="hx-bgt-pct">${b.pct}%</span>
+        </span>
+        <span class="hx-bar" role="progressbar" aria-label="${escapeHtml(c.category)} terpakai" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="--w:${pct}%"></span></span>
+        <span class="hx-bgt-foot">
+          <span>${mmFormatIDRShort(b.spent)} <span class="hx-of">/ ${mmFormatIDRShort(b.target)}</span></span>
+          <span class="hx-bgt-note">${escapeHtml(note)}</span>
+        </span>
+      </span>
     </button>`;
 }
 
@@ -1134,7 +1152,7 @@ function mmRenderBudgetCard(allocationCards, totalIncome, carryover) {
   const cards = MM_ALLOC_CARDS.filter(c => (c.target || 0) > 0 || (c.spent || 0) > 0);
   if (!cards.length) {
     if (summary) summary.textContent = 'Belum ada dana bulan ini';
-    list.innerHTML = `<div class="hm-card">${mmEmpty('circle-dollar', 'Budget belum terbentuk', 'Budget dibentuk dari sisa saldo bulan lalu ditambah pemasukan, lalu dibagi sesuai persentase di Settings.', `<button class="mm-empty-action" onclick="mmShowActionSheet('income')">Catat pemasukan</button>`)}</div>`;
+    list.innerHTML = `${mmEmpty('circle-dollar', 'Budget belum terbentuk', 'Budget dibentuk dari sisa saldo bulan lalu ditambah pemasukan, lalu dibagi sesuai persentase di Settings.', `<button class="mm-empty-action" onclick="mmShowActionSheet('income')">Catat pemasukan</button>`)}`;
     return;
   }
 
@@ -1329,25 +1347,25 @@ function mmRenderDashboardTransactions() {
         ? (tx.account || '') + (tx.accountTo ? ' → ' + tx.accountTo : '')
         : [tx.subcategory || tx.category || tx.type, tx.account].filter(Boolean).join(' · ');
       return `
-      <div class="mm-transaction-item" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
-        <div class="mm-tx-icon-dash" style="color:${catColor}">${catIcon}</div>
-        <div class="mm-tx-info-dash">
-          <div class="mm-tx-name-dash">${escapeHtml(label)}</div>
-          <div class="mm-tx-category-dash">${escapeHtml(meta)}</div>
+      <div class="hx-tx" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
+        <div class="hx-tx-ic" style="--c:${catColor}">${catIcon}</div>
+        <div class="hx-tx-info">
+          <div class="hx-tx-name">${escapeHtml(label)}</div>
+          <div class="hx-tx-meta">${escapeHtml(meta)}</div>
         </div>
-        <div class="mm-tx-amount-dash ${colorClass}">${prefix}${mmFormatIDR(tx.amount)}</div>
+        <div class="hx-tx-amt ${colorClass}">${prefix}${mmFormatIDR(tx.amount)}</div>
       </div>`;
     }).join('');
     return `
-      <div class="mm-day-group">
-        <div class="mm-day-head">
+      <div class="hx-day">
+        <div class="hx-day-head">
           <span>${mmDayLabel(g.date)}</span>
           <strong class="${netClass}">${netText}</strong>
         </div>
         ${rows}
       </div>`;
   }).join('') + (sorted.length > MM_TX_PREVIEW
-    ? `<button type="button" class="lx-more" onclick="mmShowPage('mmHistoryPage')">Lihat semua ${sorted.length} transaksi ${lucideIconSvg('chevron-right', 16)}</button>`
+    ? `<button type="button" class="hx-more" onclick="mmShowPage('mmHistoryPage')">Lihat semua ${sorted.length} transaksi ${lucideIconSvg('chevron-right', 16)}</button>`
     : '');
 }
 
