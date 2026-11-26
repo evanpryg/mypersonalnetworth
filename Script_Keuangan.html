@@ -377,8 +377,7 @@ function mmRenderHeader() {
   setText('mmGreeting', greeting);
 
   // User name — safeStorage so a browser that blocks storage still renders.
-  let savedName = safeStorage.getItem('mm_user_name') || 'Mr Evan';
-  savedName = savedName.replace(/[🌿🌱🍃]/gu, '').trim() || 'Mr Evan';
+  const savedName = safeStorage.getItem('mm_user_name') || 'Mr Evan 🌿';
   setText('mmUserName', savedName);
   // Home and the Profile tab show the same name, with initials as the avatar.
   const plainName = savedName.replace(/[^\p{L}\p{N}\s.'-]/gu, '').trim() || 'Profil';
@@ -947,18 +946,20 @@ function mmRenderSparkline(data) {
 
   svg.innerHTML =
     '<defs><linearGradient id="mmSparkFill" x1="0" y1="0" x2="0" y2="1">' +
-      '<stop offset="0" stop-color="rgba(0,184,138,0.22)"/>' +
-      '<stop offset="1" stop-color="rgba(0,184,138,0)"/>' +
+      '<stop offset="0" stop-color="rgba(32,201,151,0.22)"/>' +
+      '<stop offset="1" stop-color="rgba(32,201,151,0)"/>' +
     '</linearGradient></defs>' +
     '<path class="lx-trend-area" d="' + line + ` L${last[0].toFixed(1)} ${h} L${xy[0][0].toFixed(1)} ${h} Z" fill="url(#mmSparkFill)"/>` +
-    '<path class="lx-trend-line" pathLength="1" d="' + line + '" fill="none" stroke="#00B88A" stroke-width="2.2" ' +
-      'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
-    `<circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4" fill="#00B88A" stroke="#090F12" stroke-width="2"/>`;
+    '<path class="lx-trend-line" pathLength="1" d="' + line + '" fill="none" stroke="#20C997" stroke-width="2" ' +
+      'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
 
-  // Remove any obsolete absolute dot that might have floated outside the chart
+  // Endpoint dot sits in HTML so it stays round on a stretched viewBox.
   if (wrap) {
-    const oldDot = wrap.querySelector('.lx-trend-dot');
-    if (oldDot) oldDot.remove();
+    let dot = wrap.querySelector('.lx-trend-dot');
+    if (!dot) { dot = document.createElement('span'); dot.className = 'lx-trend-dot'; wrap.appendChild(dot); }
+    dot.style.left = (last[0] / w * 100) + '%';
+    const drawnH = svg.getBoundingClientRect().height || 88;
+    dot.style.top = (last[1] / h * drawnH) + 'px';
   }
 
   if (labels) {
