@@ -9860,6 +9860,212 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
   .ah *, .ah *::before, .ah *::after { transition: none !important; animation: none !important; }
 }
 
+/* ============================================================
+   HOME v4 - "QUIET LEDGER"  (ui-ux-pro-max: Minimalism & Swiss)
+   One card on Home (the month). Everything else is type on the
+   page background, separated by hairlines - fewer boxes, clearer
+   hierarchy. Reuses .hx-* rows; namespace .hq-*. Keep LAST.
+   ============================================================ */
+.hq { gap: 20px; }
+.hq .hx-cols, .hq .hx-col { gap: 24px; }
+
+/* --- Saldo: no card, just the number ---------------------------- */
+.hq-hero { position: relative; display: flex; flex-direction: column; }
+.hq-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+.hq-amount {
+  margin: 4px 0 8px;
+  font-size: clamp(32px, 10vw, 40px);
+  line-height: 1.02;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+.hq-change { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.hq-change-note { font-size: 13px; color: var(--text-secondary); }
+.hq .mm-change-badge { padding: 2px 8px 2px 6px; border-radius: 999px; font-size: 12px; }
+.hq-trend { display: block; width: 100%; margin-top: 14px; padding: 0; text-align: left; border-radius: 12px; }
+.hq-trend svg { display: block; width: 100%; height: 56px; overflow: visible; }
+.hq-trend .lx-trend-area { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 92%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 92%, transparent 100%); }
+.hq-trend .hx-trend-labels span { color: var(--text-muted); }
+.hq-trend:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+/* --- Actions: one segmented bar, not three cards ------------------- */
+.hq-actions {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+}
+.hq-act {
+  --c: var(--accent-rgb);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 0 8px;
+  font-size: 13px; font-weight: 600; color: var(--text);
+  transition: background var(--dur-fast);
+}
+.hq-act + .hq-act { border-left: 1px solid var(--border); }
+.hq-act svg { width: 18px; height: 18px; color: rgb(var(--c)); }
+.hq-act.is-out { --c: var(--expense-rgb); }
+.hq-act.is-in  { --c: var(--income-rgb); }
+.hq-act.is-tf  { --c: var(--info-rgb); }
+.hq-act:active { background: var(--surface-2); }
+.hq-act:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* --- The month: the only card ------------------------------------- */
+.hq-month { display: flex; flex-direction: column; overflow: hidden; }
+.hq-month-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px 4px; }
+.hq-today { border: 0; background: none; border-radius: 0; }
+.hq-today .hx-today-main { padding: 8px 16px 12px; min-height: 0; }
+.hq-today .hx-pace { padding: 12px 16px 14px; }
+.hq-sec { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-top: 1px solid var(--border); }
+.hq .hq-sec.hx-daily { gap: 0; padding-top: 12px; padding-bottom: 8px; }
+.hq-sec .hx-flow-item { padding: 0 10px; }
+.hq-sec .hx-flow-item:first-child { padding-left: 0; }
+.hq-alerts { display: flex; flex-direction: column; border-top: 1px solid var(--border); }
+.hq-alerts:empty { display: none; }
+.hq .hq-alerts .mm-alert {
+  min-height: 44px; padding: 10px 16px; border: 0; border-radius: 0; background: none;
+}
+.hq .hq-alerts .mm-alert + .mm-alert { border-top: 1px solid var(--border); }
+.hq .hq-alerts .mm-alert.is-bad  { background: rgba(var(--error-rgb), 0.06); }
+.hq .hq-alerts .mm-alert.is-warn { background: rgba(var(--warning-rgb), 0.05); }
+.hq .hq-alerts .mm-alert[role="button"] { cursor: pointer; }
+
+/* --- Plain lists: no card, hairline rows -------------------------- */
+.hq-list-block { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.hq-head { padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.hq-list { display: flex; flex-direction: column; }
+.hq-list > * + * { border-top: 1px solid var(--hairline); }
+.hq .hq-list .hx-day + .hx-day { border-top: 1px solid var(--border); }
+.hq .hq-list .hx-tx,
+.hq .hq-list .hx-bgt { padding-left: 0; padding-right: 0; border-radius: 0; }
+.hq .hq-list .hx-day-head { padding: 12px 0 2px; }
+.hq .hq-list .hx-bgt + .hx-bgt { border-top: 1px solid var(--hairline); }
+.hq .hq-list .hx-more { border-top: 1px solid var(--hairline); justify-content: flex-start; padding: 0; }
+.hq .hq-list .mm-empty { padding: 20px 0; }
+
+.hq-row {
+  --c: var(--text-secondary);
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; min-height: 56px; padding: 8px 0; text-align: left;
+  transition: background var(--dur-fast);
+}
+.hq-row:active { background: var(--surface); }
+.hq-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+.hq-row-ic {
+  width: 32px; height: 32px; flex: none; border-radius: 10px; display: grid; place-items: center;
+  color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent);
+}
+.hq-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.hq-row-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hq-row-meta { font-size: 12px; color: var(--text-muted); }
+.hq-row-amt { flex: none; font-size: 14px; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; }
+.hq-row-ghost { color: var(--text-secondary); }
+.hq-row-ghost .hq-row-ic { background: rgba(255, 255, 255, 0.06); color: var(--text-secondary); }
+
+/* Motion: one calm entrance per column. */
+.hq .hx-col > * { animation: hxIn 0.4s var(--ease-out) backwards; }
+
+@media (min-width: 720px) {
+  .hq-act:hover { background: var(--surface); }
+  .hq .hq-list .hx-tx:hover, .hq .hq-list .hx-bgt:hover { background: transparent; }
+  .hq .hq-list .hx-tx:hover .hx-tx-name, .hq .hq-list .hx-bgt:hover .hx-bgt-name, .hq-row:hover .hq-row-name { color: var(--accent); }
+}
+@media (min-width: 1024px) {
+  .hq { gap: 24px; }
+  .hq .hx-cols { gap: 40px; }
+  .hq-amount { font-size: 44px; }
+  .hq-trend svg { height: 72px; }
+}
+
+/* ============================================================
+   ACTIVITY - calendar always visible, daily net under each date
+   ============================================================ */
+.ah-sum .ah-flow { margin-top: 12px; }
+.ah-sum .ah-flowbar { margin: 12px 14px 0; }
+.ah-calwrap { margin-top: 14px; padding: 12px 8px 8px; border-top: 1px solid var(--border); }
+.ah-cal-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 6px 6px; }
+.ah-cal-title { font-size: 13px; font-weight: 600; }
+.ah-cal-legend { display: flex; gap: 10px; font-size: 12px; color: var(--text-muted); }
+.ah-cal-legend .is-in  { color: var(--income); }
+.ah-cal-legend .is-out { color: var(--expense); }
+
+.ah-cal.mm-calendar-grid { gap: 2px; margin: 0; }
+.ah-cal .mm-cal-header { padding: 4px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
+.ah-cal .mm-cal-header.is-weekend { color: var(--text-secondary); }
+.ah-cal .mm-cal-day {
+  min-width: 0; min-height: 50px; gap: 3px; padding: 6px 1px 5px; justify-content: flex-start;
+  border-radius: 10px; border: 1px solid transparent; background: none; color: var(--text);
+}
+.ah-cal .mm-cal-day.is-future { color: var(--text-muted); }
+.ah-cal .mm-cal-day.is-in  { background: rgba(var(--income-rgb), 0.07); }
+.ah-cal .mm-cal-day.is-out { background: rgba(var(--expense-rgb), 0.07); }
+.ah-cal .mm-cal-num { font-size: 13px; font-weight: 600; line-height: 1.1; }
+.ah-net {
+  max-width: 100%; overflow: hidden; white-space: nowrap;
+  font-size: 11px; font-weight: 650; line-height: 1.1; letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.ah-net.is-in  { color: var(--income); }
+.ah-net.is-out { color: var(--expense); }
+.ah-net.is-zero { color: var(--text-muted); font-weight: 500; }
+.ah-cal .mm-cal-day.today { border-color: rgba(var(--accent-rgb), 0.55); }
+.ah-cal .mm-cal-day.today .mm-cal-num { color: var(--accent); }
+.ah-cal .mm-cal-day.selected { background: var(--text); border-color: var(--text); color: var(--bg); box-shadow: none; }
+.ah-cal .mm-cal-day.selected .mm-cal-num,
+.ah-cal .mm-cal-day.selected .ah-net { color: var(--bg); }
+.ah-cal .mm-cal-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 720px) {
+  .ah-cal .mm-cal-day { min-height: 58px; }
+  .ah-net { font-size: 12px; }
+}
+
+/* ============================================================
+   BUDGET + ACCOUNTS v4 - same quiet language as Home
+   ============================================================ */
+.hq-body { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.hq-body > .sk-list { padding: 8px 0; }
+.hq-head-amt { flex: none; font-size: 14px; font-weight: 650; white-space: nowrap; }
+.hq-tag {
+  margin-left: 4px; padding: 1px 6px; border-radius: 6px; vertical-align: 1px;
+  font-size: 11px; font-weight: 500; color: var(--text-muted); background: rgba(255, 255, 255, 0.06);
+}
+.hq-row-wrap { display: flex; align-items: center; gap: 4px; }
+.hq-row-wrap .hq-row { flex: 1; min-width: 0; }
+.hq-row-edit { color: var(--text-muted); margin-right: -10px; }
+
+.hq-budget-hero { --tone: var(--accent); }
+.hq-budget-hero.is-warn { --tone: var(--warning); }
+.hq-budget-hero.is-over { --tone: var(--error); }
+.hq-budget-hero .hq-change-note strong { color: var(--tone); font-weight: 650; }
+.hq-bigbar { height: 6px; margin: 14px 0 10px; }
+.hq-bigbar > span { background: var(--tone); }
+.hq-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--text-secondary); }
+.hq-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.hq-legend .lx-state-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.hq-legend .is-ok .lx-state-dot { background: var(--success); }
+.hq-legend .is-warn .lx-state-dot { background: var(--warning); }
+.hq-legend .is-over .lx-state-dot { background: var(--error); }
+.hq-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--text-muted); }
+.hq-note strong { color: var(--text-secondary); font-weight: 600; }
+.hq .hq-inline-link {
+  display: inline-flex; align-items: center; min-height: 44px; margin: -12px 0; padding: 0 2px;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+}
+
+/* Activity list: plain rows like Home, no card around them. */
+.ah .ah-tx.hx-card { background: none; border: 0; border-radius: 0; overflow: visible; }
+.ah .ah-list .hx-head { padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.ah .ah-tx .hx-tx { padding-left: 0; padding-right: 0; }
+.ah .ah-tx .hx-day-head { padding-left: 0; padding-right: 0; }
+.ah .ah-tx .hx-tx + .hx-tx { border-top: 1px solid var(--hairline); }
+.ah .ah-tx .mm-empty { padding: 24px 0; }
+
+/* The bottom nav already carries "Catat" on every money page; the
+   floating + only covered rows. Desktop hides both and uses the sidebar. */
+#mmFabContainer { display: none !important; }
+
+@media (min-width: 1024px) {
+  .hx.ah { max-width: 760px; }
+}
 </style>
 
 
@@ -10341,20 +10547,20 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
     <div id="moneyWorkspace" class="workspace active">
       <main class="main-content">
 
-        <!-- ===== MM HOME (redesign v3 — "Pocket Ledger") =====
-             Mobile-first, one question per block:
-             1. Top bar        — siapa & kapan
-             2. Hero           — berapa total uangku (+ tren 6 bulan)
-             3. Actions        — catat sesuatu (3 aksi, 56px)
-             4. Today          — berapa yang boleh kupakai hari ini (+ peringatan)
-             5. Month          — bulan ini: masuk / keluar / sisa + belanja harian
-             6. Accounts       — uangku ada di mana
-             7. Budget         — pos mana yang aman / hampir habis
-             8. Activity       — apa yang baru terjadi
-             Desktop (>=1024): dua kolom — kiri: 2-5, kanan: 6-8.
+        <!-- ===== MM HOME (v4 — "Quiet Ledger") =====
+             Satu kartu saja; sisanya tipografi dan garis tipis.
+             1. Top bar      — sapaan & tanggal
+             2. Saldo        — angka besar + tren 6 bulan, tanpa kartu
+             3. Aksi         — satu bilah segmen: Keluar / Masuk / Transfer
+             4. Bulan ini    — SATU kartu: jatah hari ini, laju belanja,
+                               masuk / keluar / sisa, belanja harian, peringatan
+             5. Rekening     — daftar polos
+             6. Anggaran     — daftar polos
+             7. Aktivitas    — daftar polos
+             Desktop (>=1024): dua kolom — kiri: 2-4, kanan: 5-7.
              Semua id data (mm*) dipertahankan; render ada di Script_Keuangan.html. -->
         <div id="mmDashboardPage" class="page active-page">
-          <div class="hx">
+          <div class="hx hq">
 
             <!-- 1. TOP BAR -->
             <header class="hx-top">
@@ -10368,57 +10574,46 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
             <div class="hx-cols">
               <div class="hx-col hx-col-main">
 
-                <!-- 2. HERO: total saldo + tren -->
-                <section class="hx-hero" id="mmNetworthCard" aria-labelledby="hxHeroLabel">
-                  <span class="hx-hero-glow" aria-hidden="true"></span>
-                  <p class="hx-label" id="hxHeroLabel">Total saldo bersih</p>
-                  <h2 class="hx-amount" id="mmNetWorthValue">Rp 0</h2>
-                  <p class="hx-change">
+                <!-- 2. SALDO -->
+                <section class="hq-hero" id="mmNetworthCard" aria-labelledby="hxHeroLabel">
+                  <p class="hq-label" id="hxHeroLabel">Total saldo bersih</p>
+                  <h2 class="hq-amount" id="mmNetWorthValue">Rp 0</h2>
+                  <p class="hq-change">
                     <span class="mm-change-badge up" id="mmChangeBadge">+0%</span>
-                    <span class="hx-change-note" id="mmChangeText">vs akhir bulan lalu</span>
+                    <span class="hq-change-note" id="mmChangeText">vs akhir bulan lalu</span>
                   </p>
-                  <button type="button" class="hx-trend" id="mmTrendWrap" onclick="mmShowPage('mmInsightPage')" aria-label="Tren saldo 6 bulan terakhir, buka analitik">
+                  <button type="button" class="hq-trend" id="mmTrendWrap" onclick="mmShowPage('mmInsightPage')" aria-label="Tren saldo 6 bulan terakhir, buka analitik">
                     <svg id="mmNetworthSparkline" viewBox="0 0 320 72" preserveAspectRatio="none" aria-hidden="true"></svg>
                     <span class="hx-trend-labels" id="mmTrendLabels" aria-hidden="true"></span>
                   </button>
                 </section>
 
-                <!-- 3. ACTIONS -->
-                <nav class="hx-actions" aria-label="Catat transaksi cepat">
-                  <button type="button" class="hx-act is-out" onclick="mmShowActionSheet('expense')">
-                    <span class="hx-act-ic"><i data-lucide="arrow-up-right"></i></span>
-                    <span class="hx-act-tx">Keluar</span>
+                <!-- 3. AKSI -->
+                <nav class="hq-actions" aria-label="Catat transaksi cepat">
+                  <button type="button" class="hq-act is-out" onclick="mmShowActionSheet('expense')">
+                    <i data-lucide="arrow-up-right"></i><span>Keluar</span>
                   </button>
-                  <button type="button" class="hx-act is-in" onclick="mmShowActionSheet('income')">
-                    <span class="hx-act-ic"><i data-lucide="arrow-down-left"></i></span>
-                    <span class="hx-act-tx">Masuk</span>
+                  <button type="button" class="hq-act is-in" onclick="mmShowActionSheet('income')">
+                    <i data-lucide="arrow-down-left"></i><span>Masuk</span>
                   </button>
-                  <button type="button" class="hx-act is-tf" onclick="mmShowActionSheet('transfer')">
-                    <span class="hx-act-ic"><i data-lucide="arrow-right-left"></i></span>
-                    <span class="hx-act-tx">Transfer</span>
+                  <button type="button" class="hq-act is-tf" onclick="mmShowActionSheet('transfer')">
+                    <i data-lucide="arrow-right-left"></i><span>Transfer</span>
                   </button>
                 </nav>
 
-                <!-- 4. TODAY: jatah harian + peringatan -->
-                <section class="hx-block hx-today-block" aria-label="Jatah hari ini">
-                  <div class="hx-card hx-today" id="mmTodayCard"></div>
-                  <div class="hx-alerts mm-alerts" id="mmAlerts"></div>
-                </section>
-
-                <!-- 5. MONTH -->
-                <section class="hx-block" id="mmMonthSection" aria-labelledby="mmCashflowTitle">
-                  <div class="hx-head">
+                <!-- 4. BULAN INI — satu-satunya kartu -->
+                <section class="hx-card hq-month" id="mmMonthSection" aria-labelledby="mmCashflowTitle">
+                  <div class="hq-month-head">
                     <div class="hx-head-text">
                       <h3 class="hx-title" id="mmCashflowTitle">Bulan Ini</h3>
                       <p class="hx-sub" id="mmCashflowSub"></p>
                     </div>
-                    <button type="button" class="hx-link" onclick="mmShowPage('mmInsightPage')">Detail <i data-lucide="chevron-right"></i></button>
+                    <button type="button" class="hx-link" onclick="mmShowPage('mmInsightPage')">Analitik <i data-lucide="chevron-right"></i></button>
                   </div>
 
-                  <div class="hx-card hx-month">
-                    <div class="hx-flowbar" id="mmFlowBar" role="img" aria-label="Perbandingan pengeluaran terhadap pemasukan">
-                      <span class="hx-flowbar-fill" id="mmFlowFill"></span>
-                    </div>
+                  <div class="hx-today hq-today" id="mmTodayCard"></div>
+
+                  <div class="hq-sec">
                     <dl class="hx-flow">
                       <div class="hx-flow-item is-in">
                         <dt><span class="hx-dot"></span>Masuk</dt>
@@ -10436,56 +10631,62 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
                         <dd class="hx-flow-delta"><span class="mm-rate-chip" id="mmSavingRate"></span></dd>
                       </div>
                     </dl>
-
-                    <div class="hx-daily">
-                      <div class="hx-daily-head">
-                        <span>Belanja harian</span>
-                        <span id="mmDailySub"></span>
-                      </div>
-                      <div class="mm-daily-chart" id="mmDailyChart"></div>
-                      <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
+                    <div class="hx-flowbar" id="mmFlowBar" role="img" aria-label="Perbandingan pengeluaran terhadap pemasukan">
+                      <span class="hx-flowbar-fill" id="mmFlowFill"></span>
                     </div>
-                    <div id="mmBreakdown" style="display:none;"></div>
                   </div>
+
+                  <div class="hq-sec hx-daily">
+                    <div class="hx-daily-head">
+                      <span>Belanja harian</span>
+                      <span id="mmDailySub"></span>
+                    </div>
+                    <div class="mm-daily-chart" id="mmDailyChart"></div>
+                    <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
+                  </div>
+
+                  <div class="hq-alerts mm-alerts" id="mmAlerts"></div>
+                  <div id="mmBreakdown" style="display:none;"></div>
                 </section>
 
               </div>
 
               <div class="hx-col hx-col-side">
 
-                <!-- 6. ACCOUNTS -->
-                <section class="hx-block" aria-labelledby="hxAcctTitle">
-                  <div class="hx-head">
+                <!-- 5. REKENING -->
+                <section class="hq-list-block" aria-labelledby="hxAcctTitle">
+                  <div class="hx-head hq-head">
                     <div class="hx-head-text">
                       <h3 class="hx-title" id="hxAcctTitle">Rekening</h3>
+                      <p class="hx-sub" id="mmAcctSub"></p>
                     </div>
                     <button type="button" class="hx-link" onclick="mmShowPage('mmAccountsPage')">Semua <i data-lucide="chevron-right"></i></button>
                   </div>
-                  <div class="hx-accts" id="mmAccountsScroll" aria-label="Daftar rekening"></div>
+                  <div class="hq-list" id="mmAccountsScroll" aria-label="Daftar rekening"></div>
                 </section>
 
-                <!-- 7. BUDGET -->
-                <section class="hx-block" id="mmBudgetSection" aria-labelledby="hxBudgetTitle">
-                  <div class="hx-head">
+                <!-- 6. ANGGARAN -->
+                <section class="hq-list-block" id="mmBudgetSection" aria-labelledby="hxBudgetTitle">
+                  <div class="hx-head hq-head">
                     <div class="hx-head-text">
                       <h3 class="hx-title" id="hxBudgetTitle">Anggaran</h3>
                       <p class="hx-sub" id="mmBudgetSummary"></p>
                     </div>
                     <button type="button" class="hx-link" onclick="mmShowPage('mmBudgetPage')">Detail <i data-lucide="chevron-right"></i></button>
                   </div>
-                  <div class="hx-card hx-budget" id="mmBudgetList"></div>
+                  <div class="hq-list hx-budget" id="mmBudgetList"></div>
                 </section>
 
-                <!-- 8. ACTIVITY -->
-                <section class="hx-block" id="mmTransactionsSection" aria-labelledby="hxActTitle">
-                  <div class="hx-head">
+                <!-- 7. AKTIVITAS -->
+                <section class="hq-list-block" id="mmTransactionsSection" aria-labelledby="hxActTitle">
+                  <div class="hx-head hq-head">
                     <div class="hx-head-text">
-                      <h3 class="hx-title" id="hxActTitle">Aktivitas Terbaru</h3>
+                      <h3 class="hx-title" id="hxActTitle">Aktivitas terbaru</h3>
                       <p class="hx-sub" id="mmTxMonthCount"></p>
                     </div>
                     <button type="button" class="hx-link" onclick="mmShowPage('mmHistoryPage')">Semua <i data-lucide="chevron-right"></i></button>
                   </div>
-                  <div class="hx-card hx-activity" id="mmDashboardTransactions"></div>
+                  <div class="hq-list hx-activity" id="mmDashboardTransactions"></div>
                 </section>
 
               </div>
@@ -10493,70 +10694,58 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
           </div>
         </div>
 
-        <!-- ===== MM BUDGET PAGE ===== -->
+        <!-- ===== MM BUDGET PAGE (v4 — sama dengan Home: tanpa kartu) ===== -->
         <div id="mmBudgetPage" class="page">
-          <section class="ed-page-wrap">
-            <header class="ed-page-header">
-              <div>
-                <span class="ed-eyebrow">BUDGET ALLOCATION</span>
-                <h2 class="ed-page-title">Anggaran &amp; Pembagian Dana</h2>
-                <p class="ed-page-sub" id="mmBudgetPageSub">Pantau batas belanja agar keuangan tetap terkendali.</p>
+          <div class="hx hq">
+            <header class="ah-top">
+              <div class="ah-top-text">
+                <h1 class="ah-title">Anggaran</h1>
+                <p class="ah-sub" id="mmBudgetPageSub">Batas belanja bulan ini</p>
               </div>
-              <div class="ed-header-right">
-                <button class="btn-primary" onclick="mmOpenBudgetSettings()">
-                  <i data-lucide="sliders-horizontal"></i>
-                  <span>Atur Split Budget</span>
-                </button>
-              </div>
+              <button type="button" class="ah-icon-btn is-bordered" onclick="mmOpenBudgetSettings()" aria-label="Atur pembagian budget">
+                <i data-lucide="sliders-horizontal"></i>
+              </button>
             </header>
-            <div id="mmBudgetPageContent">
-              <div class="mm-dash-card">
-                <div class="sk-list"><div class="sk sk-line lg" style="width:60%"></div><div class="sk sk-line" style="width:40%"></div></div>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <!-- ===== MM DEDICATED ACCOUNTS PAGE ===== -->
-        <div id="mmAccountsPage" class="page">
-          <section class="ed-page-wrap">
-            <header class="ed-page-header">
-              <div>
-                <span class="ed-eyebrow">ACCOUNTS &amp; LIQUIDITY</span>
-                <h2 class="ed-page-title">Rekening &amp; Sumber Dana</h2>
-                <p class="ed-page-sub">Kelola rekening bank, e-wallet, uang kas tunai, dan dompet digital.</p>
-              </div>
-              <div class="ed-header-right">
-                <button type="button" class="btn-primary" onclick="mmShowAddAccount()">
-                  <i data-lucide="plus"></i>
-                  <span>Tambah Rekening</span>
-                </button>
-              </div>
-            </header>
-
-            <div class="ed-accounts-hero">
-              <div class="ed-acc-hero-stat">
-                <span class="ed-acc-hero-label">TOTAL SALDO LIKUID SELURUH SUMBER DANA</span>
-                <h3 class="ed-acc-hero-value" id="mmAccountsTotalBalance">Rp 0</h3>
-                <span class="ed-acc-hero-meta" id="mmAccountsCountMeta">Memuat data rekening...</span>
-              </div>
-            </div>
-
-            <div id="mmAccountsFullList" class="ed-accounts-structured-list">
+            <div id="mmBudgetPageContent" class="hq-body">
               <div class="sk-list"><div class="sk sk-line lg" style="width:60%"></div><div class="sk sk-line" style="width:40%"></div></div>
             </div>
-          </section>
+          </div>
+        </div>
+
+        <!-- ===== MM ACCOUNTS PAGE (v4) ===== -->
+        <div id="mmAccountsPage" class="page">
+          <div class="hx hq">
+            <header class="ah-top">
+              <div class="ah-top-text">
+                <h1 class="ah-title">Rekening</h1>
+                <p class="ah-sub">Bank, e-wallet &amp; tunai</p>
+              </div>
+              <button type="button" class="ah-icon-btn is-bordered" onclick="mmShowAddAccount()" aria-label="Tambah rekening">
+                <i data-lucide="plus"></i>
+              </button>
+            </header>
+
+            <section class="hq-hero" aria-labelledby="mmAccTotalLabel">
+              <p class="hq-label" id="mmAccTotalLabel">Total saldo</p>
+              <h2 class="hq-amount" id="mmAccountsTotalBalance">Rp 0</h2>
+              <p class="hq-change"><span class="hq-change-note" id="mmAccountsCountMeta">Memuat data rekening…</span></p>
+            </section>
+
+            <div id="mmAccountsFullList" class="hq-body">
+              <div class="sk-list"><div class="sk sk-line lg" style="width:60%"></div><div class="sk sk-line" style="width:40%"></div></div>
+            </div>
+          </div>
         </div>
 
         <!-- ===== MM HISTORY / ACTIVITY PAGE (redesign — compact) =====
              Satu pertanyaan per blok, urutan dari yang paling sering dipakai:
              1. Top bar      — judul + unduh CSV
              2. Segmented    — per bulan / semua waktu / rentang tanggal
-             3. Ringkasan    — navigasi bulan + masuk / keluar / sisa
+             3. Ringkasan    — navigasi bulan + masuk / keluar / sisa +
+                               kalender (selalu tampil, nett per tanggal)
              4. Filter       — cari, jenis, akun
              5. Rekap        — per kategori (dilipat)
-             6. Kalender     — aktivitas harian (dilipat)
-             7. Daftar       — transaksi, dikelompokkan per hari
+             6. Daftar       — transaksi, dikelompokkan per hari
              Tombol "Catat" sudah ada di bottom nav, jadi tidak diulang di sini.
              Semua id data (mmHist*, mmHistory*) dipertahankan; render ada di
              Script_Keuangan.html. -->
@@ -10589,9 +10778,6 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
                   <button type="button" class="ah-icon-btn" aria-label="Bulan berikutnya" onclick="mmNextMonth()"><i data-lucide="chevron-right"></i></button>
                   <button type="button" class="ah-insight" onclick="mmHistOpenInsight()"><i data-lucide="sparkles"></i>Insight</button>
                 </div>
-                <div class="hx-flowbar ah-flowbar" id="mmHistFlowBar" role="img" aria-label="Perbandingan pengeluaran terhadap pemasukan">
-                  <span class="hx-flowbar-fill" id="mmHistFlowFill"></span>
-                </div>
                 <dl class="hx-flow ah-flow">
                   <div class="hx-flow-item is-in">
                     <dt><span class="hx-dot"></span>Masuk</dt>
@@ -10606,6 +10792,19 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
                     <dd id="mmHistSaving">Rp 0</dd>
                   </div>
                 </dl>
+                <div class="hx-flowbar ah-flowbar" id="mmHistFlowBar" role="img" aria-label="Perbandingan pengeluaran terhadap pemasukan">
+                  <span class="hx-flowbar-fill" id="mmHistFlowFill"></span>
+                </div>
+
+                <!-- Kalender: selalu tampil. Di bawah tiap tanggal: nett hari itu
+                     (pemasukan − pengeluaran; transfer tidak dihitung). -->
+                <div class="ah-calwrap" id="mmHistCalFold">
+                  <div class="ah-cal-head">
+                    <span class="ah-cal-title">Nett harian</span>
+                    <span class="ah-cal-legend"><span class="is-in">+ surplus</span><span class="is-out">− defisit</span></span>
+                  </div>
+                  <div id="mmHistoryCalendarGrid" class="mm-calendar-grid ah-cal" role="group" aria-label="Kalender transaksi, ketuk tanggal untuk memfilter"></div>
+                </div>
               </section>
 
               <!-- Filters -->
@@ -10631,19 +10830,6 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
               <!-- Category breakdown (rendered as a <details> card by JS) -->
               <div id="mmHistoryCategoryBreakdown" class="mm-hist-category-wrap"></div>
 
-              <!-- Calendar -->
-              <details class="hx-card ah-fold" id="mmHistCalFold">
-                <summary>
-                  <span class="ah-fold-row">
-                    <span class="ah-fold-title">Kalender harian</span>
-                    <span class="ah-fold-hint">Ketuk tanggal untuk memfilter</span>
-                    <i data-lucide="chevron-down" class="ah-fold-chev"></i>
-                  </span>
-                </summary>
-                <div class="ah-fold-body">
-                  <div id="mmHistoryCalendarGrid" class="mm-calendar-grid ah-cal"></div>
-                </div>
-              </details>
 
               <!-- Grouped Transaction List -->
               <section class="hx-block ah-list" id="mmHistListSection" aria-labelledby="mmHistoryListLabel">
@@ -15203,7 +15389,9 @@ function mmRenderDashboard(data) {
   if (window.lucide) lucide.createIcons();
 }
 
-/* === DEDICATED ACCOUNTS PAGE RENDERING === */
+/* === ACCOUNTS PAGE ===
+   Same language as Home: total as plain type, then one hairline list per
+   group. Tap a row for its transactions; the pencil edits it. */
 function mmRenderAccountsPage() {
   const container = document.getElementById('mmAccountsFullList');
   const totalEl = document.getElementById('mmAccountsTotalBalance');
@@ -15214,92 +15402,60 @@ function mmRenderAccountsPage() {
   if (!accounts.length) {
     if (totalEl) totalEl.textContent = 'Rp 0';
     if (metaEl) metaEl.textContent = 'Belum ada rekening';
-    container.innerHTML = mmEmpty('wallet', 'Belum Ada Rekening', 'Tambahkan rekening bank, dompet digital, atau uang tunai untuk mulai mencatat keuangan.', `<button class="btn-primary" onclick="mmShowAddAccount()">+ Tambah Rekening</button>`);
+    container.innerHTML = mmEmpty('wallet', 'Belum ada rekening', 'Tambahkan rekening bank, dompet digital, atau uang tunai untuk mulai mencatat.', `<button class="mm-empty-action" onclick="mmShowAddAccount()">Tambah rekening</button>`);
     return;
   }
 
-  const total = accounts.reduce((sum, a) => sum + (Number(a.balance ?? a.initialBalance) || 0), 0);
+  const balOf = (a) => Number(a.balance ?? a.initialBalance) || 0;
+  const total = accounts.reduce((sum, a) => sum + balOf(a), 0);
+  const positive = accounts.reduce((sum, a) => sum + Math.max(balOf(a), 0), 0);
   if (totalEl) totalEl.textContent = mmFormatIDR(total);
-  if (metaEl) metaEl.textContent = `${accounts.length} rekening terdaftar · Total likuiditas aktif`;
+  if (metaEl) metaEl.textContent = `${accounts.length} rekening`;
 
-  // Group accounts into Bank, E-Wallet, Cash, Other
-  const groups = {
-    'Bank Accounts': { title: 'Rekening Bank', icon: 'landmark', accounts: [] },
-    'E-Wallets': { title: 'Dompet Digital (E-Wallet)', icon: 'smartphone', accounts: [] },
-    'Cash': { title: 'Uang Tunai (Cash)', icon: 'banknote', accounts: [] },
-    'Other Accounts': { title: 'Lainnya & Investasi', icon: 'wallet-cards', accounts: [] }
-  };
-
+  const groups = [
+    { title: 'Rekening bank', test: (t, n) => t.includes('bank') || /bca|mandiri|bri|bni|jago|seabank|btn|cimb|permata/.test(n), accounts: [] },
+    { title: 'Dompet digital', test: (t, n) => t.includes('wallet') || /gopay|ovo|shopee|dana|linkaja/.test(n), accounts: [] },
+    { title: 'Tunai', test: (t, n) => t.includes('cash') || t.includes('tunai') || /dompet|cash|kas/.test(n), accounts: [] },
+    { title: 'Lainnya', test: () => true, accounts: [] }
+  ];
   accounts.forEach(a => {
-    const type = (a.type || '').toLowerCase();
-    const name = (a.name || '').toLowerCase();
-    if (type.includes('bank') || name.includes('bca') || name.includes('mandiri') || name.includes('bri') || name.includes('bni') || name.includes('jago') || name.includes('seabank')) {
-      groups['Bank Accounts'].accounts.push(a);
-    } else if (type.includes('wallet') || name.includes('gopay') || name.includes('ovo') || name.includes('shopee') || name.includes('dana') || name.includes('linkaja')) {
-      groups['E-Wallets'].accounts.push(a);
-    } else if (type.includes('cash') || type.includes('tunai') || name.includes('dompet') || name.includes('cash') || name.includes('kas')) {
-      groups['Cash'].accounts.push(a);
-    } else {
-      groups['Other Accounts'].accounts.push(a);
-    }
+    const t = (a.type || '').toLowerCase(), n = (a.name || '').toLowerCase();
+    groups.find(g => g.test(t, n)).accounts.push(a);
   });
 
-  let html = '';
-  Object.values(groups).forEach(g => {
-    if (!g.accounts.length) return;
-    const subtotal = g.accounts.reduce((s, a) => s + (Number(a.balance ?? a.initialBalance) || 0), 0);
-    const groupShare = total > 0 ? Math.round((Math.max(subtotal, 0) / total) * 100) : 0;
-
-    html += `
-      <div class="ed-acc-section-group">
-        <div class="ed-acc-group-header">
-          <div class="ed-acc-group-title">
-            <span class="ed-acc-group-icon">${lucideIconSvg(g.icon, 16)}</span>
-            <h4>${g.title}</h4>
-            <span class="ed-acc-group-badge">${g.accounts.length} akun</span>
+  container.innerHTML = groups.filter(g => g.accounts.length).map(g => {
+    const list = g.accounts.slice().sort((x, y) => balOf(y) - balOf(x));
+    const subtotal = list.reduce((s2, a) => s2 + balOf(a), 0);
+    const share = positive > 0 ? Math.round(Math.max(subtotal, 0) / positive * 100) : 0;
+    const rows = list.map(a => {
+      const bal = balOf(a);
+      const accShare = positive > 0 ? Math.round(Math.max(bal, 0) / positive * 100) : 0;
+      const color = MM_ACC_TYPE_COLORS[a.type] || MM_ACC_TYPE_COLORS['Other'];
+      return `
+        <div class="hq-row-wrap">
+          <button type="button" class="hq-row" style="--c:${color}" onclick="mmShowAccountTransactions('${jsStr(a.name)}')" aria-label="${escapeHtml(a.name)}, saldo ${escapeHtml(mmFormatIDR(bal))}, lihat mutasi">
+            <span class="hq-row-ic">${a.icon ? mmAccountIconSvg(a.icon, 16) : lucideIconSvg('wallet', 16)}</span>
+            <span class="hq-row-main">
+              <span class="hq-row-name">${escapeHtml(a.name)}${!a.showOnDashboard ? ' <small class="hq-tag">Disembunyikan</small>' : ''}</span>
+              <span class="hq-row-meta">${accShare}% dari total</span>
+            </span>
+            <strong class="hq-row-amt ${bal < 0 ? 'expense-color' : ''}">${mmFormatIDR(bal)}</strong>
+          </button>
+          <button type="button" class="ah-icon-btn hq-row-edit" aria-label="Edit ${escapeHtml(a.name)}" onclick="mmShowEditAccount('${jsStr(a.id)}', '${jsStr(a.name)}', '${jsStr(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">${lucideIconSvg('pencil', 16)}</button>
+        </div>`;
+    }).join('');
+    return `
+      <section class="hq-list-block">
+        <div class="hx-head hq-head">
+          <div class="hx-head-text">
+            <h3 class="hx-title">${g.title}</h3>
+            <p class="hx-sub">${list.length} rekening · ${share}% dari total</p>
           </div>
-          <div class="ed-acc-group-totals">
-            <strong class="ed-acc-group-amount">${mmFormatIDR(subtotal)}</strong>
-            <span class="ed-acc-group-share">${groupShare}% total</span>
-          </div>
+          <strong class="hq-head-amt">${mmFormatIDR(subtotal)}</strong>
         </div>
-        <div class="ed-acc-group-cards">
-          ${g.accounts.map(a => {
-            const bal = Number(a.balance ?? a.initialBalance) || 0;
-            const accShare = total > 0 ? Math.round((Math.max(bal, 0) / total) * 100) : 0;
-            const isNegative = bal < 0;
-            return `
-              <div class="ed-acc-card">
-                <div class="ed-acc-card-main" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
-                  <div class="ed-acc-card-icon">${a.icon ? mmAccountIconSvg(a.icon, 20) : lucideIconSvg('wallet', 20)}</div>
-                  <div class="ed-acc-card-info">
-                    <div class="ed-acc-card-name">
-                      <strong>${escapeHtml(a.name)}</strong>
-                      ${!a.showOnDashboard ? '<span class="ed-chip-muted">Hidden</span>' : ''}
-                    </div>
-                    <div class="ed-acc-card-meta">${escapeHtml(a.type || 'Akun')} · ${accShare}% alokasi</div>
-                  </div>
-                </div>
-                <div class="ed-acc-card-side">
-                  <div class="ed-acc-card-balance ${isNegative ? 'expense-color' : ''}" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
-                    ${mmFormatIDR(bal)}
-                  </div>
-                  <div class="ed-acc-card-actions">
-                    <button type="button" class="ed-btn-sm" title="Lihat mutasi transaksi" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
-                      ${lucideIconSvg('receipt', 13)} Riwayat
-                    </button>
-                    <button type="button" class="ed-btn-sm" title="Edit rekening" onclick="mmShowEditAccount('${jsStr(a.id)}', '${jsStr(a.name)}', '${jsStr(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">
-                      ${lucideIconSvg('pencil', 13)} Edit
-                    </button>
-                  </div>
-                </div>
-              </div>`;
-          }).join('')}
-        </div>
-      </div>`;
-  });
-
-  container.innerHTML = html;
+        <div class="hq-list">${rows}</div>
+      </section>`;
+  }).join('');
   if (window.lucide) lucide.createIcons();
 }
 
@@ -15730,7 +15886,7 @@ function mmRenderSparkline(data) {
     // End marker: a zero-length round-capped stroke stays a true circle even
     // though the SVG stretches (preserveAspectRatio="none"); a <circle> would
     // squash into an ellipse on wide screens.
-    `<path class="lx-trend-dot-ring" d="M${last[0].toFixed(1)} ${last[1].toFixed(1)}h0.01" stroke="#0F1D21" stroke-width="14" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` +
+    `<path class="lx-trend-dot-ring" d="M${last[0].toFixed(1)} ${last[1].toFixed(1)}h0.01" stroke="#090F12" stroke-width="12" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` +
     `<path class="lx-trend-dot-core" d="M${last[0].toFixed(1)} ${last[1].toFixed(1)}h0.01" stroke="#00B88A" stroke-width="8" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
 
   // Remove any obsolete absolute dot that might have floated outside the chart
@@ -15770,30 +15926,35 @@ const MM_ACC_TYPE_COLORS = {
 function mmRenderAccountCards(accounts) {
   const box = document.getElementById('mmAccountsScroll');
   if (!box) return;
-  const manage = `<button type="button" class="hx-acct is-ghost" onclick="mmShowPage('mmSettingsPage')"><span class="hx-acct-ic">${lucideIconSvg('sliders-horizontal', 18)}</span><span class="hx-acct-name">Kelola rekening</span></button>`;
+  const sub = document.getElementById('mmAcctSub');
 
   const visible = (accounts || []).filter(a => a.showOnDashboard).sort((a, b) => (b.balance || 0) - (a.balance || 0));
   if (!visible.length) {
-    box.innerHTML = `<button type="button" class="hx-acct is-ghost" onclick="mmShowPage('mmSettingsPage')"><span class="hx-acct-ic">${lucideIconSvg('plus', 18)}</span><span class="hx-acct-name">Tambah rekening</span></button>`;
+    if (sub) sub.textContent = '';
+    box.innerHTML = `<button type="button" class="hq-row hq-row-ghost" onclick="mmShowAddAccount()"><span class="hq-row-ic">${lucideIconSvg('plus', 16)}</span><span class="hq-row-main"><span class="hq-row-name">Tambah rekening</span></span></button>`;
     return;
   }
-  // Empty accounts stay off the strip; Settings still lists them.
+  // Empty accounts stay off Home; the Accounts page still lists them.
   const shown = visible.filter(a => a.balance || 0);
   const total = visible.reduce((s, a) => s + Math.max(a.balance || 0, 0), 0);
-  box.innerHTML = shown.map(a => {
+  const MAX = 4;
+  if (sub) sub.textContent = `${shown.length} rekening aktif`;
+  box.innerHTML = shown.slice(0, MAX).map(a => {
     const color = MM_ACC_TYPE_COLORS[a.type] || MM_ACC_TYPE_COLORS['Other'];
     const bal = a.balance || 0;
     const share = total > 0 ? Math.round(Math.max(bal, 0) / total * 100) : 0;
     return `
-      <button type="button" class="hx-acct" style="--c:${color}" aria-label="${escapeHtml(a.name)}, saldo ${escapeHtml(mmFormatIDR(bal))}, ${share}% dari total" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
-        <span class="hx-acct-top">
-          <span class="hx-acct-ic">${a.icon ? mmAccountIconSvg(a.icon, 18) : lucideIconSvg('wallet', 18)}</span>
-          <span class="hx-acct-share">${share}%</span>
+      <button type="button" class="hq-row" style="--c:${color}" aria-label="${escapeHtml(a.name)}, saldo ${escapeHtml(mmFormatIDR(bal))}, ${share}% dari total" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
+        <span class="hq-row-ic">${a.icon ? mmAccountIconSvg(a.icon, 16) : lucideIconSvg('wallet', 16)}</span>
+        <span class="hq-row-main">
+          <span class="hq-row-name">${escapeHtml(a.name)}</span>
+          <span class="hq-row-meta">${a.type ? escapeHtml(a.type) + ' · ' : ''}${share}% dari total</span>
         </span>
-        <span class="hx-acct-name">${escapeHtml(a.name)}</span>
-        <strong class="hx-acct-bal ${bal < 0 ? 'expense-color' : ''}">${mmFormatIDRShort(bal)}</strong>
+        <strong class="hq-row-amt ${bal < 0 ? 'expense-color' : ''}">${mmFormatIDR(bal)}</strong>
       </button>`;
-  }).join('') + manage;
+  }).join('') + (shown.length > MAX
+    ? `<button type="button" class="hx-more" onclick="mmShowPage('mmAccountsPage')">${shown.length - MAX} rekening lainnya ${lucideIconSvg('chevron-right', 16)}</button>`
+    : '');
 }
 
 /* === BUDGET ===
@@ -15880,7 +16041,7 @@ function mmBudgetRowHtml(c, detailed) {
 }
 
 // Home budget row: icon, name, used %, thin bar, "spent / target" and what is left.
-function mmBudgetTileHtml(c) {
+function mmBudgetTileHtml(c, detailed) {
   const b = mmBudgetState(c);
   const color = mmCategoryColor(c.category);
   const note = b.state === 'goal' ? 'Target tercapai' : b.note;
@@ -15890,7 +16051,7 @@ function mmBudgetTileHtml(c) {
       <span class="hx-bgt-ic" style="--c:${color}">${mmCategoryEmoji(c.category)}</span>
       <span class="hx-bgt-body">
         <span class="hx-bgt-top">
-          <span class="hx-bgt-name">${escapeHtml(c.category)}</span>
+          <span class="hx-bgt-name">${escapeHtml(c.category)}${detailed && c.percent ? ` <small class="hx-of">${c.percent}% dana</small>` : ''}</span>
           <span class="hx-bgt-pct">${b.pct}%</span>
         </span>
         <span class="hx-bar" role="progressbar" aria-label="${escapeHtml(c.category)} terpakai" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="--w:${pct}%"></span></span>
@@ -15920,46 +16081,58 @@ function mmRenderBudgetCard(allocationCards, totalIncome, carryover) {
 
   const t = mmBudgetTotals(cards);
   if (summary) summary.textContent = `${t.left < 0 ? 'Lewat ' : 'Sisa '}${mmFormatIDRShort(Math.abs(t.left))} dari ${mmFormatIDRShort(t.totalTarget)} · ${t.pct}% terpakai`;
-  list.innerHTML = cards.map(mmBudgetTileHtml).join('');
+  list.innerHTML = cards.map(c => mmBudgetTileHtml(c)).join('');
 }
 
-/* Budget tab: the same posts in full, plus what each is allowed to grow to. */
+/* Budget tab: what is left as plain type, then every post as a hairline
+   row - the same rows as Home, with each post's share of the money. */
 function mmRenderBudgetPage() {
   const box = document.getElementById('mmBudgetPageContent');
   if (!box) return;
   const ctx = mmMonthContext();
-  setText('mmBudgetPageSub', `${ctx.monthName.charAt(0).toUpperCase() + ctx.monthName.slice(1)} ${ctx.now.getFullYear()} · ${ctx.daysLeft - 1} hari lagi`);
+  const monthTitle = ctx.monthName.charAt(0).toUpperCase() + ctx.monthName.slice(1);
+  setText('mmBudgetPageSub', `${monthTitle} ${ctx.now.getFullYear()} · ${ctx.daysLeft - 1} hari lagi`);
 
   const cards = (MM_ALLOC_CARDS && MM_ALLOC_CARDS.length) ? MM_ALLOC_CARDS
     : ((MM_DASHBOARD && MM_DASHBOARD.allocationCards) || []);
   const active = cards.filter(c => (c.target || 0) > 0 || (c.spent || 0) > 0);
   if (!active.length) {
-    box.innerHTML = `<div class="mm-dash-card">${mmEmpty('circle-dollar', 'Budget belum terbentuk',
+    box.innerHTML = mmEmpty('circle-dollar', 'Budget belum terbentuk',
       'Budget dibentuk dari sisa saldo bulan lalu ditambah pemasukan, lalu dibagi sesuai persentase di Settings.',
-      `<button class="mm-empty-action" onclick="mmShowActionSheet('income')">Catat pemasukan</button>`)}</div>`;
+      `<button class="mm-empty-action" onclick="mmShowActionSheet('income')">Catat pemasukan</button>`);
     return;
   }
 
   const t = mmBudgetTotals(active);
   const spend = active.filter(c => !MM_NON_SPEND_RE.test(c.category || ''));
   const counts = { ok: 0, warn: 0, over: 0 };
-  spend.forEach(c => { const s = mmBudgetState(c).state; if (counts[s] !== undefined) counts[s]++; });
+  spend.forEach(c => { const st = mmBudgetState(c).state; if (counts[st] !== undefined) counts[st]++; });
+  const b = MM_BUDGET_BASIS;
+  const pct = Math.min(t.pct, 100);
 
   box.innerHTML = `
-    <div class="mm-dash-card lx-budget-hero">
-      ${mmBudgetSummaryHtml(t)}
-      <div class="lx-budget-legend">
+    <section class="hq-hero hq-budget-hero is-${t.state}" aria-label="Ringkasan budget">
+      <p class="hq-label">${t.left < 0 ? 'Lewat budget' : 'Sisa budget'}</p>
+      <h2 class="hq-amount ${t.left < 0 ? 'expense-color' : ''}">${t.left < 0 ? '−' : ''}${mmFormatIDR(Math.abs(t.left))}</h2>
+      <p class="hq-change"><span class="hq-change-note"><strong>${t.pct}%</strong> terpakai · ${mmFormatIDRShort(t.totalSpent)} dari ${mmFormatIDRShort(t.totalTarget)}</span></p>
+      <span class="hx-bar hq-bigbar" role="progressbar" aria-label="Budget terpakai" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><span style="--w:${pct}%"></span></span>
+      <p class="hq-legend">
         <span class="is-ok"><span class="lx-state-dot"></span>${counts.ok} aman</span>
         <span class="is-warn"><span class="lx-state-dot"></span>${counts.warn} hampir habis</span>
-        <span class="is-over"><span class="lx-state-dot"></span>${counts.over} lewat budget</span>
+        <span class="is-over"><span class="lx-state-dot"></span>${counts.over} lewat</span>
+      </p>
+    </section>
+    <section class="hq-list-block">
+      <div class="hx-head hq-head">
+        <div class="hx-head-text">
+          <h3 class="hx-title">Per pos</h3>
+          <p class="hx-sub">Ketuk untuk melihat transaksinya</p>
+        </div>
       </div>
-      ${mmBudgetBasisHtml()}
-    </div>
-    <div class="mm-section-header lx-sub-head"><div><h3>Per pos</h3><p class="mm-section-sub">Ketuk untuk melihat transaksinya</p></div></div>
-    <div class="mm-dash-card mm-budget-list">
-      <div class="lx-budget-rows">${active.map(c => mmBudgetRowHtml(c, true)).join('')}</div>
-    </div>
-    <button type="button" class="btn-ghost btn-full lx-page-action" onclick="mmOpenBudgetSettings()">${lucideIconSvg('sliders-horizontal', 16)} Atur pembagian budget</button>`;
+      <div class="hq-list hx-budget">${active.map(c => mmBudgetTileHtml(c, true)).join('')}</div>
+      <p class="hq-note">Dana bulan ini = sisa bulan lalu <strong>${mmFormatIDRShort(b.carryover)}</strong> + pemasukan <strong>${mmFormatIDRShort(b.income)}</strong>.
+        <button type="button" class="hq-inline-link" onclick="mmOpenBudgetSettings()">Atur pembagian</button></p>
+    </section>`;
 }
 
 function mmOpenBudgetSettings() {
@@ -16574,15 +16747,29 @@ function mmSelectMonthFromAllTime(monthStr) {
   }
 }
 
-/* Kalender mulai Senin (kebiasaan di Indonesia). Sel hari memakai titik
-   hijau/merah untuk ada-tidaknya pemasukan/pengeluaran; nominalnya ada di
-   daftar saat tanggalnya diketuk. */
+/* Kalender mulai Senin (kebiasaan di Indonesia), selalu tampil. Di bawah
+   tiap tanggal: nett hari itu = pemasukan − pengeluaran (transfer hanya
+   memindah uang, jadi tidak dihitung). Tanda +/− dan warna dipakai
+   bersamaan supaya tidak bergantung pada warna saja. Ketuk tanggal untuk
+   memfilter daftar di bawah. */
+function mmCalNet(v) {
+  if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••';
+  const abs = Math.abs(v);
+  const dec = (x) => x.toFixed(1).replace(/\.0$/, '').replace('.', ',');
+  let t;
+  if (abs >= 1e9) t = dec(abs / 1e9) + 'M';
+  else if (abs >= 1e6) t = (abs >= 1e7 ? Math.round(abs / 1e6) : dec(abs / 1e6)) + 'jt';
+  else if (abs >= 1e3) t = Math.round(abs / 1e3) + 'rb';
+  else t = String(Math.round(abs));
+  return (v > 0 ? '+' : '−') + t;
+}
+
 function mmRenderMonthCalendar(data) {
   const grid = document.getElementById('mmHistoryCalendarGrid');
   if (!grid) return;
 
   const dayNames = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-  let html = dayNames.map(d => `<div class="mm-cal-header">${d}</div>`).join('');
+  let html = dayNames.map((d, i) => `<div class="mm-cal-header${i > 4 ? ' is-weekend' : ''}" aria-hidden="true">${d}</div>`).join('');
 
   const lead = (new Date(data.year, data.month - 1, 1).getDay() + 6) % 7;
   const now = new Date();
@@ -16594,11 +16781,19 @@ function mmRenderMonthCalendar(data) {
   for (let d = 1; d <= data.endDay; d++) {
     const dd = data.days[d] || { income: 0, expense: 0, transactions: [] };
     const isToday = isCurrentMonth && now.getDate() === d;
+    const isFuture = (isCurrentMonth && d > now.getDate())
+      || data.year > now.getFullYear() || (data.year === now.getFullYear() && data.month > now.getMonth() + 1);
     const n = (dd.transactions || []).length;
-    const dots = (dd.income > 0 ? '<i class="ah-dot is-in"></i>' : '') + (dd.expense > 0 ? '<i class="ah-dot is-out"></i>' : '');
-    const label = `${d} ${monthName}${n ? ', ' + n + ' transaksi' : ', tidak ada transaksi'}`;
-    html += `<button type="button" class="mm-cal-day${isToday ? ' today' : ''}${MM_HIST_DAY === d ? ' selected' : ''}" data-day="${d}" aria-pressed="${MM_HIST_DAY === d}" aria-label="${label}" onclick="mmHistShowDay(${d})">
-      <span class="mm-cal-num">${d}</span><span class="ah-dots">${dots}</span>
+    const net = (dd.income || 0) - (dd.expense || 0);
+    const tone = net > 0 ? 'is-in' : net < 0 ? 'is-out' : 'is-zero';
+    const netHtml = net !== 0
+      ? `<span class="ah-net ${tone}">${mmCalNet(net)}</span>`
+      : `<span class="ah-net is-zero">${n ? '0' : (isFuture ? '' : '·')}</span>`;
+    const label = `${d} ${monthName}` + (n
+      ? `, ${n} transaksi, nett ${net > 0 ? 'plus' : net < 0 ? 'minus' : ''} ${mmFormatIDR(Math.abs(net))}`
+      : ', tidak ada transaksi');
+    html += `<button type="button" class="mm-cal-day ${tone}${isToday ? ' today' : ''}${isFuture ? ' is-future' : ''}${MM_HIST_DAY === d ? ' selected' : ''}" data-day="${d}" aria-pressed="${MM_HIST_DAY === d}" aria-label="${escapeHtml(label)}" onclick="mmHistShowDay(${d})">
+      <span class="mm-cal-num">${d}</span>${netHtml}
     </button>`;
   }
 
@@ -16627,14 +16822,15 @@ function mmHistShowDay(day) {
   mmHistRenderList();
 
   if (MM_HIST_DAY) {
-    // Kalender ada di atas daftar: tutup dan bawa daftar ke layar, kalau tidak
-    // hasil ketukan tidak terlihat.
-    const fold = document.getElementById('mmHistCalFold');
-    if (fold) fold.open = false;
+    // Kalender tetap terbuka. Bawa daftar ke layar hanya kalau judulnya
+    // belum terlihat, supaya hasil ketukan tidak tersembunyi.
     const target = document.getElementById('mmHistListSection');
     if (target) {
-      const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      target.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+      const r = target.getBoundingClientRect();
+      if (r.top > window.innerHeight - 120) {
+        const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        target.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+      }
     }
   }
 }
