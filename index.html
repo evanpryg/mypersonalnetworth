@@ -6,20 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#0B1220">
+  <meta name="theme-color" content="#090F12">
   <!-- Dark UA canvas from the first frame, so no white shows before the
        stylesheet applies or at the edges of an overscroll. -->
   <meta name="color-scheme" content="dark">
   <!-- Installed to the home screen this opens standalone, with its own icon
        and no browser chrome — the difference between a bookmark and an app. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Money">
+  <meta name="apple-mobile-web-app-title" content="MoneyMate">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -27,16 +27,166 @@
 </head>
 
 <body>
+  <!-- ===== MINIMALIST DESKTOP SIDEBAR ===== -->
+  <aside class="ed-desktop-sidebar" id="edDesktopSidebar" aria-label="Sidebar Navigasi">
+    <div class="ed-sidebar-brand" onclick="navigateApp('mmDashboardPage')" role="button" tabindex="0">
+      <div class="ed-brand-icon">
+        <svg viewBox="0 0 28 28" width="22" height="22" fill="none">
+          <rect width="28" height="28" rx="7" fill="#172329"/>
+          <path d="M7 19L12 11L16 16L21 8" stroke="#00B88A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="21" cy="8" r="2" fill="#00B88A"/>
+        </svg>
+      </div>
+      <div class="ed-brand-text">
+        <span class="ed-brand-title">MoneyMate</span>
+        <span class="ed-brand-badge">EDITORIAL</span>
+      </div>
+    </div>
+
+    <div class="ed-sidebar-cta">
+      <button type="button" class="ed-cta-btn" onclick="mmShowActionSheet('expense')">
+        <i data-lucide="plus"></i>
+        <span>Catat Transaksi</span>
+      </button>
+    </div>
+
+    <nav class="ed-sidebar-nav" aria-label="Menu Utama">
+      <div class="ed-nav-group-label">FINANCE</div>
+      <button type="button" class="ed-nav-item active" data-nav="mmDashboardPage" onclick="navigateApp('mmDashboardPage')">
+        <i data-lucide="layout-dashboard"></i>
+        <span>Home</span>
+      </button>
+      <button type="button" class="ed-nav-item" data-nav="mmHistoryPage" onclick="navigateApp('mmHistoryPage')">
+        <i data-lucide="arrow-left-right"></i>
+        <span>Activity</span>
+      </button>
+      <button type="button" class="ed-nav-item" data-nav="mmBudgetPage" onclick="navigateApp('mmBudgetPage')">
+        <i data-lucide="pie-chart"></i>
+        <span>Budget</span>
+      </button>
+      <button type="button" class="ed-nav-item" data-nav="mmAccountsPage" onclick="navigateApp('mmAccountsPage')">
+        <i data-lucide="wallet"></i>
+        <span>Accounts</span>
+      </button>
+
+      <div class="ed-nav-group-label" style="margin-top:18px;">GROWTH</div>
+      <button type="button" class="ed-nav-item" data-nav="investments" onclick="navigateApp('investments')">
+        <i data-lucide="trending-up"></i>
+        <span>Investments</span>
+      </button>
+      <button type="button" class="ed-nav-item" data-nav="mmInsightPage" onclick="navigateApp('mmInsightPage')">
+        <i data-lucide="sparkles"></i>
+        <span>Insights</span>
+      </button>
+
+      <div class="ed-nav-group-label" style="margin-top:18px;">PREFERENCES</div>
+      <button type="button" class="ed-nav-item" data-nav="mmSettingsPage" onclick="navigateApp('mmSettingsPage')">
+        <i data-lucide="settings"></i>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <div class="ed-sidebar-footer">
+      <div class="ed-sidebar-profile">
+        <div class="ed-sidebar-avatar" id="sidebarAvatar">E</div>
+        <div class="ed-sidebar-user">
+          <span class="ed-sidebar-name">Mr Evan</span>
+          <span class="ed-sidebar-role">Personal Finance</span>
+        </div>
+        <button type="button" class="ed-sidebar-icon-btn" onclick="toggleAmountVisibility()" title="Sensor nominal" aria-label="Sensor nominal">
+          <i data-lucide="eye"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MOBILE OFF-CANVAS DRAWER ===== -->
+  <div class="ed-drawer-backdrop hidden" id="edMobileDrawer" onclick="closeMobileDrawer(event)">
+    <div class="ed-drawer-content">
+      <div class="ed-drawer-head">
+        <div class="ed-drawer-brand">
+          <div class="ed-brand-icon">
+            <svg viewBox="0 0 28 28" width="20" height="20" fill="none">
+              <rect width="28" height="28" rx="7" fill="#172329"/>
+              <path d="M7 19L12 11L16 16L21 8" stroke="#00B88A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="21" cy="8" r="2" fill="#00B88A"/>
+            </svg>
+          </div>
+          <span class="ed-brand-title">MoneyMate</span>
+        </div>
+        <button type="button" class="ed-drawer-close" onclick="toggleMobileNavDrawer(false)" aria-label="Tutup menu">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <nav class="ed-drawer-nav">
+        <button type="button" class="ed-drawer-item active" data-drawer-nav="mmDashboardPage" onclick="navigateApp('mmDashboardPage');toggleMobileNavDrawer(false);">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Home</span>
+        </button>
+        <button type="button" class="ed-drawer-item" data-drawer-nav="mmHistoryPage" onclick="navigateApp('mmHistoryPage');toggleMobileNavDrawer(false);">
+          <i data-lucide="arrow-left-right"></i>
+          <span>Activity (Transaksi)</span>
+        </button>
+        <button type="button" class="ed-drawer-item" data-drawer-nav="mmBudgetPage" onclick="navigateApp('mmBudgetPage');toggleMobileNavDrawer(false);">
+          <i data-lucide="pie-chart"></i>
+          <span>Budget Bulanan</span>
+        </button>
+        <button type="button" class="ed-drawer-item" data-drawer-nav="mmAccountsPage" onclick="navigateApp('mmAccountsPage');toggleMobileNavDrawer(false);">
+          <i data-lucide="wallet"></i>
+          <span>Rekening &amp; Kas</span>
+        </button>
+        <button type="button" class="ed-drawer-item" data-drawer-nav="investments" onclick="navigateApp('investments');toggleMobileNavDrawer(false);">
+          <i data-lucide="trending-up"></i>
+          <span>Investasi &amp; Portofolio</span>
+        </button>
+        <button type="button" class="ed-drawer-item" data-drawer-nav="mmInsightPage" onclick="navigateApp('mmInsightPage');toggleMobileNavDrawer(false);">
+          <i data-lucide="sparkles"></i>
+          <span>Laporan &amp; Insight</span>
+        </button>
+        <button type="button" class="ed-drawer-item" data-drawer-nav="mmSettingsPage" onclick="navigateApp('mmSettingsPage');toggleMobileNavDrawer(false);">
+          <i data-lucide="settings"></i>
+          <span>Pengaturan</span>
+        </button>
+        <div class="ed-drawer-sep"></div>
+        <button type="button" class="ed-drawer-item" onclick="mmOpenAiChat();toggleMobileNavDrawer(false);">
+          <i data-lucide="sparkles"></i>
+          <span>Asisten Keuangan AI</span>
+        </button>
+        <button type="button" class="ed-drawer-item" onclick="mmOpenSearch();toggleMobileNavDrawer(false);">
+          <i data-lucide="search"></i>
+          <span>Cari Transaksi</span>
+        </button>
+      </nav>
+      <div class="ed-drawer-footer">
+        <button type="button" class="btn-ghost btn-full" onclick="switchWorkspace();toggleMobileNavDrawer(false);">
+          <i data-lucide="repeat"></i>
+          <span>Ganti Workspace</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="app-shell">
 
-    <!-- Workspace Switcher Header -->
+    <!-- Workspace Switcher / Mobile Header -->
     <header class="workspace-header">
-      <div class="ws-title-wrap" onclick="switchWorkspace()">
-        <h1 id="workspaceTitle">Money Management</h1>
-        <span class="ws-subtitle" id="wsSubtitle">Personal Finance</span>
+      <div class="ws-left-group">
+        <button type="button" class="ws-drawer-btn mobile-only" onclick="toggleMobileNavDrawer(true)" aria-label="Buka menu navigasi">
+          <i data-lucide="menu"></i>
+        </button>
+        <div class="ws-title-wrap" onclick="switchWorkspace()" role="button" tabindex="0" title="Klik untuk berganti workspace">
+          <h1 id="workspaceTitle">Money Management</h1>
+          <span class="ws-subtitle" id="wsSubtitle">Dark Editorial Finance</span>
+        </div>
       </div>
       <div class="ws-header-actions">
-        <button class="global-eye-btn" id="globalEyeBtn" onclick="toggleAmountVisibility()" aria-label="Toggle nominal visibility">
+        <button type="button" class="ws-action-icon-btn" id="mmBtnAi" aria-label="Tanya Asisten AI" onclick="mmOpenAiChat()" title="AI Assistant">
+          <i data-lucide="sparkles"></i>
+        </button>
+        <button type="button" class="ws-action-icon-btn" id="mmBtnSearch" aria-label="Cari Transaksi" onclick="mmOpenSearch()" title="Cari transaksi">
+          <i data-lucide="search"></i>
+        </button>
+        <button class="global-eye-btn ws-action-icon-btn" id="globalEyeBtn" onclick="toggleAmountVisibility()" aria-label="Toggle sensor nominal" title="Toggle nominal visibility">
           <svg class="eye-icon-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
           <svg class="eye-icon-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><line x1="1" y1="1" x2="23" y2="23"></line><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path></svg>
         </button>
@@ -347,153 +497,227 @@
     <div id="moneyWorkspace" class="workspace active">
       <main class="main-content">
 
-        <!-- ===== HOME =====
-             Built around three questions, in the order they are asked:
-             how much do I have; how much can I still spend today; how is
-             the month going. Logging a transaction is one tap from the top,
-             everything deeper is one tap into Analytics, Transactions or
-             Budget. -->
+        <!-- ===== MM DASHBOARD / HOME =====
+             Redesigned to Dark Editorial Finance with 7 strictly ordered sections:
+             1. Header (greeting, name, date, actions)
+             2. Total balance (hero, diff, sparkline, quick log actions)
+             3. Cashflow (monthly income, expense, net, daily trend)
+             4. Accounts overview (balances per account)
+             5. Budget overview (progress per category)
+             6. Financial insights (daily allowance, health alerts)
+             7. Recent transactions (latest records) -->
         <div id="mmDashboardPage" class="page active-page">
-          <section class="dashboard-wrap hm">
+          <section class="ed-dashboard-wrap">
 
-            <header class="hm-top">
-              <button type="button" class="hm-avatar" id="mmHomeAvatar" aria-label="Buka profil" onclick="mmShowPage('mmSettingsPage')">E</button>
-              <div class="hm-hello">
-                <p><span id="mmGreeting">Selamat datang</span> · <span id="mmDateText"></span></p>
-                <h2 id="mmUserName">Mr Evan</h2>
+            <!-- 1. HEADER: Greeting, Nama Pengguna, Tanggal & Actions -->
+            <header class="ed-dash-header">
+              <div class="ed-dash-header-left">
+                <div class="ed-dash-meta">
+                  <span id="mmGreeting">Selamat datang</span>
+                  <span class="ed-dot-sep">·</span>
+                  <span id="mmDateText"></span>
+                </div>
+                <h1 class="ed-dash-user" id="mmUserName">Mr Evan</h1>
               </div>
-              <button type="button" class="hm-icon-btn hm-ai-btn" id="mmBtnAi" aria-label="Tanya asisten AI" onclick="mmOpenAiChat()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg>
-              </button>
-              <button type="button" class="hm-icon-btn" id="mmBtnSearch" aria-label="Cari transaksi" onclick="mmOpenSearch()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              </button>
+              <div class="ed-dash-header-actions">
+                <button type="button" class="ed-header-btn" onclick="mmOpenAiChat()" aria-label="Tanya Asisten AI" title="AI Assistant">
+                  <i data-lucide="sparkles"></i>
+                  <span class="ed-btn-label">AI</span>
+                </button>
+                <button type="button" class="ed-header-btn" onclick="mmOpenSearch()" aria-label="Cari Transaksi" title="Cari Transaksi">
+                  <i data-lucide="search"></i>
+                  <span class="ed-btn-label">Cari</span>
+                </button>
+                <button type="button" class="ed-header-btn" id="mmBalanceEye" onclick="toggleAmountVisibility()" aria-label="Sembunyikan nominal" title="Sensor nominal">
+                  <i data-lucide="eye"></i>
+                </button>
+                <button type="button" class="ed-avatar-btn" id="mmHomeAvatar" onclick="mmShowPage('mmSettingsPage')" aria-label="Buka profil">
+                  <span>E</span>
+                </button>
+              </div>
             </header>
 
-            <div class="hm-grid">
-              <div class="hm-col">
-
-                <!-- What I have: balance, its direction, where it sits -->
-                <section class="hm-hero" id="mmNetworthCard" aria-label="Total saldo">
-                  <div class="hm-hero-label">
-                    <span>Total saldo</span>
-                    <button type="button" class="hm-eye" id="mmBalanceEye" aria-label="Tampilkan/sembunyikan nominal" onclick="toggleAmountVisibility()"></button>
-                  </div>
-                  <h1 class="hm-balance" id="mmNetWorthValue">Rp 0</h1>
-                  <div class="hm-change">
-                    <span class="mm-change-badge up" id="mmChangeBadge"></span>
-                    <span id="mmChangeText">vs akhir bulan lalu</span>
-                  </div>
-                  <button type="button" class="hm-trend" id="mmTrendWrap" aria-label="Lihat analitik saldo" onclick="mmShowPage('mmInsightPage')">
-                    <svg id="mmNetworthSparkline" viewBox="0 0 320 72" preserveAspectRatio="none" aria-hidden="true"></svg>
-                    <span class="hm-trend-labels" id="mmTrendLabels" aria-hidden="true"></span>
-                  </button>
-                  <div class="hm-accounts" id="mmAccountsScroll" aria-label="Saldo per akun"></div>
-                </section>
-
-                <!-- Log something: the most frequent job, one tap -->
-                <nav class="hm-actions" aria-label="Catat transaksi">
-                  <button type="button" class="hm-action" onclick="mmShowActionSheet('expense')">
-                    <span class="hm-action-ic is-out" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></span>
-                    <span>Pengeluaran</span>
-                  </button>
-                  <button type="button" class="hm-action" onclick="mmShowActionSheet('income')">
-                    <span class="hm-action-ic is-in" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17"/><path d="M17 17H7V7"/></svg></span>
-                    <span>Pemasukan</span>
-                  </button>
-                  <button type="button" class="hm-action" onclick="mmShowActionSheet('transfer')">
-                    <span class="hm-action-ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg></span>
-                    <span>Transfer</span>
-                  </button>
-                </nav>
-
-                <!-- Today: the one number to decide with -->
-                <section class="hm-card hm-today" id="mmTodayCard" aria-label="Jatah hari ini"></section>
-                <div class="mm-alerts hm-alerts" id="mmAlerts"></div>
-
-                <!-- Budget posts -->
-                <section class="hm-section" id="mmBudgetSection">
-                  <div class="hm-sec-head">
-                    <div>
-                      <h3>Budget</h3>
-                      <p id="mmBudgetSummary">&nbsp;</p>
-                    </div>
-                    <button type="button" class="mm-view-all" onclick="mmShowPage('mmBudgetPage')">Detail <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
-                  </div>
-                  <div class="hm-budget" id="mmBudgetList"></div>
-                </section>
-
+            <!-- 2. TOTAL BALANCE: Angka besar, perubahan saldo, dan grafik perkembangan -->
+            <section class="ed-section ed-hero-balance" id="mmNetworthCard">
+              <div class="ed-balance-row-top">
+                <div class="ed-eyebrow">TOTAL NET BALANCE</div>
+                <div class="ed-balance-change">
+                  <span class="mm-change-badge up" id="mmChangeBadge">+0%</span>
+                  <span class="ed-change-note" id="mmChangeText">vs akhir bulan lalu</span>
+                </div>
               </div>
-              <div class="hm-col">
-
-                <!-- The month: in, out, left; day by day; where it went -->
-                <section class="hm-section" id="mmMonthSection">
-                  <div class="hm-sec-head">
-                    <div>
-                      <h3 id="mmCashflowTitle">Bulan ini</h3>
-                      <p id="mmCashflowSub">&nbsp;</p>
-                    </div>
-                    <button type="button" class="mm-view-all" onclick="mmShowPage('mmInsightPage')">Analitik <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
-                  </div>
-                  <div class="hm-card hm-month">
-                    <div class="hm-flow">
-                      <div class="hm-flow-item">
-                        <span class="hm-k"><i class="hm-dot is-in"></i>Masuk</span>
-                        <strong id="mmTotalIncome">Rp 0</strong>
-                        <span class="lx-delta" id="mmIncomeDelta"></span>
-                      </div>
-                      <div class="hm-flow-item">
-                        <span class="hm-k"><i class="hm-dot is-out"></i>Keluar</span>
-                        <strong id="mmTotalExpense">Rp 0</strong>
-                        <span class="lx-delta" id="mmExpenseDelta"></span>
-                      </div>
-                      <div class="hm-flow-item">
-                        <span class="hm-k">Sisa</span>
-                        <strong id="mmTotalSaving">Rp 0</strong>
-                        <span class="lx-delta"><span class="mm-rate-chip" id="mmSavingRate"></span></span>
-                      </div>
-                    </div>
-
-                    <div class="hm-block">
-                      <div class="hm-block-head"><span>Pengeluaran harian</span><span id="mmDailySub"></span></div>
-                      <div class="mm-daily-chart" id="mmDailyChart"></div>
-                      <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
-                    </div>
-
-                    <div class="hm-block" id="mmBreakdown"></div>
-                  </div>
-                </section>
-
-                <!-- Latest activity -->
-                <section class="hm-section" id="mmTransactionsSection">
-                  <div class="hm-sec-head">
-                    <div>
-                      <h3>Terbaru</h3>
-                      <p id="mmTxMonthCount">&nbsp;</p>
-                    </div>
-                    <button type="button" class="mm-view-all" onclick="mmShowPage('mmHistoryPage')">Semua <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
-                  </div>
-                  <div class="hm-card mm-transaction-list" id="mmDashboardTransactions"></div>
-                </section>
-
+              <div class="ed-balance-main-row">
+                <h2 class="ed-balance-hero-val" id="mmNetWorthValue">Rp 0</h2>
               </div>
-            </div>
+
+              <!-- Quick Log Actions -->
+              <div class="ed-quick-tx-bar" aria-label="Catat Transaksi Cepat">
+                <button type="button" class="ed-quick-btn is-out" onclick="mmShowActionSheet('expense')">
+                  <span class="ed-qbtn-icon"><i data-lucide="arrow-up-right"></i></span>
+                  <span class="ed-qbtn-text">Pengeluaran</span>
+                </button>
+                <button type="button" class="ed-quick-btn is-in" onclick="mmShowActionSheet('income')">
+                  <span class="ed-qbtn-icon"><i data-lucide="arrow-down-left"></i></span>
+                  <span class="ed-qbtn-text">Pemasukan</span>
+                </button>
+                <button type="button" class="ed-quick-btn is-tx" onclick="mmShowActionSheet('transfer')">
+                  <span class="ed-qbtn-icon"><i data-lucide="arrow-right-left"></i></span>
+                  <span class="ed-qbtn-text">Transfer</span>
+                </button>
+              </div>
+
+              <!-- Sparkline & Net Worth Trend -->
+              <div class="ed-sparkline-box" id="mmTrendWrap" onclick="mmShowPage('mmInsightPage')" role="button" tabindex="0" title="Klik untuk lihat analitik lengkap">
+                <div class="ed-sparkline-head">
+                  <span class="ed-sparkline-title">Tren Pertumbuhan Saldo</span>
+                  <span class="ed-sparkline-more">Analitik <i data-lucide="arrow-right"></i></span>
+                </div>
+                <svg id="mmNetworthSparkline" viewBox="0 0 320 72" preserveAspectRatio="none" aria-hidden="true"></svg>
+                <div class="hm-trend-labels" id="mmTrendLabels" aria-hidden="true"></div>
+              </div>
+            </section>
+
+            <!-- 3. CASHFLOW: Total Income dan Expenses bulan berjalan -->
+            <section class="ed-section ed-cashflow-section" id="mmMonthSection">
+              <div class="ed-sec-head">
+                <div>
+                  <div class="ed-eyebrow">MONTHLY CASHFLOW</div>
+                  <h3 class="ed-sec-title" id="mmCashflowTitle">Bulan Ini</h3>
+                </div>
+                <div class="ed-sec-actions">
+                  <span id="mmCashflowSub" class="ed-sec-sub"></span>
+                  <button type="button" class="ed-text-link" onclick="mmShowPage('mmInsightPage')">
+                    Detail <i data-lucide="arrow-right"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="ed-flow-grid">
+                <div class="ed-flow-card is-in">
+                  <div class="ed-flow-top">
+                    <span class="ed-flow-dot in"></span>
+                    <span class="ed-flow-label">Pemasukan</span>
+                  </div>
+                  <strong class="ed-flow-val" id="mmTotalIncome">Rp 0</strong>
+                  <div class="ed-flow-delta" id="mmIncomeDelta"></div>
+                </div>
+
+                <div class="ed-flow-card is-out">
+                  <div class="ed-flow-top">
+                    <span class="ed-flow-dot out"></span>
+                    <span class="ed-flow-label">Pengeluaran</span>
+                  </div>
+                  <strong class="ed-flow-val" id="mmTotalExpense">Rp 0</strong>
+                  <div class="ed-flow-delta" id="mmExpenseDelta"></div>
+                </div>
+
+                <div class="ed-flow-card is-net">
+                  <div class="ed-flow-top">
+                    <span class="ed-flow-dot net"></span>
+                    <span class="ed-flow-label">Sisa Kas (Net)</span>
+                  </div>
+                  <strong class="ed-flow-val" id="mmTotalSaving">Rp 0</strong>
+                  <div class="ed-flow-delta">
+                    <span class="mm-rate-chip" id="mmSavingRate"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Daily Spending Histogram -->
+              <div class="ed-daily-box">
+                <div class="ed-daily-head">
+                  <span class="ed-daily-label">Distribusi Belanja Harian</span>
+                  <span class="ed-daily-sub" id="mmDailySub"></span>
+                </div>
+                <div class="mm-daily-chart" id="mmDailyChart"></div>
+                <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
+                <div id="mmBreakdown" style="display:none;"></div>
+              </div>
+            </section>
+
+            <!-- 4. ACCOUNTS OVERVIEW: Ringkasan saldo setiap rekening -->
+            <section class="ed-section ed-accounts-section">
+              <div class="ed-sec-head">
+                <div>
+                  <div class="ed-eyebrow">ACCOUNTS &amp; LIQUIDITY</div>
+                  <h3 class="ed-sec-title">Ringkasan Rekening</h3>
+                </div>
+                <button type="button" class="ed-text-link" onclick="mmShowPage('mmAccountsPage')">
+                  Lihat Semua Akun <i data-lucide="arrow-right"></i>
+                </button>
+              </div>
+              <div class="ed-accounts-strip" id="mmAccountsScroll" aria-label="Daftar Rekening"></div>
+            </section>
+
+            <!-- 5. BUDGET OVERVIEW: Total anggaran, terpakai, tersisa, dan pos kategori -->
+            <section class="ed-section ed-budget-section" id="mmBudgetSection">
+              <div class="ed-sec-head">
+                <div>
+                  <div class="ed-eyebrow">BUDGET TRACKING</div>
+                  <h3 class="ed-sec-title">Anggaran Bulanan</h3>
+                </div>
+                <div class="ed-sec-actions">
+                  <span id="mmBudgetSummary" class="ed-sec-sub"></span>
+                  <button type="button" class="ed-text-link" onclick="mmShowPage('mmBudgetPage')">
+                    Detail Budget <i data-lucide="arrow-right"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="ed-budget-grid" id="mmBudgetList"></div>
+            </section>
+
+            <!-- 6. FINANCIAL INSIGHTS: Insight pengeluaran dan jatah hari ini -->
+            <section class="ed-section ed-insights-section">
+              <div class="ed-sec-head">
+                <div>
+                  <div class="ed-eyebrow">FINANCIAL INTELLIGENCE</div>
+                  <h3 class="ed-sec-title">Insight &amp; Jatah Harian</h3>
+                </div>
+                <button type="button" class="ed-text-link" onclick="mmShowPage('mmInsightPage')">
+                  Buka Analisis <i data-lucide="arrow-right"></i>
+                </button>
+              </div>
+              <div class="ed-insights-row">
+                <div class="ed-today-card" id="mmTodayCard" aria-label="Jatah hari ini"></div>
+                <div class="mm-alerts ed-alerts-card" id="mmAlerts"></div>
+              </div>
+            </section>
+
+            <!-- 7. RECENT TRANSACTIONS: 5-7 transaksi terakhir -->
+            <section class="ed-section ed-recent-section" id="mmTransactionsSection">
+              <div class="ed-sec-head">
+                <div>
+                  <div class="ed-eyebrow">RECENT ACTIVITY</div>
+                  <h3 class="ed-sec-title">Aktivitas Terkini</h3>
+                </div>
+                <div class="ed-sec-actions">
+                  <span id="mmTxMonthCount" class="ed-sec-sub"></span>
+                  <button type="button" class="ed-text-link" onclick="mmShowPage('mmHistoryPage')">
+                    Semua Transaksi <i data-lucide="arrow-right"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="ed-recent-list" id="mmDashboardTransactions"></div>
+            </section>
+
           </section>
         </div>
 
-        <!-- ===== MM BUDGET PAGE =====
-             Every pos in full: allocation share, used, remaining and state.
-             Rendered from the same dashboard data as the overview card. -->
+        <!-- ===== MM BUDGET PAGE ===== -->
         <div id="mmBudgetPage" class="page">
-          <section class="lx-page">
-            <header class="lx-page-head">
+          <section class="ed-page-wrap">
+            <header class="ed-page-header">
               <div>
-                <h2 class="page-title">Budget</h2>
-                <p class="lx-page-sub" id="mmBudgetPageSub">&nbsp;</p>
+                <span class="ed-eyebrow">BUDGET ALLOCATION</span>
+                <h2 class="ed-page-title">Anggaran &amp; Pembagian Dana</h2>
+                <p class="ed-page-sub" id="mmBudgetPageSub">Pantau batas belanja agar keuangan tetap terkendali.</p>
               </div>
-              <button class="mm-header-btn" aria-label="Atur pembagian budget" onclick="mmOpenBudgetSettings()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
-              </button>
+              <div class="ed-header-right">
+                <button class="btn-primary" onclick="mmOpenBudgetSettings()">
+                  <i data-lucide="sliders-horizontal"></i>
+                  <span>Atur Split Budget</span>
+                </button>
+              </div>
             </header>
             <div id="mmBudgetPageContent">
               <div class="mm-dash-card">
@@ -503,51 +727,151 @@
           </section>
         </div>
 
-        <!-- ===== MM HISTORY PAGE ===== -->
-        <div id="mmHistoryPage" class="page">
-          <section class="page-header-card">
-            <p class="panel-eyebrow">History</p>
-            <h2 class="page-title">Transaction History</h2>
-            <p class="page-desc">View income &amp; expense records.</p>
-          </section>
-          <section class="panel-card">
-            <div class="tab-bar mm-history-tabs">
-              <button class="tab-btn active" onclick="mmSwitchHistoryTab('alltime')">All Time</button>
-              <button class="tab-btn" onclick="mmSwitchHistoryTab('month')">Month</button>
-              <button class="tab-btn" onclick="mmSwitchHistoryTab('period')">Period</button>
-            </div>
-            <div id="mmHistoryAllTime" class="mm-history-content"></div>
-            <div id="mmHistoryMonth" class="mm-history-content" style="display:none;">
-              <div class="mm-month-nav">
-                <button class="btn-ghost" aria-label="Bulan sebelumnya" onclick="mmPrevMonth()">&lt;</button>
-                <strong id="mmHistoryMonthLabel">-</strong>
-                <button class="btn-ghost" aria-label="Bulan berikutnya" onclick="mmNextMonth()">&gt;</button>
+        <!-- ===== MM DEDICATED ACCOUNTS PAGE ===== -->
+        <div id="mmAccountsPage" class="page">
+          <section class="ed-page-wrap">
+            <header class="ed-page-header">
+              <div>
+                <span class="ed-eyebrow">ACCOUNTS &amp; LIQUIDITY</span>
+                <h2 class="ed-page-title">Rekening &amp; Sumber Dana</h2>
+                <p class="ed-page-sub">Kelola rekening bank, e-wallet, uang kas tunai, dan dompet digital.</p>
               </div>
-              <div class="mm-month-summary">
-                <div class="item"><span>Income</span><strong class="positive" id="mmHistIncome">Rp 0</strong></div>
-                <div class="item"><span>Expense</span><strong class="negative" id="mmHistExpense">Rp 0</strong></div>
-                <div class="item"><span>Sisa</span><strong id="mmHistSaving">Rp 0</strong></div>
-              </div>
-              <div class="mm-month-insight-btn-wrap">
-                <button type="button" class="btn-ghost mm-btn-open-insight" onclick="mmHistOpenInsight()">
-                  <i data-lucide="brain"></i> Lihat Insight Bulan Ini &rarr;
+              <div class="ed-header-right">
+                <button type="button" class="btn-primary" onclick="mmShowAddAccount()">
+                  <i data-lucide="plus"></i>
+                  <span>Tambah Rekening</span>
                 </button>
               </div>
-              <div id="mmHistoryCategoryBreakdown" class="mm-hist-category-wrap"></div>
-              <div id="mmHistoryCalendarGrid" class="mm-calendar-grid"></div>
-              <div class="mm-month-list-head">
-                <strong id="mmHistoryListLabel">Transactions this month</strong>
-                <button class="btn-ghost btn-mini" id="mmHistoryShowAllBtn" style="display:none;" onclick="mmHistShowAll()">Show all</button>
+            </header>
+
+            <div class="ed-accounts-hero">
+              <div class="ed-acc-hero-stat">
+                <span class="ed-acc-hero-label">TOTAL SALDO LIKUID SELURUH SUMBER DANA</span>
+                <h3 class="ed-acc-hero-value" id="mmAccountsTotalBalance">Rp 0</h3>
+                <span class="ed-acc-hero-meta" id="mmAccountsCountMeta">Memuat data rekening...</span>
               </div>
-              <div id="mmHistoryMonthContent"></div>
             </div>
-            <div id="mmHistoryPeriod" class="mm-history-content" style="display:none;">
-              <div class="mm-period-filter">
-                <input type="date" id="mmPeriodStart" class="form-input">
-                <input type="date" id="mmPeriodEnd" class="form-input">
-                <button class="btn-primary" onclick="mmLoadPeriod()">Filter</button>
+
+            <div id="mmAccountsFullList" class="ed-accounts-structured-list">
+              <div class="sk-list"><div class="sk sk-line lg" style="width:60%"></div><div class="sk sk-line" style="width:40%"></div></div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ===== MM HISTORY / ACTIVITY PAGE ===== -->
+        <div id="mmHistoryPage" class="page">
+          <section class="ed-page-wrap">
+            <header class="ed-page-header">
+              <div>
+                <span class="ed-eyebrow">ACTIVITY LOG</span>
+                <h2 class="ed-page-title">Riwayat Transaksi</h2>
+                <p class="ed-page-sub">Catatan seluruh arus pemasukan, pengeluaran, dan mutasi saldo.</p>
               </div>
-              <div id="mmHistoryPeriodContent"></div>
+              <div class="ed-header-right">
+                <button type="button" class="btn-ghost" onclick="mmExportData('transactions')" title="Unduh CSV">
+                  <i data-lucide="download"></i>
+                  <span>Export CSV</span>
+                </button>
+                <button type="button" class="btn-primary" onclick="mmShowActionSheet('expense')">
+                  <i data-lucide="plus"></i>
+                  <span>Catat Transaksi</span>
+                </button>
+              </div>
+            </header>
+
+            <div class="tab-bar mm-history-tabs ed-tabs-bar">
+              <button class="tab-btn active" onclick="mmSwitchHistoryTab('month')">Bulan Ini</button>
+              <button class="tab-btn" onclick="mmSwitchHistoryTab('alltime')">Semua Waktu</button>
+              <button class="tab-btn" onclick="mmSwitchHistoryTab('period')">Rentang Tanggal</button>
+            </div>
+
+            <!-- Month View -->
+            <div id="mmHistoryMonth" class="mm-history-content">
+              <!-- Month Navigator -->
+              <div class="ed-month-nav">
+                <button class="ed-month-nav-btn" aria-label="Bulan sebelumnya" onclick="mmPrevMonth()"><i data-lucide="chevron-left"></i></button>
+                <strong class="ed-month-title" id="mmHistoryMonthLabel">-</strong>
+                <button class="ed-month-nav-btn" aria-label="Bulan berikutnya" onclick="mmNextMonth()"><i data-lucide="chevron-right"></i></button>
+                <button type="button" class="btn-ghost ed-insight-btn-pill" onclick="mmHistOpenInsight()">
+                  <i data-lucide="sparkles"></i> Insight Bulan Ini &rarr;
+                </button>
+              </div>
+
+              <!-- Month Summary Bar -->
+              <div class="ed-month-summary">
+                <div class="ed-msum-card in">
+                  <span>Pemasukan</span>
+                  <strong class="positive" id="mmHistIncome">Rp 0</strong>
+                </div>
+                <div class="ed-msum-card out">
+                  <span>Pengeluaran</span>
+                  <strong class="negative" id="mmHistExpense">Rp 0</strong>
+                </div>
+                <div class="ed-msum-card net">
+                  <span>Sisa (Net)</span>
+                  <strong id="mmHistSaving">Rp 0</strong>
+                </div>
+              </div>
+
+              <!-- Filter Toolbar -->
+              <div class="ed-tx-filter-bar">
+                <div class="ed-tx-search-wrap">
+                  <i data-lucide="search"></i>
+                  <input type="text" id="mmHistSearchInput" placeholder="Cari transaksi bulan ini..." oninput="mmFilterMonthHistory()">
+                </div>
+                <div class="ed-tx-filter-selects">
+                  <select id="mmHistTypeFilter" class="ed-select" onchange="mmFilterMonthHistory()">
+                    <option value="All">Semua Tipe</option>
+                    <option value="Expense">Pengeluaran</option>
+                    <option value="Income">Pemasukan</option>
+                    <option value="Transfer">Transfer</option>
+                  </select>
+                  <select id="mmHistAccountFilter" class="ed-select" onchange="mmFilterMonthHistory()">
+                    <option value="All">Semua Akun</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Category breakdown -->
+              <div id="mmHistoryCategoryBreakdown" class="mm-hist-category-wrap"></div>
+
+              <!-- Calendar Day Grid -->
+              <div class="ed-calendar-card">
+                <div class="ed-cal-header-row">
+                  <span class="ed-cal-title">Aktivitas Harian</span>
+                  <button class="btn-ghost btn-mini" id="mmHistoryShowAllBtn" style="display:none;" onclick="mmHistShowAll()">Tampilkan Semua</button>
+                </div>
+                <div id="mmHistoryCalendarGrid" class="mm-calendar-grid"></div>
+              </div>
+
+              <!-- Grouped Transaction List -->
+              <div class="ed-month-list-section">
+                <div class="ed-list-head-row">
+                  <strong id="mmHistoryListLabel">Daftar Transaksi</strong>
+                </div>
+                <div id="mmHistoryMonthContent" class="ed-tx-container"></div>
+              </div>
+            </div>
+
+            <!-- All Time View -->
+            <div id="mmHistoryAllTime" class="mm-history-content" style="display:none;"></div>
+
+            <!-- Custom Period View -->
+            <div id="mmHistoryPeriod" class="mm-history-content" style="display:none;">
+              <div class="ed-period-picker">
+                <div class="ed-period-inputs">
+                  <div class="ed-period-field">
+                    <label>Dari Tanggal</label>
+                    <input type="date" id="mmPeriodStart" class="form-input">
+                  </div>
+                  <div class="ed-period-field">
+                    <label>Sampai Tanggal</label>
+                    <input type="date" id="mmPeriodEnd" class="form-input">
+                  </div>
+                </div>
+                <button class="btn-primary" onclick="mmLoadPeriod()">Filter Periode</button>
+              </div>
+              <div id="mmHistoryPeriodContent" class="ed-tx-container"></div>
             </div>
           </section>
         </div>
@@ -776,27 +1100,29 @@
       </button>
     </nav>
 
-    <!-- ===== MONEY MANAGEMENT BOTTOM TABS ===== -->
+    <!-- ===== MONEY MANAGEMENT BOTTOM TABS (Mobile Max 5 Items) ===== -->
     <nav class="bottom-tabs mm-tabs" id="mmBottomTabs" aria-label="Navigasi utama">
       <button class="tab-item active" aria-current="page" data-page="mmDashboardPage" aria-label="Home" onclick="mmShowPage('mmDashboardPage')">
-        <i data-lucide="house" class="tab-icon"></i>
+        <i data-lucide="layout-dashboard" class="tab-icon"></i>
         <small>Home</small>
       </button>
-      <button class="tab-item" data-page="mmInsightPage" aria-label="Analytics" onclick="mmShowPage('mmInsightPage')">
-        <i data-lucide="chart-pie" class="tab-icon"></i>
-        <small>Analytics</small>
-      </button>
-      <button class="tab-item" data-page="mmHistoryPage" aria-label="Transactions" onclick="mmShowPage('mmHistoryPage')">
+      <button class="tab-item" data-page="mmHistoryPage" aria-label="Activity" onclick="mmShowPage('mmHistoryPage')">
         <i data-lucide="arrow-left-right" class="tab-icon"></i>
-        <small>Transactions</small>
+        <small>Activity</small>
+      </button>
+      <button class="tab-item tab-item-add" aria-label="Tambah Transaksi" onclick="mmShowActionSheet('expense')">
+        <span class="tab-add-bubble">
+          <i data-lucide="plus" class="tab-add-icon"></i>
+        </span>
+        <small>Catat</small>
+      </button>
+      <button class="tab-item" data-page="mmInsightPage" aria-label="Insights" onclick="mmShowPage('mmInsightPage')">
+        <i data-lucide="sparkles" class="tab-icon"></i>
+        <small>Insights</small>
       </button>
       <button class="tab-item" data-page="mmBudgetPage" aria-label="Budget" onclick="mmShowPage('mmBudgetPage')">
-        <i data-lucide="wallet" class="tab-icon"></i>
+        <i data-lucide="pie-chart" class="tab-icon"></i>
         <small>Budget</small>
-      </button>
-      <button class="tab-item" data-page="mmSettingsPage" aria-label="Profile" onclick="mmShowPage('mmSettingsPage')">
-        <i data-lucide="circle-user-round" class="tab-icon"></i>
-        <small>Profile</small>
       </button>
     </nav>
 

@@ -70,8 +70,69 @@
     if (LATEST_DASHBOARD_DATA) renderDashboard(LATEST_DASHBOARD_DATA);
     // Re-render MM Dashboard
     if (typeof MM_DASHBOARD !== 'undefined' && MM_DASHBOARD) mmRenderDashboard(MM_DASHBOARD);
+    // Re-render MM Accounts page if active
+    if (typeof mmRenderAccountsPage === 'function' && document.getElementById('mmAccountsPage') && document.getElementById('mmAccountsPage').classList.contains('active-page')) {
+      mmRenderAccountsPage();
+    }
     // Re-render Insight page
     if (typeof INSIGHT_DATA !== 'undefined' && INSIGHT_DATA) renderFinancialInsight(INSIGHT_DATA);
+  }
+
+  /* === UNIFIED APPLICATION NAVIGATION === */
+  function navigateApp(target) {
+    if (target === 'investments' || target === 'dashboardPage' || target === 'platformPage' || target === 'historyPage') {
+      if (currentWorkspace !== 'invest') switchWorkspace();
+      if (target === 'investments' || target === 'dashboardPage') showPage('dashboardPage');
+      else showPage(target);
+      updateNavActive('investments');
+    } else {
+      if (currentWorkspace !== 'money') switchWorkspace();
+      if (typeof mmShowPage === 'function') mmShowPage(target);
+      updateNavActive(target);
+    }
+  }
+
+  function updateNavActive(target) {
+    // Desktop sidebar
+    document.querySelectorAll('#edDesktopSidebar .ed-nav-item').forEach(btn => {
+      const nav = btn.getAttribute('data-nav');
+      if (nav === target) btn.classList.add('active');
+      else btn.classList.remove('active');
+    });
+
+    // Mobile drawer
+    document.querySelectorAll('#edMobileDrawer .ed-drawer-item').forEach(btn => {
+      const nav = btn.getAttribute('data-drawer-nav');
+      if (nav === target) btn.classList.add('active');
+      else btn.classList.remove('active');
+    });
+
+    // Mobile bottom tabs
+    document.querySelectorAll('#mmBottomTabs .tab-item').forEach(btn => {
+      const page = btn.getAttribute('data-page');
+      if (page === target) {
+        btn.classList.add('active');
+        btn.setAttribute('aria-current', 'page');
+      } else if (page) {
+        btn.classList.remove('active');
+        btn.removeAttribute('aria-current');
+      }
+    });
+  }
+
+  function toggleMobileNavDrawer(open) {
+    const drawer = document.getElementById('edMobileDrawer');
+    if (!drawer) return;
+    const shouldOpen = open !== undefined ? open : drawer.classList.contains('hidden');
+    drawer.classList.toggle('hidden', !shouldOpen);
+    document.body.style.overflow = shouldOpen ? 'hidden' : '';
+    if (shouldOpen && window.lucide) lucide.createIcons();
+  }
+
+  function closeMobileDrawer(event) {
+    if (event.target && (event.target.id === 'edMobileDrawer' || event.target.classList.contains('ed-drawer-backdrop'))) {
+      toggleMobileNavDrawer(false);
+    }
   }
 
   /* === NAVIGATION === */
@@ -1657,10 +1718,11 @@
       investFab.style.display = 'none';
       moneyFab.style.display = 'block';
       title.textContent = 'Money Management';
-      subtitle.textContent = 'Personal Finance';
+      subtitle.textContent = 'Dark Editorial Finance';
       // Dot indicator: first active
       dots[0].classList.add('active');
       dots[1].classList.remove('active');
+      updateNavActive('mmDashboardPage');
       // Only load if no cache
       if (typeof mmLoadDashboard === 'function') mmLoadDashboard(true);
     } else {
@@ -1676,6 +1738,7 @@
       // Dot indicator: second active
       dots[0].classList.remove('active');
       dots[1].classList.add('active');
+      updateNavActive('investments');
       // Only load if no cache
       loadDashboard(true);
     }

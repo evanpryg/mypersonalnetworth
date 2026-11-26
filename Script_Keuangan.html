@@ -21,16 +21,23 @@ function mmShowPage(pageId) {
   document.querySelectorAll('#mmBottomTabs .tab-item').forEach(b => { b.classList.remove('active'); b.removeAttribute('aria-current'); });
   const active = document.querySelector(`#mmBottomTabs .tab-item[data-page="${pageId}"]`);
   if (active) { active.classList.add('active'); active.setAttribute('aria-current', 'page'); }
+  if (typeof updateNavActive === 'function') updateNavActive(pageId);
   // A new tab starts at its top, not wherever the previous one was scrolled.
   window.scrollTo(0, 0);
 
   // Only load data if not cached
   if (pageId === 'mmDashboardPage') mmLoadDashboard(true);
+  if (pageId === 'mmAccountsPage') {
+    if (MM_DASHBOARD) mmRenderAccountsPage();
+    else mmLoadDashboard(true);
+  }
   if (pageId === 'mmBudgetPage') {
     if (MM_DASHBOARD) mmRenderBudgetPage();
     else mmLoadDashboard(true);
   }
-  if (pageId === 'mmHistoryPage' && !document.getElementById('mmHistoryAllTime').innerHTML.trim()) mmLoadHistory();
+  if (pageId === 'mmHistoryPage') {
+    mmLoadHistory();
+  }
   if (pageId === 'mmSettingsPage' && !document.getElementById('mmSettingsAccountsList').innerHTML.includes('mm-settings-acc-row')) mmLoadSettings();
   if (pageId === 'mmSettingsPage' && typeof mmAiRenderKeyStatus === 'function') mmAiRenderKeyStatus();
   if (pageId === 'mmInsightPage') {
@@ -39,6 +46,7 @@ function mmShowPage(pageId) {
     if (!INSIGHT_YEAR || !INSIGHT_MONTH) loadFinancialInsight();
     else loadFinancialInsight(INSIGHT_YEAR, INSIGHT_MONTH);
   }
+  if (window.lucide) lucide.createIcons();
 }
 
 /* === TRANSACTION SEARCH ===
@@ -426,6 +434,110 @@ function mmRenderDashboard(data) {
   mmRenderChart();
   mmRenderDashboardTransactions();
   mmRenderBudgetPage();
+  if (document.getElementById('mmAccountsPage') && document.getElementById('mmAccountsPage').classList.contains('active-page')) {
+    mmRenderAccountsPage();
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+/* === DEDICATED ACCOUNTS PAGE RENDERING === */
+function mmRenderAccountsPage() {
+  const container = document.getElementById('mmAccountsFullList');
+  const totalEl = document.getElementById('mmAccountsTotalBalance');
+  const metaEl = document.getElementById('mmAccountsCountMeta');
+  if (!container) return;
+
+  const accounts = (MM_DASHBOARD && MM_DASHBOARD.accounts) || MM_ACCOUNTS || [];
+  if (!accounts.length) {
+    if (totalEl) totalEl.textContent = 'Rp 0';
+    if (metaEl) metaEl.textContent = 'Belum ada rekening';
+    container.innerHTML = mmEmpty('wallet', 'Belum Ada Rekening', 'Tambahkan rekening bank, dompet digital, atau uang tunai untuk mulai mencatat keuangan.', `<button class="btn-primary" onclick="mmShowAddAccount()">+ Tambah Rekening</button>`);
+    return;
+  }
+
+  const total = accounts.reduce((sum, a) => sum + (Number(a.balance ?? a.initialBalance) || 0), 0);
+  if (totalEl) totalEl.textContent = mmFormatIDR(total);
+  if (metaEl) metaEl.textContent = `${accounts.length} rekening terdaftar · Total likuiditas aktif`;
+
+  // Group accounts into Bank, E-Wallet, Cash, Other
+  const groups = {
+    'Bank Accounts': { title: 'Rekening Bank', icon: 'landmark', accounts: [] },
+    'E-Wallets': { title: 'Dompet Digital (E-Wallet)', icon: 'smartphone', accounts: [] },
+    'Cash': { title: 'Uang Tunai (Cash)', icon: 'banknote', accounts: [] },
+    'Other Accounts': { title: 'Lainnya & Investasi', icon: 'wallet-cards', accounts: [] }
+  };
+
+  accounts.forEach(a => {
+    const type = (a.type || '').toLowerCase();
+    const name = (a.name || '').toLowerCase();
+    if (type.includes('bank') || name.includes('bca') || name.includes('mandiri') || name.includes('bri') || name.includes('bni') || name.includes('jago') || name.includes('seabank')) {
+      groups['Bank Accounts'].accounts.push(a);
+    } else if (type.includes('wallet') || name.includes('gopay') || name.includes('ovo') || name.includes('shopee') || name.includes('dana') || name.includes('linkaja')) {
+      groups['E-Wallets'].accounts.push(a);
+    } else if (type.includes('cash') || type.includes('tunai') || name.includes('dompet') || name.includes('cash') || name.includes('kas')) {
+      groups['Cash'].accounts.push(a);
+    } else {
+      groups['Other Accounts'].accounts.push(a);
+    }
+  });
+
+  let html = '';
+  Object.values(groups).forEach(g => {
+    if (!g.accounts.length) return;
+    const subtotal = g.accounts.reduce((s, a) => s + (Number(a.balance ?? a.initialBalance) || 0), 0);
+    const groupShare = total > 0 ? Math.round((Math.max(subtotal, 0) / total) * 100) : 0;
+
+    html += `
+      <div class="ed-acc-section-group">
+        <div class="ed-acc-group-header">
+          <div class="ed-acc-group-title">
+            <span class="ed-acc-group-icon">${lucideIconSvg(g.icon, 16)}</span>
+            <h4>${g.title}</h4>
+            <span class="ed-acc-group-badge">${g.accounts.length} akun</span>
+          </div>
+          <div class="ed-acc-group-totals">
+            <strong class="ed-acc-group-amount">${mmFormatIDR(subtotal)}</strong>
+            <span class="ed-acc-group-share">${groupShare}% total</span>
+          </div>
+        </div>
+        <div class="ed-acc-group-cards">
+          ${g.accounts.map(a => {
+            const bal = Number(a.balance ?? a.initialBalance) || 0;
+            const accShare = total > 0 ? Math.round((Math.max(bal, 0) / total) * 100) : 0;
+            const isNegative = bal < 0;
+            return `
+              <div class="ed-acc-card">
+                <div class="ed-acc-card-main" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
+                  <div class="ed-acc-card-icon">${a.icon ? mmAccountIconSvg(a.icon, 20) : lucideIconSvg('wallet', 20)}</div>
+                  <div class="ed-acc-card-info">
+                    <div class="ed-acc-card-name">
+                      <strong>${escapeHtml(a.name)}</strong>
+                      ${!a.showOnDashboard ? '<span class="ed-chip-muted">Hidden</span>' : ''}
+                    </div>
+                    <div class="ed-acc-card-meta">${escapeHtml(a.type || 'Akun')} · ${accShare}% alokasi</div>
+                  </div>
+                </div>
+                <div class="ed-acc-card-side">
+                  <div class="ed-acc-card-balance ${isNegative ? 'expense-color' : ''}" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
+                    ${mmFormatIDR(bal)}
+                  </div>
+                  <div class="ed-acc-card-actions">
+                    <button type="button" class="ed-btn-sm" title="Lihat mutasi transaksi" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
+                      ${lucideIconSvg('receipt', 13)} Riwayat
+                    </button>
+                    <button type="button" class="ed-btn-sm" title="Edit rekening" onclick="mmShowEditAccount('${jsStr(a.id)}', '${jsStr(a.name)}', '${jsStr(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">
+                      ${lucideIconSvg('pencil', 13)} Edit
+                    </button>
+                  </div>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  });
+
+  container.innerHTML = html;
+  if (window.lucide) lucide.createIcons();
 }
 
 /* "↑ 12% vs Okt" — direction, size and what it is compared with. goodWhenUp
@@ -986,25 +1098,28 @@ function mmBudgetRowHtml(c, detailed) {
     </button>`;
 }
 
-// Home tile: a ring around the post's icon, its %, name and what is left.
+// Home budget tile: horizontal progress bar card, clear spent vs target, status badge
 function mmBudgetTileHtml(c) {
   const b = mmBudgetState(c);
   const color = mmCategoryColor(c.category);
-  const r = 21, circ = 2 * Math.PI * r;
-  const frac = Math.min(b.pct, 100) / 100;
   const note = b.state === 'goal' ? 'Target tercapai' : b.note;
+  const pct = Math.min(b.pct, 100);
   return `
-    <button type="button" class="hm-btile is-${b.state}" onclick="mmShowCategoryDetail('${jsStr(c.category)}')">
-      <span class="hm-btile-top">
-        <span class="hm-bring" aria-hidden="true">
-          <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="${r}" class="hm-ring-track"/>
-            <circle cx="24" cy="24" r="${r}" class="hm-ring-val" ${frac > 0 ? '' : 'stroke-opacity="0"'} stroke-dasharray="${(frac * circ).toFixed(1)} ${circ.toFixed(1)}" transform="rotate(-90 24 24)"/></svg>
-          <span style="color:${color}">${mmCategoryEmoji(c.category)}</span>
-        </span>
-        <span class="hm-btile-pct">${b.pct}%</span>
-      </span>
-      <span class="hm-btile-name">${escapeHtml(c.category)}</span>
-      <span class="hm-btile-note">${escapeHtml(note)}</span>
+    <button type="button" class="ed-budget-card is-${b.state}" onclick="mmShowCategoryDetail('${jsStr(c.category)}')">
+      <div class="ed-bcard-head">
+        <div class="ed-bcard-title-wrap">
+          <span class="ed-bcard-icon" style="color:${color}">${mmCategoryEmoji(c.category)}</span>
+          <span class="ed-bcard-name">${escapeHtml(c.category)}</span>
+        </div>
+        <span class="ed-bcard-badge is-${b.state}">${b.pct}%</span>
+      </div>
+      <div class="ed-bcard-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
+        <div class="ed-bcard-fill is-${b.state}" style="width:${pct}%"></div>
+      </div>
+      <div class="ed-bcard-foot">
+        <span class="ed-bcard-spent">${mmFormatIDRShort(b.spent)} <span class="ed-bcard-target">/ ${mmFormatIDRShort(b.target)}</span></span>
+        <span class="ed-bcard-note is-${b.state}">${escapeHtml(note)}</span>
+      </div>
     </button>`;
 }
 
@@ -1543,6 +1658,7 @@ function mmRenderMonthView(data) {
   mmRenderHistCategoryBreakdown(data);
 
   mmRenderMonthCalendar(data);
+  mmPopulateHistoryAccountFilter();
   mmHistShowAll();
   if (window.lucide) lucide.createIcons();
 }
@@ -1762,39 +1878,124 @@ function mmRenderPeriod(data, container) {
 }
 
 function mmRenderTransactionList(transactions) {
-  if (!transactions.length) return '<div class="empty-state">No transactions.</div>';
+  if (!transactions || !transactions.length) return '<div class="empty-state">Belum ada transaksi.</div>';
 
-  return transactions.map(tx => {
-    let amtClass = 'income-amt';
-    let prefix = '+';
-    let subtitle = tx.account;
+  // Group by date
+  const groups = {};
+  transactions.forEach(tx => {
+    const d = tx.date || 'Lainnya';
+    if (!groups[d]) groups[d] = { date: d, items: [], net: 0 };
+    groups[d].items.push(tx);
+    if (tx.type === 'Income') groups[d].net += (Number(tx.amount) || 0);
+    else if (tx.type === 'Expense') groups[d].net -= (Number(tx.amount) || 0);
+  });
 
-    if (tx.type === 'Expense') {
-      amtClass = 'expense-amt';
-      prefix = '-';
-      subtitle = `${tx.account} · ${tx.category}${tx.subcategory ? ' / ' + tx.subcategory : ''}`;
-    } else if (tx.type === 'Transfer') {
-      amtClass = 'transfer-amt';
-      prefix = '';
-      subtitle = `${tx.account} → ${tx.accountTo}`;
-    } else {
-      subtitle = `${tx.account}${tx.category ? ' · ' + tx.category : ''}`;
-    }
-
-    const catColor = mmCategoryColor(tx.category, tx.type);
-    const catIcon = mmCategoryEmoji(tx.category, tx.type);
-    const dateStr = mmFormatDate(tx.date);
+  return Object.values(groups).map(g => {
+    const formattedDate = mmFormatDate(g.date);
+    const netFormatted = (g.net >= 0 ? '+' : '') + mmFormatIDR(g.net);
+    const netClass = g.net > 0 ? 'positive' : (g.net < 0 ? 'negative' : 'neutral');
 
     return `
-      <div class="mm-tx-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
-        <div class="mm-tx-icon" style="color:${catColor}">${catIcon}</div>
-        <div class="mm-tx-info">
-          <div class="tx-title">${escapeHtml(tx.notes || tx.type)}</div>
-          <div class="tx-sub">${dateStr} · ${subtitle}</div>
+      <div class="ed-tx-group">
+        <div class="ed-tx-group-header">
+          <span class="ed-tx-group-date">${formattedDate}</span>
+          <span class="ed-tx-group-net ${netClass}">Net: ${netFormatted}</span>
         </div>
-        <div class="mm-tx-amount ${amtClass}">${prefix}${mmFormatIDR(tx.amount)}</div>
+        <div class="ed-tx-group-items">
+          ${g.items.map(tx => {
+            let amtClass = 'income-amt';
+            let prefix = '+';
+            let subtitle = escapeHtml(tx.account || '');
+
+            if (tx.type === 'Expense') {
+              amtClass = 'expense-amt';
+              prefix = '-';
+              subtitle = `${escapeHtml(tx.account || '')} · ${escapeHtml(tx.category || '')}${tx.subcategory ? ' / ' + escapeHtml(tx.subcategory) : ''}`;
+            } else if (tx.type === 'Transfer') {
+              amtClass = 'transfer-amt';
+              prefix = '';
+              subtitle = `${escapeHtml(tx.account || '')} → ${escapeHtml(tx.accountTo || '')}`;
+            } else {
+              subtitle = `${escapeHtml(tx.account || '')}${tx.category ? ' · ' + escapeHtml(tx.category) : ''}`;
+            }
+
+            const catColor = mmCategoryColor(tx.category, tx.type);
+            const catIcon = mmCategoryEmoji(tx.category, tx.type);
+
+            return `
+              <div class="ed-tx-row mm-tx-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
+                <div class="ed-tx-left">
+                  <div class="ed-tx-icon" style="color:${catColor}">${catIcon}</div>
+                  <div class="ed-tx-details">
+                    <span class="ed-tx-title">${escapeHtml(tx.notes || tx.category || tx.type)}</span>
+                    <span class="ed-tx-sub">${subtitle}</span>
+                  </div>
+                </div>
+                <div class="ed-tx-right">
+                  <span class="ed-tx-amount ${amtClass}">${prefix}${mmFormatIDR(tx.amount)}</span>
+                  <span class="ed-tx-tag is-${tx.type.toLowerCase()}">${tx.type}</span>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
       </div>`;
   }).join('');
+}
+
+/* === ACTIVITY SEARCH & FILTERS === */
+function mmFilterMonthHistory() {
+  const searchInput = document.getElementById('mmHistSearchInput');
+  const typeFilter = document.getElementById('mmHistTypeFilter');
+  const accFilter = document.getElementById('mmHistAccountFilter');
+  const container = document.getElementById('mmHistoryMonthContent');
+  if (!container) return;
+
+  const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
+  const selectedType = typeFilter ? typeFilter.value : 'All';
+  const selectedAcc = accFilter ? accFilter.value : 'All';
+
+  const cacheKey = `${MM_HIST_YEAR}-${MM_HIST_MONTH}`;
+  const data = MM_MONTH_CACHE[cacheKey];
+  if (!data || !data.days) return;
+
+  let all = [];
+  Object.keys(data.days).forEach(d => { all = all.concat(data.days[d].transactions || []); });
+
+  if (query) {
+    all = all.filter(tx => {
+      const notes = (tx.notes || '').toLowerCase();
+      const cat = (tx.category || '').toLowerCase();
+      const sub = (tx.subcategory || '').toLowerCase();
+      const acc = (tx.account || '').toLowerCase();
+      const accTo = (tx.accountTo || '').toLowerCase();
+      const amtStr = String(tx.amount || '');
+      return notes.includes(query) || cat.includes(query) || sub.includes(query) || acc.includes(query) || accTo.includes(query) || amtStr.includes(query);
+    });
+  }
+
+  if (selectedType !== 'All') {
+    all = all.filter(tx => tx.type === selectedType);
+  }
+
+  if (selectedAcc !== 'All') {
+    all = all.filter(tx => tx.account === selectedAcc || tx.accountTo === selectedAcc);
+  }
+
+  all.sort((a, b) => new Date(b.date) - new Date(a.date));
+  container.innerHTML = mmRenderTransactionList(all);
+}
+
+function mmPopulateHistoryAccountFilter() {
+  const select = document.getElementById('mmHistAccountFilter');
+  if (!select) return;
+  const currentVal = select.value;
+  let opts = '<option value="All">Semua Akun</option>';
+  const accounts = (MM_DASHBOARD && MM_DASHBOARD.accounts) || MM_ACCOUNTS || [];
+  accounts.forEach(a => {
+    opts += `<option value="${escapeHtml(a.name)}">${escapeHtml(a.name)}</option>`;
+  });
+  select.innerHTML = opts;
+  if (currentVal) select.value = currentVal;
 }
 
 /* === CALENDAR HELPERS === */
