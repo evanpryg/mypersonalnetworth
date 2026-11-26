@@ -95,7 +95,7 @@ html, body {
   --text-primary: #F2F5F3;
   --text-2: #93A19B;
   --text-secondary: #93A19B;
-  --text-muted: #687771;
+  --text-muted: #7E8D87; /* 5:1 on --bg-card (was 4:1, failed WCAG AA) */
   --border: #26343A;
   --hairline: rgba(38, 52, 58, 0.6);
 
@@ -9095,6 +9095,201 @@ body {
   box-shadow: 0 0 0 2px rgba(0, 184, 138, 0.25) !important;
 }
 
+
+/* ============================================================
+   DESIGN POLISH PASS (ui-ux-pro-max)
+   - 44px touch targets, no wrapped headings/labels, readable
+     12px minimum for labels, visible keyboard focus, one
+     vertical rhythm for section heads, aligned bottom nav.
+   Keep this block LAST so it wins over the earlier layers.
+   ============================================================ */
+
+/* --- Keyboard focus: never remove, always visible --------------- */
+:where(button, a, [role="button"], input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px;
+}
+
+/* --- App header -------------------------------------------------- */
+.workspace-header {
+  gap: 4px;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 8px 6px var(--gutter);
+}
+.ws-left-group { flex: 1; min-width: 0; gap: 2px; }
+.ws-header-actions { gap: 0; flex: none; }
+
+.ws-drawer-btn,
+.ws-action-icon-btn,
+.global-eye-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.ws-drawer-btn { color: var(--text); }
+.ws-drawer-btn svg,
+.ws-action-icon-btn svg { width: 22px; height: 22px; }
+.ws-action-icon-btn:hover,
+.ws-drawer-btn:hover { background: var(--surface-2); color: var(--text-primary); }
+.ws-action-icon-btn:active,
+.ws-drawer-btn:active { background: var(--surface-elevated); }
+
+.ws-title-wrap {
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 2px 0 6px;
+  border-radius: 12px;
+}
+.ws-title-wrap:active { background: var(--surface-2); }
+.ws-title-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.workspace-header h1 {
+  font-size: 15px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ws-subtitle {
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+}
+.ws-subtitle-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.ws-swap-icon { width: 14px; height: 14px; flex: none; color: var(--text-muted); }
+/* Phones: the title itself is the workspace switch (chevron hints it);
+   the dot pill returns on wider screens where there is room. */
+.ws-indicator { display: none; min-height: 44px; padding: 0 14px; }
+@media (min-width: 480px) {
+  .ws-indicator { display: flex; }
+  .ws-swap-icon { display: none; }
+}
+
+/* --- Home: greeting + hero -------------------------------------- */
+.ed-eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.ed-avatar-btn { width: 44px; height: 44px; font-size: 15px; }
+.ed-balance-row-top { margin-bottom: 6px; }
+.ed-balance-hero-val {
+  margin: 0 0 10px;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.ed-balance-change {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-bottom: 22px;
+}
+.ed-change-note { font-size: 13px; }
+
+.ed-quick-tx-bar { gap: 8px; }
+.ed-quick-btn {
+  height: 44px;
+  padding: 0 6px;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+}
+.ed-quick-btn .ed-qbtn-icon svg { width: 15px; height: 15px; }
+
+/* --- Trend card + empty state ------------------------------------ */
+.ed-sparkline-title,
+.ed-sparkline-more { font-size: 12px; }
+.ed-sparkline-box:has(#mmNetworthSparkline:empty) #mmNetworthSparkline { display: none !important; }
+.ed-sparkline-box:has(#mmNetworthSparkline:empty)::after {
+  content: "Tren akan muncul setelah ada transaksi.";
+  display: block;
+  padding: 18px 0 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* --- Section heads: title + link on one row, subtitle underneath --- */
+.ed-sec-head {
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 4px 12px;
+  margin-bottom: 16px;
+}
+.ed-sec-head > div:first-child { flex: 1 1 0; min-width: 0; }
+.ed-sec-actions { display: contents; }
+.ed-sec-sub {
+  order: 3;
+  flex: 1 0 100%;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.ed-sec-sub:empty { display: none; }
+.ed-text-link {
+  margin-left: auto;
+  min-height: 44px;
+  padding: 0 2px;
+  font-size: 14px;
+  white-space: nowrap;
+  gap: 6px;
+}
+.ed-text-link svg { width: 16px; height: 16px; }
+@media (min-width: 720px) {
+  .ed-sec-actions { display: flex; }
+  .ed-sec-sub { order: 0; flex: none; }
+}
+
+/* --- Cashflow ---------------------------------------------------- */
+.ed-flow-card { padding: 12px 10px; gap: 6px; justify-content: flex-start; }
+.ed-flow-top { gap: 6px; min-width: 0; }
+.ed-flow-label {
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.ed-flow-dot { flex: none; }
+.ed-flow-val { font-variant-numeric: tabular-nums; }
+.ed-flow-delta { min-height: 26px; display: flex; align-items: center; }
+
+.ed-daily-head { flex-direction: column; align-items: flex-start; gap: 2px; }
+.ed-daily-label { font-size: 12px; }
+
+/* --- Accounts: name is information, not decoration --------------- */
+.hm-chip { min-height: 56px; }
+.hm-chip-name { color: var(--text-primary); font-weight: 500; font-size: 14px; }
+.hm-chip.is-manage {
+  background: transparent !important;
+  border-style: dashed !important;
+  color: var(--text-secondary) !important;
+}
+.hm-chip.is-manage .hm-chip-name { color: var(--text-secondary); }
+.hm-chip.is-manage:hover .hm-chip-name { color: var(--text-primary); }
+
+/* --- Bottom navigation ------------------------------------------- */
+.tab-item small { font-size: 12px; letter-spacing: 0; }
+.tab-item-add { top: 0; }
+.tab-add-bubble {
+  width: 44px;
+  height: 44px;
+  /* Rises out of the bar, but only takes the icon row's height so the
+     "Catat" label lines up with the other four. */
+  margin: -22px 0 0;
+  box-shadow: 0 8px 18px -6px rgba(var(--accent-rgb), 0.6), 0 0 0 4px var(--bg);
+}
+.tab-add-icon { width: 22px; height: 22px; }
+
 </style>
 
 
@@ -9248,9 +9443,14 @@ body {
         <button type="button" class="ws-drawer-btn mobile-only" onclick="toggleMobileNavDrawer(true)" aria-label="Buka menu navigasi">
           <i data-lucide="menu"></i>
         </button>
-        <div class="ws-title-wrap" onclick="switchWorkspace()" role="button" tabindex="0" title="Klik untuk berganti workspace">
-          <h1 id="workspaceTitle">Money Management</h1>
-          <span class="ws-subtitle" id="wsSubtitle">Dark Editorial Finance</span>
+        <div class="ws-title-wrap" onclick="switchWorkspace()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchWorkspace();}" role="button" tabindex="0" aria-label="Ganti workspace" title="Ketuk untuk berganti workspace">
+          <div class="ws-title-text">
+            <h1 id="workspaceTitle">Money Management</h1>
+            <span class="ws-subtitle-row">
+              <span class="ws-subtitle" id="wsSubtitle">Arus kas &amp; anggaran</span>
+              <i data-lucide="chevrons-up-down" class="ws-swap-icon" aria-hidden="true"></i>
+            </span>
+          </div>
         </div>
       </div>
       <div class="ws-header-actions">
@@ -9603,14 +9803,14 @@ body {
             <!-- 2. TOTAL BALANCE: Angka besar, perubahan saldo, dan grafik perkembangan -->
             <section class="ed-section ed-hero-balance" id="mmNetworthCard">
               <div class="ed-balance-row-top">
-                <div class="ed-eyebrow">TOTAL NET BALANCE</div>
-                <div class="ed-balance-change">
-                  <span class="mm-change-badge up" id="mmChangeBadge">+0%</span>
-                  <span class="ed-change-note" id="mmChangeText">vs akhir bulan lalu</span>
-                </div>
+                <div class="ed-eyebrow">Total Net Balance</div>
               </div>
               <div class="ed-balance-main-row">
                 <h2 class="ed-balance-hero-val" id="mmNetWorthValue">Rp 0</h2>
+              </div>
+              <div class="ed-balance-change">
+                <span class="mm-change-badge up" id="mmChangeBadge">+0%</span>
+                <span class="ed-change-note" id="mmChangeText">vs akhir bulan lalu</span>
               </div>
 
               <!-- Quick Log Actions -->
@@ -9677,7 +9877,7 @@ body {
                 <div class="ed-flow-card is-net">
                   <div class="ed-flow-top">
                     <span class="ed-flow-dot net"></span>
-                    <span class="ed-flow-label">Sisa Kas (Net)</span>
+                    <span class="ed-flow-label">Sisa Kas</span>
                   </div>
                   <strong class="ed-flow-val" id="mmTotalSaving">Rp 0</strong>
                   <div class="ed-flow-delta">
@@ -9706,7 +9906,7 @@ body {
                   <h3 class="ed-sec-title">Ringkasan Rekening</h3>
                 </div>
                 <button type="button" class="ed-text-link" onclick="mmShowPage('mmAccountsPage')">
-                  Lihat Semua Akun <i data-lucide="arrow-right"></i>
+                  Semua Akun <i data-lucide="arrow-right"></i>
                 </button>
               </div>
               <div class="ed-accounts-strip" id="mmAccountsScroll" aria-label="Daftar Rekening"></div>
@@ -9722,7 +9922,7 @@ body {
                 <div class="ed-sec-actions">
                   <span id="mmBudgetSummary" class="ed-sec-sub"></span>
                   <button type="button" class="ed-text-link" onclick="mmShowPage('mmBudgetPage')">
-                    Detail Budget <i data-lucide="arrow-right"></i>
+                    Detail <i data-lucide="arrow-right"></i>
                   </button>
                 </div>
               </div>
@@ -9737,7 +9937,7 @@ body {
                   <h3 class="ed-sec-title">Insight &amp; Jatah Harian</h3>
                 </div>
                 <button type="button" class="ed-text-link" onclick="mmShowPage('mmInsightPage')">
-                  Buka Analisis <i data-lucide="arrow-right"></i>
+                  Analisis <i data-lucide="arrow-right"></i>
                 </button>
               </div>
               <div class="ed-insights-row">
@@ -9756,7 +9956,7 @@ body {
                 <div class="ed-sec-actions">
                   <span id="mmTxMonthCount" class="ed-sec-sub"></span>
                   <button type="button" class="ed-text-link" onclick="mmShowPage('mmHistoryPage')">
-                    Semua Transaksi <i data-lucide="arrow-right"></i>
+                    Semua transaksi <i data-lucide="arrow-right"></i>
                   </button>
                 </div>
               </div>
@@ -13743,7 +13943,7 @@ function injectAuthSettingsCard() {
       investFab.style.display = 'none';
       moneyFab.style.display = 'block';
       title.textContent = 'Money Management';
-      subtitle.textContent = 'Dark Editorial Finance';
+      subtitle.textContent = 'Arus kas & anggaran';
       // Dot indicator: first active
       dots[0].classList.add('active');
       dots[1].classList.remove('active');
@@ -15011,7 +15211,7 @@ const MM_ACC_TYPE_COLORS = {
 function mmRenderAccountCards(accounts) {
   const box = document.getElementById('mmAccountsScroll');
   if (!box) return;
-  const manage = `<button type="button" class="hm-chip is-manage" aria-label="Kelola akun" onclick="mmShowPage('mmSettingsPage')">${lucideIconSvg('sliders-horizontal', 15)}</button>`;
+  const manage = `<button type="button" class="hm-chip is-manage" onclick="mmShowPage('mmSettingsPage')"><span class="hm-chip-ic">${lucideIconSvg('sliders-horizontal', 15)}</span><span class="hm-chip-name">Kelola akun</span></button>`;
 
   const visible = (accounts || []).filter(a => a.showOnDashboard).sort((a, b) => (b.balance || 0) - (a.balance || 0));
   if (!visible.length) {
