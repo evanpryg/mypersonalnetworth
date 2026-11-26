@@ -9290,6 +9290,351 @@ body {
 }
 .tab-add-icon { width: 22px; height: 22px; }
 
+/* ============================================================
+   HOME v3 - "POCKET LEDGER"  (ui-ux-pro-max)
+   Written from scratch for #mmDashboardPage; namespace .hx-*.
+   Scale: 12 / 13 / 15 / 17 / 24 / hero. Touch >= 44px.
+   Cards: 20px radius, 1px hairline, no shadows. Colour only
+   carries meaning: green = in / safe, red = out / over,
+   amber = watch. Keep LAST so it wins over older layers.
+   ============================================================ */
+.hx {
+  --hx-bleed: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 720px;
+  margin: 0 auto;
+  font-family: var(--font-family);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.hx *, .hx *::before, .hx *::after { box-sizing: border-box; }
+.hx h1, .hx h2, .hx h3, .hx p, .hx dl, .hx dd { margin: 0; }
+:where(.hx button) {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.hx svg { flex: none; }
+.hx-cols, .hx-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+/* --- 1. Top bar ------------------------------------------------ */
+.hx-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.hx-top-text { min-width: 0; }
+.hx-top-meta { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hx-top-name { font-size: 18px; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hx-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 14px; font-weight: 650;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.12);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  transition: background var(--dur-fast), transform var(--dur-fast);
+}
+.hx-avatar:active { transform: scale(0.94); }
+
+/* --- 2. Hero ----------------------------------------------------- */
+.hx-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 16px 16px 14px;
+  border-radius: 20px;
+  background: linear-gradient(165deg, #123329 0%, #0F1D21 58%, #111A1F 100%);
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+}
+.hx-hero-glow {
+  position: absolute; z-index: -1; pointer-events: none;
+  width: 280px; height: 280px; right: -100px; top: -130px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(var(--accent-rgb), 0.34), transparent);
+}
+.hx-label { font-size: 12px; font-weight: 500; color: rgba(242, 245, 243, 0.74); }
+.hx-amount {
+  margin: 2px 0 8px;
+  font-size: clamp(26px, 7.8vw, 32px);
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+.hx-change { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.hx-change-note { font-size: 12px; color: rgba(242, 245, 243, 0.72); }
+.hx-hero .mm-change-badge { padding: 2px 8px 2px 6px; border-radius: 999px; font-size: 12px; }
+.hx-trend {
+  display: block;
+  width: calc(100% + 32px);
+  margin: 10px -16px -14px;
+  padding: 0;
+  text-align: left;
+}
+.hx-trend .lx-trend-area { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16%, #000 90%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 16%, #000 90%, transparent 100%); }
+.hx-trend svg { display: block; width: 100%; height: 52px; overflow: visible; }
+.hx-trend-labels { position: relative; display: block; height: 22px; }
+.hx-trend-labels span {
+  position: absolute; top: 2px; transform: translateX(-50%);
+  font-size: 12px; color: rgba(242, 245, 243, 0.6);
+}
+
+/* --- 3. Actions --------------------------------------------------- */
+.hx-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.hx-act {
+  --c: var(--accent-rgb);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  min-height: 68px; padding: 10px 4px 8px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition: transform var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast);
+}
+.hx .hx-act { border: 1px solid var(--border); }
+.hx-act.is-out { --c: var(--expense-rgb); }
+.hx-act.is-in  { --c: var(--income-rgb); }
+.hx-act.is-tf  { --c: var(--info-rgb); }
+.hx-act-ic {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(var(--c), 0.14);
+  color: rgb(var(--c));
+}
+.hx-act-ic svg { width: 18px; height: 18px; }
+.hx-act-tx { font-size: 12px; font-weight: 600; }
+.hx-act:active { transform: scale(0.97); background: var(--surface-2); }
+
+/* --- Blocks & heads ------------------------------------------------ */
+.hx-block { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.hx-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hx-head-text { min-width: 0; }
+.hx-title { font-size: 15px; line-height: 1.25; font-weight: 650; letter-spacing: -0.01em; }
+.hx-sub { margin-top: 1px; font-size: 12px; color: var(--text-secondary); }
+.hx-sub:empty { display: none; }
+.hx-link {
+  display: inline-flex; align-items: center; gap: 2px;
+  min-height: 44px; margin: -10px 0; padding: 0 0 0 10px; flex: none;
+  font-size: 13px; font-weight: 600; color: var(--accent); white-space: nowrap;
+}
+.hx-link svg { width: 14px; height: 14px; }
+.hx-link:active { opacity: 0.7; }
+.hx-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+
+/* --- 4. Today ------------------------------------------------------ */
+.hx-today { overflow: hidden; }
+.hx-today-main {
+  --tone: var(--accent);
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; min-height: 64px; padding: 12px 14px; text-align: left;
+}
+.hx-today-main.is-warn { --tone: var(--warning); }
+.hx-today-main.is-bad  { --tone: var(--error); }
+.hx-ring { position: relative; width: 44px; height: 44px; flex: none; display: grid; place-items: center; font-size: 11px; font-weight: 650; }
+.hx-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hx-ring-track { fill: none; stroke: rgba(255, 255, 255, 0.08); stroke-width: 6; }
+.hx-ring-val { fill: none; stroke: var(--tone); stroke-width: 6; stroke-linecap: round; transition: stroke-dasharray 0.6s var(--ease-out); }
+.hx-today-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hx-k { font-size: 12px; color: var(--text-secondary); }
+.hx-today-value { font-size: 19px; line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.hx-today-sub { font-size: 12px; color: var(--text-muted); text-wrap: balance; }
+.hx-chev { display: flex; color: var(--text-muted); }
+.hx-today-main:active { background: var(--surface-2); }
+
+.hx-pace { --tone: var(--accent); display: flex; flex-direction: column; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid var(--border); }
+.hx-pace.is-warn { --tone: var(--warning); }
+.hx-pace.is-bad  { --tone: var(--error); }
+.hx-pace-top { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-secondary); }
+.hx-pace-top strong { color: var(--text); font-weight: 650; }
+.hx-pace-status { font-weight: 600; color: var(--tone); text-align: right; }
+.hx-pace-track { position: relative; height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); }
+.hx-pace-fill { position: absolute; inset: 0 auto 0 0; width: var(--w); border-radius: inherit; background: var(--tone); animation: hxReveal 0.7s var(--ease-out) backwards; }
+.hx-pace-mark { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 2px; background: var(--text); }
+.hx-pace-foot { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-muted); }
+
+.hx-alerts { display: grid; gap: 6px; }
+.hx-alerts:empty { display: none; }
+.hx .mm-alert {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 40px; margin: 0; padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 12px; line-height: 1.35; color: var(--text-secondary);
+  background: var(--surface); border: 1px solid var(--border);
+}
+.hx .mm-alert > span { flex: 1; min-width: 0; }
+.hx .mm-alert strong { color: var(--text); font-weight: 650; }
+.hx .mm-alert.is-bad  { background: rgba(var(--error-rgb), 0.09);   border-color: rgba(var(--error-rgb), 0.3); }
+.hx .mm-alert.is-bad  > svg:first-child { color: var(--error); }
+.hx .mm-alert.is-warn { background: rgba(var(--warning-rgb), 0.08); border-color: rgba(var(--warning-rgb), 0.28); }
+.hx .mm-alert.is-warn > svg:first-child { color: var(--warning); }
+.hx .mm-alert.is-info > svg:first-child { color: var(--info); }
+.hx .mm-alert > svg:last-child:not(:first-child) { color: var(--text-muted); }
+
+/* --- 5. Month ------------------------------------------------------ */
+.hx-month { display: flex; flex-direction: column; gap: 12px; padding: 14px 14px 10px; }
+.hx-flowbar { position: relative; height: 8px; border-radius: 999px; overflow: hidden; background: rgba(var(--success-rgb), 0.26); }
+.hx-flowbar-fill { position: absolute; inset: 0 auto 0 0; width: var(--w, 0%); border-radius: inherit; background: var(--expense); animation: hxReveal 0.7s var(--ease-out) backwards; }
+.hx-flowbar.is-warn .hx-flowbar-fill { background: var(--warning); }
+.hx-flowbar:not(.is-good):not(.is-warn):not(.is-bad) { background: rgba(255, 255, 255, 0.07); }
+.hx-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hx-flow-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 0 8px; }
+.hx-flow-item:first-child { padding-left: 0; }
+.hx-flow-item + .hx-flow-item { border-left: 1px solid var(--border); }
+.hx-flow-item dt { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+.hx-flow-item dd:nth-of-type(1) { font-size: 15px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.hx-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+.hx-flow-item.is-in  .hx-dot { background: var(--income); }
+.hx-flow-item.is-out .hx-dot { background: var(--expense); }
+.hx-flow-item.is-in  dd:nth-of-type(1) { color: var(--income); }
+.hx-flow-item.is-out dd:nth-of-type(1) { color: var(--expense); }
+.hx-flow-delta { display: flex; align-items: center; min-height: 20px; font-size: 12px; }
+.hx .mm-rate-chip { padding: 1px 6px; border-radius: 8px; font-size: 12px; line-height: 1.3; white-space: normal; }
+.hx .mm-rate-chip:empty { display: none; }
+.hx .lx-delta-chip { font-size: 12px; }
+.hx .lx-delta-muted { font-size: 12px; }
+
+.hx-daily { padding-top: 10px; border-top: 1px solid var(--border); }
+.hx-daily-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; font-size: 12px; color: var(--text-secondary); }
+.hx-daily-head span:first-child { color: var(--text); font-weight: 600; }
+.hx .mm-daily-plot { position: relative; height: 76px; gap: 3px; border-bottom: 1px solid var(--border); touch-action: pan-y; }
+.hx .mm-daily-bar span {
+  border-radius: 3px 3px 1px 1px;
+  background: rgba(147, 161, 155, 0.36);
+  transform-origin: bottom;
+  animation: lxGrowY 0.6s var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 14ms);
+}
+.hx .mm-daily-bar.is-high span { background: rgba(var(--error-rgb), 0.85); }
+.hx .mm-daily-bar.is-today span { background: var(--accent); box-shadow: none; }
+.hx .mm-daily-bar.is-selected span { background: var(--text); }
+.hx .mm-daily-bar.is-future span { height: 2px; background: rgba(255, 255, 255, 0.06); animation: none; }
+.hx .mm-daily-avg { border-top: 1px dashed rgba(var(--warning-rgb), 0.6); }
+.hx .mm-daily-avg span { font-size: 12px; font-weight: 500; color: var(--warning); background: var(--surface); }
+.hx .mm-daily-ticks { height: 20px; }
+.hx .mm-daily-ticks span { top: 3px; font-size: 12px; color: var(--text-muted); }
+.hx .mm-daily-foot { margin: 4px 0 0; font-size: 12px; min-height: 20px; }
+.hx .mm-daily-foot strong { font-size: 12px; }
+.hx .mm-empty { padding: 16px 12px; }
+
+/* --- 6. Accounts ---------------------------------------------------- */
+.hx-accts {
+  display: flex; gap: 8px;
+  margin: 0 calc(var(--hx-bleed) * -1);
+  padding: 2px var(--hx-bleed) 2px;
+  overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: var(--hx-bleed);
+  overscroll-behavior-x: contain; scrollbar-width: none;
+}
+.hx-accts::-webkit-scrollbar { display: none; }
+.hx .hx-acct {
+  --c: var(--text-secondary);
+  position: relative; flex: 0 0 128px; scroll-snap-align: start;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  min-height: 84px; padding: 10px 12px; text-align: left;
+  border-radius: 14px; background: var(--surface); border: 1px solid var(--border);
+  transition: transform var(--dur-fast), border-color var(--dur-fast), background var(--dur-fast);
+}
+.hx-acct:active { transform: scale(0.97); background: var(--surface-2); }
+.hx-acct-top { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 6px; }
+.hx-acct-ic {
+  width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center;
+  color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent);
+}
+.hx-acct-share { font-size: 12px; color: var(--text-muted); }
+.hx-acct-name { max-width: 100%; font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hx-acct-bal { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; }
+.hx .hx-acct.is-ghost {
+  align-items: center; justify-content: center; gap: 8px; text-align: center;
+  background: transparent; border-style: dashed; color: var(--text-secondary);
+}
+.hx-acct.is-ghost .hx-acct-ic { background: rgba(255, 255, 255, 0.06); color: var(--text-secondary); }
+.hx-acct.is-ghost .hx-acct-name { color: inherit; }
+.hx-accts .sk-card-row { display: contents; }
+.hx-accts .sk-account { flex: 0 0 128px; height: 84px; border-radius: 14px; }
+.hx-accts > .empty-state, .hx-accts > .mm-empty { flex: 1; font-size: 12px; color: var(--text-muted); }
+
+/* --- 7. Budget ------------------------------------------------------ */
+.hx-budget { overflow: hidden; }
+.hx-budget .mm-empty { padding: 18px 14px; }
+.hx-bgt { --tone: var(--accent); display: flex; align-items: flex-start; gap: 10px; width: 100%; min-height: 56px; padding: 10px 14px; text-align: left; transition: background var(--dur-fast); }
+.hx-bgt + .hx-bgt { border-top: 1px solid var(--border); }
+.hx-bgt:active { background: var(--surface-2); }
+.hx-bgt.is-warn { --tone: var(--warning); }
+.hx-bgt.is-over { --tone: var(--error); }
+.hx-bgt-ic {
+  width: 30px; height: 30px; border-radius: 10px; flex: none; display: grid; place-items: center;
+  color: var(--c, var(--text-secondary)); background: color-mix(in srgb, var(--c, #8997AA) 16%, transparent);
+}
+.hx-bgt-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.hx-bgt-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.hx-bgt-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hx-bgt-pct { font-size: 12px; font-weight: 650; color: var(--tone); }
+.hx-bar { display: block; height: 5px; margin: 6px 0 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); overflow: hidden; }
+.hx-bar > span { display: block; height: 100%; width: var(--w); border-radius: inherit; background: var(--tone, var(--accent)); animation: hxReveal 0.7s var(--ease-out) backwards; }
+.hx-bgt-foot { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-secondary); }
+.hx-of { color: var(--text-muted); }
+.hx-bgt-note { text-align: right; color: var(--text-muted); }
+.hx-bgt.is-warn .hx-bgt-note, .hx-bgt.is-over .hx-bgt-note { color: var(--tone); }
+
+/* --- 8. Activity ---------------------------------------------------- */
+.hx-activity { overflow: hidden; }
+.hx-activity .mm-empty { padding: 20px 14px; }
+.hx-day + .hx-day { border-top: 1px solid var(--border); }
+.hx-day-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 8px 14px 0; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.hx-day-head strong { font-weight: 600; font-variant-numeric: tabular-nums; }
+.hx-tx {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 48px; padding: 6px 14px; cursor: pointer;
+  transition: background var(--dur-fast);
+}
+.hx-tx:active { background: var(--surface-2); }
+.hx-tx-ic {
+  width: 32px; height: 32px; border-radius: 10px; flex: none; display: grid; place-items: center;
+  color: var(--c, var(--text-secondary)); background: color-mix(in srgb, var(--c, #8997AA) 15%, transparent);
+}
+.hx-tx-info { flex: 1; min-width: 0; }
+.hx-tx-name { font-size: 13px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hx-tx-meta { margin-top: 0; font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hx-tx-amt { flex: none; max-width: 42%; font-size: 13px; font-weight: 650; text-align: right; white-space: nowrap; }
+.hx .hx-more {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  width: 100%; min-height: 44px; border-top: 1px solid var(--border);
+  font-size: 13px; font-weight: 600; color: var(--accent);
+}
+.hx-more:active { background: var(--surface-2); }
+
+/* --- Motion --------------------------------------------------------- */
+@keyframes hxReveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes hxIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.hx-top, .hx-col > * { animation: hxIn 0.45s var(--ease-out) backwards; }
+.hx-col > :nth-child(2) { animation-delay: 60ms; }
+.hx-col > :nth-child(3) { animation-delay: 120ms; }
+.hx-col > :nth-child(4) { animation-delay: 180ms; }
+@media (prefers-reduced-motion: reduce) {
+  .hx *, .hx *::before, .hx *::after { animation: none !important; transition: none !important; }
+}
+
+/* --- Wider screens ---------------------------------------------------- */
+@media (min-width: 720px) {
+  .hx-accts {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+    margin: 0; padding: 0; overflow: visible;
+  }
+  .hx .hx-acct { flex: none; }
+  .hx-acct:hover, .hx-act:hover { border-color: rgba(var(--accent-rgb), 0.4); }
+  .hx-bgt:hover, .hx-tx:hover, .hx-more:hover { background: var(--surface-2); }
+}
+@media (min-width: 1024px) {
+  .hx { --hx-bleed: 0px; max-width: 1080px; gap: 18px; }
+  .hx-top-name { font-size: 22px; }
+  .hx-cols { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .hx-col { gap: 20px; }
+  .hx-hero { padding: 20px 20px 16px; }
+  .hx-trend { width: calc(100% + 40px); margin: 12px -20px -16px; }
+  .hx-amount { font-size: 38px; }
+  .hx-trend svg { height: 68px; }
+}
+
 </style>
 
 
@@ -9771,199 +10116,156 @@ body {
     <div id="moneyWorkspace" class="workspace active">
       <main class="main-content">
 
-        <!-- ===== MM DASHBOARD / HOME =====
-             Redesigned to Dark Editorial Finance with 7 strictly ordered sections:
-             1. Header (greeting, name, date, actions)
-             2. Total balance (hero, diff, sparkline, quick log actions)
-             3. Cashflow (monthly income, expense, net, daily trend)
-             4. Accounts overview (balances per account)
-             5. Budget overview (progress per category)
-             6. Financial insights (daily allowance, health alerts)
-             7. Recent transactions (latest records) -->
+        <!-- ===== MM HOME (redesign v3 — "Pocket Ledger") =====
+             Mobile-first, one question per block:
+             1. Top bar        — siapa & kapan
+             2. Hero           — berapa total uangku (+ tren 6 bulan)
+             3. Actions        — catat sesuatu (3 aksi, 56px)
+             4. Today          — berapa yang boleh kupakai hari ini (+ peringatan)
+             5. Month          — bulan ini: masuk / keluar / sisa + belanja harian
+             6. Accounts       — uangku ada di mana
+             7. Budget         — pos mana yang aman / hampir habis
+             8. Activity       — apa yang baru terjadi
+             Desktop (>=1024): dua kolom — kiri: 2-5, kanan: 6-8.
+             Semua id data (mm*) dipertahankan; render ada di Script_Keuangan.html. -->
         <div id="mmDashboardPage" class="page active-page">
-          <section class="ed-dashboard-wrap">
+          <div class="hx">
 
-            <!-- 1. HEADER: Greeting, Nama Pengguna, Tanggal & Profile -->
-            <header class="ed-dash-header">
-              <div class="ed-dash-header-left">
-                <div class="ed-dash-meta">
-                  <span id="mmGreeting">Selamat datang</span>
-                  <span class="ed-dot-sep">·</span>
-                  <span id="mmDateText"></span>
-                </div>
-                <h1 class="ed-dash-user" id="mmUserName">Mr Evan</h1>
+            <!-- 1. TOP BAR -->
+            <header class="hx-top">
+              <div class="hx-top-text">
+                <p class="hx-top-meta"><span id="mmGreeting">Selamat datang</span><span aria-hidden="true"> · </span><span id="mmDateText"></span></p>
+                <h1 class="hx-top-name" id="mmUserName">Mr Evan</h1>
               </div>
-              <div class="ed-dash-header-actions">
-                <button type="button" class="ed-avatar-btn" id="mmHomeAvatar" onclick="mmShowPage('mmSettingsPage')" aria-label="Buka profil">
-                  <span>E</span>
-                </button>
-              </div>
+              <button type="button" class="hx-avatar" id="mmHomeAvatar" onclick="mmShowPage('mmSettingsPage')" aria-label="Buka profil">E</button>
             </header>
 
-            <!-- 2. TOTAL BALANCE: Angka besar, perubahan saldo, dan grafik perkembangan -->
-            <section class="ed-section ed-hero-balance" id="mmNetworthCard">
-              <div class="ed-balance-row-top">
-                <div class="ed-eyebrow">Total Net Balance</div>
-              </div>
-              <div class="ed-balance-main-row">
-                <h2 class="ed-balance-hero-val" id="mmNetWorthValue">Rp 0</h2>
-              </div>
-              <div class="ed-balance-change">
-                <span class="mm-change-badge up" id="mmChangeBadge">+0%</span>
-                <span class="ed-change-note" id="mmChangeText">vs akhir bulan lalu</span>
-              </div>
+            <div class="hx-cols">
+              <div class="hx-col hx-col-main">
 
-              <!-- Quick Log Actions -->
-              <div class="ed-quick-tx-bar" aria-label="Catat Transaksi Cepat">
-                <button type="button" class="ed-quick-btn is-out" onclick="mmShowActionSheet('expense')">
-                  <span class="ed-qbtn-icon"><i data-lucide="arrow-up-right"></i></span>
-                  <span class="ed-qbtn-text">Pengeluaran</span>
-                </button>
-                <button type="button" class="ed-quick-btn is-in" onclick="mmShowActionSheet('income')">
-                  <span class="ed-qbtn-icon"><i data-lucide="arrow-down-left"></i></span>
-                  <span class="ed-qbtn-text">Pemasukan</span>
-                </button>
-                <button type="button" class="ed-quick-btn is-tx" onclick="mmShowActionSheet('transfer')">
-                  <span class="ed-qbtn-icon"><i data-lucide="arrow-right-left"></i></span>
-                  <span class="ed-qbtn-text">Transfer</span>
-                </button>
-              </div>
-
-              <!-- Sparkline & Net Worth Trend -->
-              <div class="ed-sparkline-box" id="mmTrendWrap" onclick="mmShowPage('mmInsightPage')" role="button" tabindex="0" title="Klik untuk lihat analitik lengkap">
-                <div class="ed-sparkline-head">
-                  <span class="ed-sparkline-title">Tren Pertumbuhan Saldo</span>
-                  <span class="ed-sparkline-more">Analitik <i data-lucide="arrow-right"></i></span>
-                </div>
-                <svg id="mmNetworthSparkline" viewBox="0 0 320 72" preserveAspectRatio="none" aria-hidden="true"></svg>
-                <div class="hm-trend-labels" id="mmTrendLabels" aria-hidden="true"></div>
-              </div>
-            </section>
-
-            <!-- 3. CASHFLOW: Total Income dan Expenses bulan berjalan -->
-            <section class="ed-section ed-cashflow-section" id="mmMonthSection">
-              <div class="ed-sec-head">
-                <div>
-                  <div class="ed-eyebrow">MONTHLY CASHFLOW</div>
-                  <h3 class="ed-sec-title" id="mmCashflowTitle">Bulan Ini</h3>
-                </div>
-                <div class="ed-sec-actions">
-                  <span id="mmCashflowSub" class="ed-sec-sub"></span>
-                  <button type="button" class="ed-text-link" onclick="mmShowPage('mmInsightPage')">
-                    Detail <i data-lucide="arrow-right"></i>
+                <!-- 2. HERO: total saldo + tren -->
+                <section class="hx-hero" id="mmNetworthCard" aria-labelledby="hxHeroLabel">
+                  <span class="hx-hero-glow" aria-hidden="true"></span>
+                  <p class="hx-label" id="hxHeroLabel">Total saldo bersih</p>
+                  <h2 class="hx-amount" id="mmNetWorthValue">Rp 0</h2>
+                  <p class="hx-change">
+                    <span class="mm-change-badge up" id="mmChangeBadge">+0%</span>
+                    <span class="hx-change-note" id="mmChangeText">vs akhir bulan lalu</span>
+                  </p>
+                  <button type="button" class="hx-trend" id="mmTrendWrap" onclick="mmShowPage('mmInsightPage')" aria-label="Tren saldo 6 bulan terakhir, buka analitik">
+                    <svg id="mmNetworthSparkline" viewBox="0 0 320 72" preserveAspectRatio="none" aria-hidden="true"></svg>
+                    <span class="hx-trend-labels" id="mmTrendLabels" aria-hidden="true"></span>
                   </button>
-                </div>
-              </div>
+                </section>
 
-              <div class="ed-flow-grid">
-                <div class="ed-flow-card is-in">
-                  <div class="ed-flow-top">
-                    <span class="ed-flow-dot in"></span>
-                    <span class="ed-flow-label">Pemasukan</span>
-                  </div>
-                  <strong class="ed-flow-val" id="mmTotalIncome">Rp 0</strong>
-                  <div class="ed-flow-delta" id="mmIncomeDelta"></div>
-                </div>
-
-                <div class="ed-flow-card is-out">
-                  <div class="ed-flow-top">
-                    <span class="ed-flow-dot out"></span>
-                    <span class="ed-flow-label">Pengeluaran</span>
-                  </div>
-                  <strong class="ed-flow-val" id="mmTotalExpense">Rp 0</strong>
-                  <div class="ed-flow-delta" id="mmExpenseDelta"></div>
-                </div>
-
-                <div class="ed-flow-card is-net">
-                  <div class="ed-flow-top">
-                    <span class="ed-flow-dot net"></span>
-                    <span class="ed-flow-label">Sisa Kas</span>
-                  </div>
-                  <strong class="ed-flow-val" id="mmTotalSaving">Rp 0</strong>
-                  <div class="ed-flow-delta">
-                    <span class="mm-rate-chip" id="mmSavingRate"></span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Daily Spending Histogram -->
-              <div class="ed-daily-box">
-                <div class="ed-daily-head">
-                  <span class="ed-daily-label">Distribusi Belanja Harian</span>
-                  <span class="ed-daily-sub" id="mmDailySub"></span>
-                </div>
-                <div class="mm-daily-chart" id="mmDailyChart"></div>
-                <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
-                <div id="mmBreakdown" style="display:none;"></div>
-              </div>
-            </section>
-
-            <!-- 4. ACCOUNTS OVERVIEW: Ringkasan saldo setiap rekening -->
-            <section class="ed-section ed-accounts-section">
-              <div class="ed-sec-head">
-                <div>
-                  <div class="ed-eyebrow">ACCOUNTS &amp; LIQUIDITY</div>
-                  <h3 class="ed-sec-title">Ringkasan Rekening</h3>
-                </div>
-                <button type="button" class="ed-text-link" onclick="mmShowPage('mmAccountsPage')">
-                  Semua Akun <i data-lucide="arrow-right"></i>
-                </button>
-              </div>
-              <div class="ed-accounts-strip" id="mmAccountsScroll" aria-label="Daftar Rekening"></div>
-            </section>
-
-            <!-- 5. BUDGET OVERVIEW: Total anggaran, terpakai, tersisa, dan pos kategori -->
-            <section class="ed-section ed-budget-section" id="mmBudgetSection">
-              <div class="ed-sec-head">
-                <div>
-                  <div class="ed-eyebrow">BUDGET TRACKING</div>
-                  <h3 class="ed-sec-title">Anggaran Bulanan</h3>
-                </div>
-                <div class="ed-sec-actions">
-                  <span id="mmBudgetSummary" class="ed-sec-sub"></span>
-                  <button type="button" class="ed-text-link" onclick="mmShowPage('mmBudgetPage')">
-                    Detail <i data-lucide="arrow-right"></i>
+                <!-- 3. ACTIONS -->
+                <nav class="hx-actions" aria-label="Catat transaksi cepat">
+                  <button type="button" class="hx-act is-out" onclick="mmShowActionSheet('expense')">
+                    <span class="hx-act-ic"><i data-lucide="arrow-up-right"></i></span>
+                    <span class="hx-act-tx">Keluar</span>
                   </button>
-                </div>
-              </div>
-              <div class="ed-budget-grid" id="mmBudgetList"></div>
-            </section>
-
-            <!-- 6. FINANCIAL INSIGHTS: Insight pengeluaran dan jatah hari ini -->
-            <section class="ed-section ed-insights-section">
-              <div class="ed-sec-head">
-                <div>
-                  <div class="ed-eyebrow">FINANCIAL INTELLIGENCE</div>
-                  <h3 class="ed-sec-title">Insight &amp; Jatah Harian</h3>
-                </div>
-                <button type="button" class="ed-text-link" onclick="mmShowPage('mmInsightPage')">
-                  Analisis <i data-lucide="arrow-right"></i>
-                </button>
-              </div>
-              <div class="ed-insights-row">
-                <div class="ed-today-card" id="mmTodayCard" aria-label="Jatah hari ini"></div>
-                <div class="mm-alerts ed-alerts-card" id="mmAlerts"></div>
-              </div>
-            </section>
-
-            <!-- 7. RECENT TRANSACTIONS: 5-7 transaksi terakhir -->
-            <section class="ed-section ed-recent-section" id="mmTransactionsSection">
-              <div class="ed-sec-head">
-                <div>
-                  <div class="ed-eyebrow">RECENT ACTIVITY</div>
-                  <h3 class="ed-sec-title">Aktivitas Terkini</h3>
-                </div>
-                <div class="ed-sec-actions">
-                  <span id="mmTxMonthCount" class="ed-sec-sub"></span>
-                  <button type="button" class="ed-text-link" onclick="mmShowPage('mmHistoryPage')">
-                    Semua transaksi <i data-lucide="arrow-right"></i>
+                  <button type="button" class="hx-act is-in" onclick="mmShowActionSheet('income')">
+                    <span class="hx-act-ic"><i data-lucide="arrow-down-left"></i></span>
+                    <span class="hx-act-tx">Masuk</span>
                   </button>
-                </div>
-              </div>
-              <div class="ed-recent-list" id="mmDashboardTransactions"></div>
-            </section>
+                  <button type="button" class="hx-act is-tf" onclick="mmShowActionSheet('transfer')">
+                    <span class="hx-act-ic"><i data-lucide="arrow-right-left"></i></span>
+                    <span class="hx-act-tx">Transfer</span>
+                  </button>
+                </nav>
 
-          </section>
+                <!-- 4. TODAY: jatah harian + peringatan -->
+                <section class="hx-block hx-today-block" aria-label="Jatah hari ini">
+                  <div class="hx-card hx-today" id="mmTodayCard"></div>
+                  <div class="hx-alerts mm-alerts" id="mmAlerts"></div>
+                </section>
+
+                <!-- 5. MONTH -->
+                <section class="hx-block" id="mmMonthSection" aria-labelledby="mmCashflowTitle">
+                  <div class="hx-head">
+                    <div class="hx-head-text">
+                      <h3 class="hx-title" id="mmCashflowTitle">Bulan Ini</h3>
+                      <p class="hx-sub" id="mmCashflowSub"></p>
+                    </div>
+                    <button type="button" class="hx-link" onclick="mmShowPage('mmInsightPage')">Detail <i data-lucide="chevron-right"></i></button>
+                  </div>
+
+                  <div class="hx-card hx-month">
+                    <div class="hx-flowbar" id="mmFlowBar" role="img" aria-label="Perbandingan pengeluaran terhadap pemasukan">
+                      <span class="hx-flowbar-fill" id="mmFlowFill"></span>
+                    </div>
+                    <dl class="hx-flow">
+                      <div class="hx-flow-item is-in">
+                        <dt><span class="hx-dot"></span>Masuk</dt>
+                        <dd id="mmTotalIncome">Rp 0</dd>
+                        <dd class="hx-flow-delta" id="mmIncomeDelta"></dd>
+                      </div>
+                      <div class="hx-flow-item is-out">
+                        <dt><span class="hx-dot"></span>Keluar</dt>
+                        <dd id="mmTotalExpense">Rp 0</dd>
+                        <dd class="hx-flow-delta" id="mmExpenseDelta"></dd>
+                      </div>
+                      <div class="hx-flow-item is-net">
+                        <dt><span class="hx-dot"></span>Sisa</dt>
+                        <dd id="mmTotalSaving">Rp 0</dd>
+                        <dd class="hx-flow-delta"><span class="mm-rate-chip" id="mmSavingRate"></span></dd>
+                      </div>
+                    </dl>
+
+                    <div class="hx-daily">
+                      <div class="hx-daily-head">
+                        <span>Belanja harian</span>
+                        <span id="mmDailySub"></span>
+                      </div>
+                      <div class="mm-daily-chart" id="mmDailyChart"></div>
+                      <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
+                    </div>
+                    <div id="mmBreakdown" style="display:none;"></div>
+                  </div>
+                </section>
+
+              </div>
+
+              <div class="hx-col hx-col-side">
+
+                <!-- 6. ACCOUNTS -->
+                <section class="hx-block" aria-labelledby="hxAcctTitle">
+                  <div class="hx-head">
+                    <div class="hx-head-text">
+                      <h3 class="hx-title" id="hxAcctTitle">Rekening</h3>
+                    </div>
+                    <button type="button" class="hx-link" onclick="mmShowPage('mmAccountsPage')">Semua <i data-lucide="chevron-right"></i></button>
+                  </div>
+                  <div class="hx-accts" id="mmAccountsScroll" aria-label="Daftar rekening"></div>
+                </section>
+
+                <!-- 7. BUDGET -->
+                <section class="hx-block" id="mmBudgetSection" aria-labelledby="hxBudgetTitle">
+                  <div class="hx-head">
+                    <div class="hx-head-text">
+                      <h3 class="hx-title" id="hxBudgetTitle">Anggaran</h3>
+                      <p class="hx-sub" id="mmBudgetSummary"></p>
+                    </div>
+                    <button type="button" class="hx-link" onclick="mmShowPage('mmBudgetPage')">Detail <i data-lucide="chevron-right"></i></button>
+                  </div>
+                  <div class="hx-card hx-budget" id="mmBudgetList"></div>
+                </section>
+
+                <!-- 8. ACTIVITY -->
+                <section class="hx-block" id="mmTransactionsSection" aria-labelledby="hxActTitle">
+                  <div class="hx-head">
+                    <div class="hx-head-text">
+                      <h3 class="hx-title" id="hxActTitle">Aktivitas Terbaru</h3>
+                      <p class="hx-sub" id="mmTxMonthCount"></p>
+                    </div>
+                    <button type="button" class="hx-link" onclick="mmShowPage('mmHistoryPage')">Semua <i data-lucide="chevron-right"></i></button>
+                  </div>
+                  <div class="hx-card hx-activity" id="mmDashboardTransactions"></div>
+                </section>
+
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- ===== MM BUDGET PAGE ===== -->
@@ -14825,6 +15127,18 @@ function mmRenderCashflow(data) {
 
   const chip = document.getElementById('mmSavingRate');
   const used = income > 0 ? expense / income : (expense > 0 ? 1 : 0);
+
+  // One bar for the whole month: how much of what came in has gone out.
+  const flowBar = document.getElementById('mmFlowBar');
+  const flowFill = document.getElementById('mmFlowFill');
+  if (flowBar && flowFill) {
+    flowFill.style.setProperty('--w', (Math.min(used, 1) * 100).toFixed(1) + '%');
+    const tone = (income <= 0 && expense <= 0) ? '' : saving < 0 ? ' is-bad' : used > 0.85 ? ' is-warn' : ' is-good';
+    flowBar.className = 'hx-flowbar' + tone;
+    flowBar.setAttribute('aria-label', income > 0
+      ? `${Math.round(used * 100)}% pemasukan bulan ini sudah dipakai`
+      : 'Belum ada pemasukan bulan ini');
+  }
   if (chip) {
     if (income <= 0) {
       chip.textContent = 'Belum ada pemasukan';
@@ -14905,32 +15219,32 @@ function mmRenderToday(data) {
     else { status = 'Sesuai jalur'; ptone = 'good'; }
     if (bp > 1) { status = 'Budget belanja terlampaui'; ptone = 'bad'; }
     pace = `
-      <div class="hm-pace is-${ptone}">
-        <div class="hm-pace-top">
+      <div class="hx-pace is-${ptone}">
+        <div class="hx-pace-top">
           <span>Belanja <strong>${Math.round(bp * 100)}%</strong> terpakai</span>
-          <span class="hm-pace-status">${escapeHtml(status)}</span>
+          <span class="hx-pace-status">${escapeHtml(status)}</span>
         </div>
-        <div class="hm-pace-track" role="img" aria-label="${Math.round(bp * 100)}% budget belanja terpakai, ${Math.round(tp * 100)}% bulan berjalan">
-          <span class="hm-pace-fill" style="--w:${Math.min(bp, 1) * 100}%"></span>
-          <span class="hm-pace-mark" style="left:${tp * 100}%"></span>
+        <div class="hx-pace-track" role="img" aria-label="${Math.round(bp * 100)}% budget belanja terpakai, ${Math.round(tp * 100)}% bulan berjalan">
+          <span class="hx-pace-fill" style="--w:${Math.min(bp, 1) * 100}%"></span>
+          <span class="hx-pace-mark" style="left:${tp * 100}%"></span>
         </div>
-        <div class="hm-pace-foot"><span>1 ${escapeHtml(ctx.monthName.slice(0, 3))}</span><span>hari ini · ${Math.round(tp * 100)}% bulan</span><span>${ctx.daysInMonth}</span></div>
+        <div class="hx-pace-foot"><span>1 ${escapeHtml(ctx.monthName.slice(0, 3))}</span><span>hari ini · ${Math.round(tp * 100)}% bulan</span><span>${ctx.daysInMonth}</span></div>
       </div>`;
   }
 
   box.innerHTML = `
-    <button type="button" class="hm-today-main is-${tone}" onclick="mmShowPage('mmInsightPage')">
-      <span class="hm-ring" aria-hidden="true">
-        <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="${r}" class="hm-ring-track"/>
-          <circle cx="28" cy="28" r="${r}" class="hm-ring-val" ${frac > 0 ? '' : 'stroke-opacity="0"'} stroke-dasharray="${(frac * circ).toFixed(1)} ${circ.toFixed(1)}" transform="rotate(-90 28 28)"/></svg>
+    <button type="button" class="hx-today-main is-${tone}" onclick="mmShowPage('mmInsightPage')">
+      <span class="hx-ring" aria-hidden="true">
+        <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="${r}" class="hx-ring-track"/>
+          <circle cx="28" cy="28" r="${r}" class="hx-ring-val" ${frac > 0 ? '' : 'stroke-opacity="0"'} stroke-dasharray="${(frac * circ).toFixed(1)} ${circ.toFixed(1)}" transform="rotate(-90 28 28)"/></svg>
         <span>${ringPct}</span>
       </span>
-      <span class="hm-today-text">
-        <span class="hm-k">${escapeHtml(label)}</span>
-        <strong class="hm-today-value">${escapeHtml(value)}</strong>
-        <span class="hm-today-sub">${escapeHtml(sub)}</span>
+      <span class="hx-today-text">
+        <span class="hx-k">${escapeHtml(label)}</span>
+        <strong class="hx-today-value">${escapeHtml(value)}</strong>
+        <span class="hx-today-sub">${escapeHtml(sub)}</span>
       </span>
-      <span class="hm-chev" aria-hidden="true">${lucideIconSvg('chevron-right', 18)}</span>
+      <span class="hx-chev" aria-hidden="true">${lucideIconSvg('chevron-right', 18)}</span>
     </button>
     ${pace}`;
 }
@@ -15172,7 +15486,11 @@ function mmRenderSparkline(data) {
     '<path class="lx-trend-area" d="' + line + ` L${last[0].toFixed(1)} ${h} L${xy[0][0].toFixed(1)} ${h} Z" fill="url(#mmSparkFill)"/>` +
     '<path class="lx-trend-line" pathLength="1" d="' + line + '" fill="none" stroke="#00B88A" stroke-width="2.2" ' +
       'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
-    `<circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4" fill="#00B88A" stroke="#090F12" stroke-width="2"/>`;
+    // End marker: a zero-length round-capped stroke stays a true circle even
+    // though the SVG stretches (preserveAspectRatio="none"); a <circle> would
+    // squash into an ellipse on wide screens.
+    `<path class="lx-trend-dot-ring" d="M${last[0].toFixed(1)} ${last[1].toFixed(1)}h0.01" stroke="#0F1D21" stroke-width="14" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` +
+    `<path class="lx-trend-dot-core" d="M${last[0].toFixed(1)} ${last[1].toFixed(1)}h0.01" stroke="#00B88A" stroke-width="8" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
 
   // Remove any obsolete absolute dot that might have floated outside the chart
   if (wrap) {
@@ -15211,11 +15529,11 @@ const MM_ACC_TYPE_COLORS = {
 function mmRenderAccountCards(accounts) {
   const box = document.getElementById('mmAccountsScroll');
   if (!box) return;
-  const manage = `<button type="button" class="hm-chip is-manage" onclick="mmShowPage('mmSettingsPage')"><span class="hm-chip-ic">${lucideIconSvg('sliders-horizontal', 15)}</span><span class="hm-chip-name">Kelola akun</span></button>`;
+  const manage = `<button type="button" class="hx-acct is-ghost" onclick="mmShowPage('mmSettingsPage')"><span class="hx-acct-ic">${lucideIconSvg('sliders-horizontal', 18)}</span><span class="hx-acct-name">Kelola rekening</span></button>`;
 
   const visible = (accounts || []).filter(a => a.showOnDashboard).sort((a, b) => (b.balance || 0) - (a.balance || 0));
   if (!visible.length) {
-    box.innerHTML = `<button type="button" class="hm-chip" onclick="mmShowPage('mmSettingsPage')">${lucideIconSvg('plus', 15)}<span class="hm-chip-name">Tambah akun</span></button>`;
+    box.innerHTML = `<button type="button" class="hx-acct is-ghost" onclick="mmShowPage('mmSettingsPage')"><span class="hx-acct-ic">${lucideIconSvg('plus', 18)}</span><span class="hx-acct-name">Tambah rekening</span></button>`;
     return;
   }
   // Empty accounts stay off the strip; Settings still lists them.
@@ -15223,12 +15541,16 @@ function mmRenderAccountCards(accounts) {
   const total = visible.reduce((s, a) => s + Math.max(a.balance || 0, 0), 0);
   box.innerHTML = shown.map(a => {
     const color = MM_ACC_TYPE_COLORS[a.type] || MM_ACC_TYPE_COLORS['Other'];
-    const share = total > 0 ? Math.round(Math.max(a.balance || 0, 0) / total * 100) : 0;
+    const bal = a.balance || 0;
+    const share = total > 0 ? Math.round(Math.max(bal, 0) / total * 100) : 0;
     return `
-      <button type="button" class="hm-chip" aria-label="${escapeHtml(a.name)}, ${share}% dari total" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
-        <span class="hm-chip-ic" style="color:${color}">${a.icon ? mmAccountIconSvg(a.icon, 15) : lucideIconSvg('wallet', 15)}</span>
-        <span class="hm-chip-name">${escapeHtml(a.name)}</span>
-        <strong class="${(a.balance || 0) < 0 ? 'expense-color' : ''}">${mmFormatIDRShort(a.balance)}</strong>
+      <button type="button" class="hx-acct" style="--c:${color}" aria-label="${escapeHtml(a.name)}, saldo ${escapeHtml(mmFormatIDR(bal))}, ${share}% dari total" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
+        <span class="hx-acct-top">
+          <span class="hx-acct-ic">${a.icon ? mmAccountIconSvg(a.icon, 18) : lucideIconSvg('wallet', 18)}</span>
+          <span class="hx-acct-share">${share}%</span>
+        </span>
+        <span class="hx-acct-name">${escapeHtml(a.name)}</span>
+        <strong class="hx-acct-bal ${bal < 0 ? 'expense-color' : ''}">${mmFormatIDRShort(bal)}</strong>
       </button>`;
   }).join('') + manage;
 }
@@ -15316,28 +15638,26 @@ function mmBudgetRowHtml(c, detailed) {
     </button>`;
 }
 
-// Home budget tile: horizontal progress bar card, clear spent vs target, status badge
+// Home budget row: icon, name, used %, thin bar, "spent / target" and what is left.
 function mmBudgetTileHtml(c) {
   const b = mmBudgetState(c);
   const color = mmCategoryColor(c.category);
   const note = b.state === 'goal' ? 'Target tercapai' : b.note;
   const pct = Math.min(b.pct, 100);
   return `
-    <button type="button" class="ed-budget-card is-${b.state}" onclick="mmShowCategoryDetail('${jsStr(c.category)}')">
-      <div class="ed-bcard-head">
-        <div class="ed-bcard-title-wrap">
-          <span class="ed-bcard-icon" style="color:${color}">${mmCategoryEmoji(c.category)}</span>
-          <span class="ed-bcard-name">${escapeHtml(c.category)}</span>
-        </div>
-        <span class="ed-bcard-badge is-${b.state}">${b.pct}%</span>
-      </div>
-      <div class="ed-bcard-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
-        <div class="ed-bcard-fill is-${b.state}" style="width:${pct}%"></div>
-      </div>
-      <div class="ed-bcard-foot">
-        <span class="ed-bcard-spent">${mmFormatIDRShort(b.spent)} <span class="ed-bcard-target">/ ${mmFormatIDRShort(b.target)}</span></span>
-        <span class="ed-bcard-note is-${b.state}">${escapeHtml(note)}</span>
-      </div>
+    <button type="button" class="hx-bgt is-${b.state}" onclick="mmShowCategoryDetail('${jsStr(c.category)}')">
+      <span class="hx-bgt-ic" style="--c:${color}">${mmCategoryEmoji(c.category)}</span>
+      <span class="hx-bgt-body">
+        <span class="hx-bgt-top">
+          <span class="hx-bgt-name">${escapeHtml(c.category)}</span>
+          <span class="hx-bgt-pct">${b.pct}%</span>
+        </span>
+        <span class="hx-bar" role="progressbar" aria-label="${escapeHtml(c.category)} terpakai" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="--w:${pct}%"></span></span>
+        <span class="hx-bgt-foot">
+          <span>${mmFormatIDRShort(b.spent)} <span class="hx-of">/ ${mmFormatIDRShort(b.target)}</span></span>
+          <span class="hx-bgt-note">${escapeHtml(note)}</span>
+        </span>
+      </span>
     </button>`;
 }
 
@@ -15353,7 +15673,7 @@ function mmRenderBudgetCard(allocationCards, totalIncome, carryover) {
   const cards = MM_ALLOC_CARDS.filter(c => (c.target || 0) > 0 || (c.spent || 0) > 0);
   if (!cards.length) {
     if (summary) summary.textContent = 'Belum ada dana bulan ini';
-    list.innerHTML = `<div class="hm-card">${mmEmpty('circle-dollar', 'Budget belum terbentuk', 'Budget dibentuk dari sisa saldo bulan lalu ditambah pemasukan, lalu dibagi sesuai persentase di Settings.', `<button class="mm-empty-action" onclick="mmShowActionSheet('income')">Catat pemasukan</button>`)}</div>`;
+    list.innerHTML = `${mmEmpty('circle-dollar', 'Budget belum terbentuk', 'Budget dibentuk dari sisa saldo bulan lalu ditambah pemasukan, lalu dibagi sesuai persentase di Settings.', `<button class="mm-empty-action" onclick="mmShowActionSheet('income')">Catat pemasukan</button>`)}`;
     return;
   }
 
@@ -15548,25 +15868,25 @@ function mmRenderDashboardTransactions() {
         ? (tx.account || '') + (tx.accountTo ? ' → ' + tx.accountTo : '')
         : [tx.subcategory || tx.category || tx.type, tx.account].filter(Boolean).join(' · ');
       return `
-      <div class="mm-transaction-item" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
-        <div class="mm-tx-icon-dash" style="color:${catColor}">${catIcon}</div>
-        <div class="mm-tx-info-dash">
-          <div class="mm-tx-name-dash">${escapeHtml(label)}</div>
-          <div class="mm-tx-category-dash">${escapeHtml(meta)}</div>
+      <div class="hx-tx" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
+        <div class="hx-tx-ic" style="--c:${catColor}">${catIcon}</div>
+        <div class="hx-tx-info">
+          <div class="hx-tx-name">${escapeHtml(label)}</div>
+          <div class="hx-tx-meta">${escapeHtml(meta)}</div>
         </div>
-        <div class="mm-tx-amount-dash ${colorClass}">${prefix}${mmFormatIDR(tx.amount)}</div>
+        <div class="hx-tx-amt ${colorClass}">${prefix}${mmFormatIDR(tx.amount)}</div>
       </div>`;
     }).join('');
     return `
-      <div class="mm-day-group">
-        <div class="mm-day-head">
+      <div class="hx-day">
+        <div class="hx-day-head">
           <span>${mmDayLabel(g.date)}</span>
           <strong class="${netClass}">${netText}</strong>
         </div>
         ${rows}
       </div>`;
   }).join('') + (sorted.length > MM_TX_PREVIEW
-    ? `<button type="button" class="lx-more" onclick="mmShowPage('mmHistoryPage')">Lihat semua ${sorted.length} transaksi ${lucideIconSvg('chevron-right', 16)}</button>`
+    ? `<button type="button" class="hx-more" onclick="mmShowPage('mmHistoryPage')">Lihat semua ${sorted.length} transaksi ${lucideIconSvg('chevron-right', 16)}</button>`
     : '');
 }
 
