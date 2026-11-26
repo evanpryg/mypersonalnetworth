@@ -9610,5 +9610,230 @@ body {
   .hx-trend svg { height: 68px; }
 }
 
+/* ============================================================
+   ACTIVITY v2 - compact  (ui-ux-pro-max)
+   Namespace .ah-*; reuses Home's .hx-card / .hx-flow / .hx-tx / .hx-day
+   so both pages share one type scale: 12 / 13 / 15 / 18. Touch >= 44px.
+   Keep LAST so it wins over the older .ed-* / .mm-cal-* layers.
+   ============================================================ */
+.ah { gap: 12px; }
+.ah-stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+/* --- Top bar ------------------------------------------------------ */
+.ah-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.ah-top-text { min-width: 0; }
+.ah-title { font-size: 18px; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; }
+.ah-sub { margin-top: 1px; font-size: 12px; color: var(--text-secondary); }
+
+.ah-icon-btn {
+  flex: none; width: 44px; height: 44px; display: grid; place-items: center;
+  border-radius: 12px; color: var(--text-secondary);
+  transition: background var(--dur-fast), color var(--dur-fast), transform var(--dur-fast);
+}
+.ah-icon-btn svg { width: 20px; height: 20px; }
+.ah-icon-btn:active { background: var(--surface-2); color: var(--text); transform: scale(0.95); }
+.ah-icon-btn.is-bordered { background: var(--surface); border: 1px solid var(--border); }
+.ah button:focus-visible, .ah summary:focus-visible, .ah select:focus-visible, .ah input:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+/* --- Segmented tabs ------------------------------------------------ */
+.ah-seg.mm-history-tabs { margin-bottom: 0; }
+.ah-seg {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+}
+.ah-seg-btn {
+  min-height: 40px; padding: 0 8px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  white-space: nowrap; transition: background var(--dur-fast), color var(--dur-fast);
+}
+.ah-seg-btn.active { background: rgba(var(--accent-rgb), 0.16); color: var(--accent); }
+.ah-seg-btn:not(.active):active { background: var(--surface-2); }
+
+/* --- Month summary ------------------------------------------------- */
+.ah-monthbar { display: flex; align-items: center; padding: 2px 6px 2px 2px; border-bottom: 1px solid var(--border); }
+.ah-month { flex: 1; min-width: 0; text-align: center; font-size: 15px; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ah-insight {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  min-height: 44px; margin-left: 4px; padding: 0 6px 0 12px;
+  border-left: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--accent);
+}
+.ah-insight svg { width: 16px; height: 16px; }
+.ah-insight:active { opacity: 0.7; }
+.ah-sum { padding-bottom: 14px; }
+.ah-flowbar { margin: 12px 14px 12px; }
+.ah-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0 14px; }
+.ah-flow .hx-flow-item { padding: 0 0 0 14px; }
+.ah-flow .hx-flow-item:first-child { padding-left: 0; }
+.ah-flow .hx-flow-item dd:nth-of-type(1) { font-size: 15px; white-space: nowrap; }
+/* "Sisa" is the answer people look for: its own full-width row, larger. */
+.ah-flow .hx-flow-item.is-net {
+  grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between;
+  margin-top: 10px; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--border);
+}
+.ah-flow .hx-flow-item.is-net dt { font-size: 13px; }
+.ah-flow .hx-flow-item.is-net dd:nth-of-type(1) { font-size: 17px; }
+.ah-flow .hx-flow-item.is-net dd.positive { color: var(--success); }
+.ah-psum .ah-flow { padding: 0; }
+
+/* --- Filters ---------------------------------------------------------- */
+.ah-filters { display: flex; flex-direction: column; gap: 8px; }
+.ah-row { display: flex; gap: 8px; }
+.ah-search {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 0 12px; color: var(--text-muted);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  transition: border-color var(--dur-fast);
+}
+.ah-search:focus-within { border-color: var(--accent); color: var(--accent); }
+.ah-search svg { width: 18px; height: 18px; flex: none; }
+.ah-search input {
+  flex: 1; min-width: 0; height: 42px; padding: 0; border: 0; outline: 0; background: transparent;
+  color: var(--text); font: inherit; font-size: 14px; -webkit-appearance: none; appearance: none;
+}
+.ah-search input::placeholder { color: var(--text-muted); }
+.ah-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.ah-select {
+  flex: none; width: 38%; max-width: 160px; min-height: 44px; padding: 0 30px 0 12px;
+  -webkit-appearance: none; appearance: none; text-overflow: ellipsis;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2393A19B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center / 14px;
+  border: 1px solid var(--border); border-radius: 12px;
+  color: var(--text); font: inherit; font-size: 13px; cursor: pointer;
+}
+.ah-select option { background: var(--surface-2); color: var(--text); }
+
+.ah-chips {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+  margin: 0 calc(var(--hx-bleed) * -1); padding: 0 var(--hx-bleed);
+}
+.ah-chips::-webkit-scrollbar { display: none; }
+.ah-period .ah-chips { margin: 0; padding: 0; }
+.ah-chip {
+  position: relative; flex: none; min-height: 36px; padding: 0 14px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  background: var(--surface); border: 1px solid var(--border);
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+}
+.ah-chip::after { content: ''; position: absolute; inset: -4px -2px; }   /* 44px hit area, 36px look */
+.ah-chip.active { color: var(--accent); background: rgba(var(--accent-rgb), 0.14); border-color: rgba(var(--accent-rgb), 0.45); }
+.ah-chip:not(.active):active { background: var(--surface-2); }
+
+/* --- Collapsible cards ---------------------------------------------- */
+.ah-fold { overflow: hidden; }
+.ah-fold > summary { display: block; list-style: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ah-fold > summary::-webkit-details-marker { display: none; }
+.ah-fold > summary:active { background: var(--surface-2); }
+.ah-fold-row { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 14px; }
+.ah-fold-title { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.ah-fold-hint { flex: 1; min-width: 0; text-align: right; font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ah-fold-chev { width: 16px; height: 16px; flex: none; color: var(--text-muted); transition: transform var(--dur-fast); }
+.ah-fold[open] .ah-fold-chev { transform: rotate(180deg); }
+.ah-fold-body { padding: 0 10px 12px; border-top: 1px solid var(--border); }
+.ah-fold[open] > summary .ah-fold-row { border-bottom: 1px solid var(--border); }
+.ah-fold[open] > .ah-fold-body { border-top: 0; }
+
+/* Category recap */
+.ah-catbar { display: flex; gap: 2px; height: 6px; margin: -2px 14px 12px; border-radius: 999px; overflow: hidden; background: rgba(255, 255, 255, 0.06); }
+.ah-catbar span { min-width: 3px; }
+.ah-fold[open] .ah-catbar { display: none; }
+.ah-cats { padding: 4px 0; }
+.ah-cat + .ah-cat { border-top: 1px solid var(--border); }
+.ah-cat-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 14px; text-align: left;
+}
+button.ah-cat-row { transition: background var(--dur-fast); }
+button.ah-cat-row:active { background: var(--surface-2); }
+button.ah-cat-row > svg { color: var(--text-muted); transition: transform var(--dur-fast); }
+button.ah-cat-row.is-open > svg { transform: rotate(180deg); }
+.ah-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.ah-cat-name { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 6px; font-size: 13px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ah-cat-name small { font-size: 12px; font-weight: 400; color: var(--text-muted); }
+.ah-cat-pct { flex: none; width: 36px; text-align: right; font-size: 12px; color: var(--text-muted); }
+.ah-cat-amt { flex: none; min-width: 84px; text-align: right; font-size: 13px; font-weight: 650; }
+.ah-subs { padding: 0 14px 8px 32px; }
+.ah-sub-row { display: flex; justify-content: space-between; gap: 12px; min-height: 32px; align-items: center; font-size: 12px; color: var(--text-secondary); }
+.ah-sub-row strong { font-weight: 600; color: var(--text); }
+.mm-hist-category-wrap { margin: 0; }
+.mm-hist-category-wrap:empty { display: none; }
+
+/* Calendar */
+.ah-cal.mm-calendar-grid { gap: 2px; margin: 8px 0 0; }
+.ah-cal .mm-cal-header { padding: 4px 0; font-size: 12px; font-weight: 600; text-transform: none; }
+.ah-cal .mm-cal-day {
+  aspect-ratio: auto; min-height: 44px; gap: 4px; padding: 4px 0;
+  font: inherit; background: none; border: 1px solid transparent; border-radius: 10px;
+  color: var(--text-secondary);
+}
+.ah-cal .mm-cal-day.empty { pointer-events: none; }
+.ah-cal .mm-cal-day:not(.empty):active { background: var(--surface-2); }
+.ah-cal .mm-cal-num { font-size: 13px; font-weight: 600; color: inherit; }
+.ah-cal .mm-cal-day.today { color: var(--accent); background: rgba(var(--accent-rgb), 0.1); border-color: rgba(var(--accent-rgb), 0.35); }
+.ah-cal .mm-cal-day.selected { color: var(--on-accent); background: var(--accent-strong); border-color: var(--accent); box-shadow: none; }
+.ah-dots { display: flex; gap: 3px; height: 5px; }
+.ah-dot { width: 5px; height: 5px; border-radius: 50%; display: block; }
+.ah-dot.is-in { background: var(--income); }
+.ah-dot.is-out { background: var(--expense); }
+.ah-cal .mm-cal-day.selected .ah-dot { background: currentColor; opacity: 0.85; }
+
+/* --- Transaction list ------------------------------------------------- */
+.ah-list { scroll-margin-top: 72px; }
+.ah-link { min-height: 44px; }
+.ah-tx .hx-day-head { padding-top: 10px; }
+.ah-tx .hx-day-head .income-color { color: var(--success); }
+.ah-tx .hx-day-head .expense-color { color: var(--error); }
+.ah-tx .hx-tx-amt.income-color { color: var(--success); }
+.ah-tx .hx-tx-amt.expense-color { color: var(--error); }
+.ah-tx .hx-tx-amt.transfer-color { color: var(--info); }
+.ah-tx .hx-tx-ic svg { width: 16px; height: 16px; }
+.ah-tx .sk-list { padding: 4px 0; }
+.ah-tx .mm-empty, .ah-chart + .ah-months .mm-empty { padding: 24px 14px; }
+
+/* --- All time ----------------------------------------------------------- */
+.ah-chart { padding: 8px 4px 0; overflow: hidden; }
+.ah-chart .mm-history-chart-wrap { min-height: 160px; }
+.ah-months { overflow: hidden; }
+.ah-mrow {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px; align-items: center;
+  width: 100%; min-height: 48px; padding: 6px 14px; text-align: right; font-size: 13px;
+  transition: background var(--dur-fast);
+}
+.ah-mrow + .ah-mrow { border-top: 1px solid var(--border); }
+button.ah-mrow:active { background: var(--surface-2); }
+.ah-mhead { min-height: 36px; font-size: 12px; color: var(--text-muted); }
+.ah-mhead span:first-child, .ah-mname { text-align: left; }
+.ah-mname { font-weight: 600; white-space: nowrap; }
+.ah-min { color: var(--success); font-weight: 600; }
+.ah-mout { color: var(--error); font-weight: 600; }
+
+/* --- Period ------------------------------------------------------------- */
+.ah-period { display: flex; flex-direction: column; gap: 12px; padding: 12px 14px 14px; }
+.ah-period-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ah-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; color: var(--text-secondary); }
+.ah-field input {
+  width: 100%; min-width: 0; min-height: 44px; padding: 0 10px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+  color: var(--text); font: inherit; font-size: 14px; color-scheme: dark;
+}
+.ah-field input:focus { border-color: var(--accent); }
+.ah-primary {
+  min-height: 44px; border-radius: 12px; background: var(--accent); color: #07110D;
+  font-size: 14px; font-weight: 650; transition: opacity var(--dur-fast), transform var(--dur-fast);
+}
+.ah-primary:active { opacity: 0.88; transform: scale(0.99); }
+.ah-psum { padding: 12px 14px; }
+
+/* The bottom nav already carries "Catat"; the floating + only covers rows here. */
+body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
+
+@media (min-width: 720px) {
+  .ah-seg-btn:not(.active):hover, .ah-chip:not(.active):hover, .ah-icon-btn:hover, button.ah-mrow:hover, button.ah-cat-row:hover, .ah-fold > summary:hover { background: var(--surface-2); }
+  .ah-cal .mm-cal-day:not(.empty):not(.selected):hover { background: var(--surface-2); }
+  .ah-chips { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ah *, .ah *::before, .ah *::after { transition: none !important; animation: none !important; }
+}
+
 </style>
 

@@ -1517,96 +1517,124 @@ function mmDeleteTxFromDetail(rowNumber) {
 }
 
 
-/* === HISTORY === */
+/* === HISTORY (Activity page) ===
+   Tiga tampilan: per bulan (default), semua waktu, rentang tanggal.
+   Di tampilan bulan, ada tiga penyaring yang bekerja bersama: tanggal yang
+   diketuk di kalender, kotak cari, jenis & akun. Semuanya lewat satu fungsi
+   (mmHistRenderList) supaya tidak saling menimpa. */
 let MM_ALLTIME_CACHE = null;
 let MM_MONTH_CACHE = {};
+let MM_HIST_TAB = 'month';
+let MM_HIST_DAY = null;   // tanggal terpilih di kalender (1-31) atau null
 
 function mmLoadHistory() {
-  mmSwitchHistoryTab('alltime');
+  mmSwitchHistoryTab(MM_HIST_TAB || 'month');
 }
 
 function mmSwitchHistoryTab(tab) {
-  const tabs = document.querySelectorAll('.mm-history-tabs .tab-btn');
-  tabs.forEach(t => t.classList.remove('active'));
+  if (!['month', 'alltime', 'period'].includes(tab)) tab = 'month';
+  MM_HIST_TAB = tab;
 
-  document.querySelectorAll('.mm-history-content').forEach(c => c.style.display = 'none');
+  // Aktif ditentukan data-tab, bukan urutan tombol: urutan sebelumnya tidak
+  // cocok dengan label, jadi "Bulan Ini" menyorot tab yang salah.
+  document.querySelectorAll('.ah-seg-btn').forEach(b => {
+    const on = b.dataset.tab === tab;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+
+  document.querySelectorAll('.mm-history-content').forEach(c => { c.style.display = 'none'; });
+  const ids = { month: 'mmHistoryMonth', alltime: 'mmHistoryAllTime', period: 'mmHistoryPeriod' };
+  const pane = document.getElementById(ids[tab]);
+  if (pane) pane.style.display = '';
 
   if (tab === 'alltime') {
-    tabs[0]?.classList.add('active');
-    document.getElementById('mmHistoryAllTime').style.display = 'block';
     mmLoadAllTime();
   } else if (tab === 'month') {
-    tabs[1]?.classList.add('active');
-    document.getElementById('mmHistoryMonth').style.display = 'block';
     mmUpdateHistoryMonthLabel();
     mmLoadMonthHistory();
-  } else if (tab === 'period') {
-    tabs[2]?.classList.add('active');
-    document.getElementById('mmHistoryPeriod').style.display = 'block';
+  } else {
+    const start = document.getElementById('mmPeriodStart');
+    const end = document.getElementById('mmPeriodEnd');
+    const box = document.getElementById('mmHistoryPeriodContent');
+    if (start && end && !start.value && !end.value) mmHistPreset('month', true);
+    else if (box && !box.innerHTML.trim()) mmLoadPeriod();
   }
 }
 
+/* --- All time ------------------------------------------------------- */
 function mmLoadAllTime() {
   const container = document.getElementById('mmHistoryAllTime');
-
-  // Use cache if available
   if (MM_ALLTIME_CACHE) {
     mmRenderAllTime(MM_ALLTIME_CACHE, container);
     return;
   }
-
-  container.innerHTML = skRows(5);
+  container.innerHTML = '<div class="hx-card">' + skRows(5) + '</div>';
   google.script.run
     .withSuccessHandler(data => {
       MM_ALLTIME_CACHE = data;
       mmRenderAllTime(data, container);
     })
-    .withFailureHandler(err => { container.innerHTML = '<div class="empty-state">Failed to load.</div>'; })
+    .withFailureHandler(() => {
+      container.innerHTML = '<div class="hx-card">' + mmEmpty('alert-circle', 'Gagal memuat riwayat', 'Periksa koneksi, lalu buka tab ini lagi.') + '</div>';
+      if (window.lucide) lucide.createIcons();
+    })
     .mmGetAllTimeSummary();
 }
 
 function mmRenderAllTime(data, container) {
   if (!data || !data.length) {
-    container.innerHTML = mmEmpty('clock', 'Riwayat masih kosong', 'Semua transaksi yang kamu catat akan tampil di sini.');
+    container.innerHTML = '<div class="hx-card">' + mmEmpty('clock', 'Riwayat masih kosong', 'Semua transaksi yang kamu catat akan tampil di sini.') + '</div>';
+    if (window.lucide) lucide.createIcons();
     return;
   }
 
   const chartData = data.slice(-12);
-  let html = `<div id="mmHistoryAreaChart" class="mm-history-chart-wrap"></div>`;
-  html += `<div class="mm-alltime-table"><div class="mm-alltime-header"><span>Month</span><span>Income</span><span>Expense</span></div>`;
+  const short = (m) => {
+    const p = String(m).split('-');
+    return new Intl.DateTimeFormat('id-ID', { month: 'short', year: 'numeric' }).format(new Date(Number(p[0]), Number(p[1]) - 1, 1));
+  };
+
+  let html = '<div class="hx-card ah-chart"><div id="mmHistoryAreaChart" class="mm-history-chart-wrap"></div></div>';
+  html += '<div class="hx-card ah-months">'
+    + '<div class="ah-mrow ah-mhead"><span>Bulan</span><span>Masuk</span><span>Keluar</span></div>';
   html += [...data].reverse().map(item => {
-    const monthLabel = mmFormatMonthLabel(item.month);
-    return `<div class="mm-alltime-row clickable" onclick="mmSelectMonthFromAllTime('${item.month}')" title="Buka detail ${monthLabel}"><span>${monthLabel} <i data-lucide="chevron-right" class="alltime-arrow"></i></span><span class="positive">${mmFormatIDR(item.income)}</span><span class="negative">${mmFormatIDR(item.expense)}</span></div>`;
+    const label = short(item.month);
+    return `<button type="button" class="ah-mrow" onclick="mmSelectMonthFromAllTime('${item.month}')" aria-label="Buka detail ${escapeHtml(mmFormatMonthLabel(item.month))}">
+      <span class="ah-mname">${escapeHtml(label)}</span>
+      <span class="ah-min">${mmFormatIDR(item.income)}</span>
+      <span class="ah-mout">${mmFormatIDR(item.expense)}</span>
+    </button>`;
   }).join('');
   html += '</div>';
   container.innerHTML = html;
 
-  // ApexCharts area chart
-  if (typeof mmHistoryChart !== 'undefined' && mmHistoryChart) { mmHistoryChart.destroy(); }
+  if (typeof mmHistoryChart !== 'undefined' && mmHistoryChart) { mmHistoryChart.destroy(); mmHistoryChart = null; }
   const el = document.getElementById('mmHistoryAreaChart');
   if (!el || typeof ApexCharts === 'undefined') return;
 
   const options = {
-    series: [{ name: 'Income', data: chartData.map(d => d.income) }, { name: 'Expense', data: chartData.map(d => d.expense) }],
-    chart: { type: 'area', height: 200, background: 'transparent', toolbar: { show: false }, zoom: { enabled: false }, animations: { enabled: true, easing: 'easeinout', speed: 800 } },
-    colors: ['#34d399', '#f87171'],
-    stroke: { curve: 'smooth', width: 2.5 },
-    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0, stops: [0, 100] } },
-    grid: { show: true, borderColor: 'rgba(255,255,255,0.06)', strokeDashArray: 4, xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } }, padding: { top: 10, bottom: 0 } },
-    xaxis: { categories: chartData.map(d => mmFormatMonthLabel(d.month)), axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { colors: '#94a3b8', fontSize: '10px', fontFamily: 'Inter' } } },
-    yaxis: { labels: { show: false }, max: function(max) { return max * 1.15; } },
-    markers: { size: 0, hover: { size: 5, sizeOffset: 2 } },
-    tooltip: { theme: 'dark', style: { fontSize: '12px', fontFamily: 'Inter' }, y: { formatter: function(val) { if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••••••'; return 'Rp' + Number(val).toLocaleString('id-ID'); } } },
-    legend: { show: true, position: 'top', horizontalAlign: 'center', fontSize: '11px', fontFamily: 'Inter', fontWeight: 600, labels: { colors: '#94a3b8' }, markers: { width: 8, height: 8, radius: 4 } },
+    series: [{ name: 'Masuk', data: chartData.map(d => d.income) }, { name: 'Keluar', data: chartData.map(d => d.expense) }],
+    chart: { type: 'area', height: 160, background: 'transparent', toolbar: { show: false }, zoom: { enabled: false }, animations: { enabled: true, easing: 'easeinout', speed: 600 } },
+    colors: ['#22B887', '#E77979'],
+    stroke: { curve: 'smooth', width: 2 },
+    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0, stops: [0, 100] } },
+    grid: { show: true, borderColor: 'rgba(255,255,255,0.06)', strokeDashArray: 4, xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } }, padding: { top: 0, bottom: 0, left: 20, right: 20 } },
+    xaxis: { categories: chartData.map(d => short(d.month)), axisBorder: { show: false }, axisTicks: { show: false }, labels: { rotate: 0, hideOverlappingLabels: true, style: { colors: '#93A19B', fontSize: '12px', fontFamily: 'Geist, Inter, sans-serif' } } },
+    yaxis: { labels: { show: false }, max: function (max) { return max * 1.15; } },
+    markers: { size: 0, hover: { size: 4, sizeOffset: 2 } },
+    tooltip: { theme: 'dark', style: { fontSize: '12px', fontFamily: 'Geist, Inter, sans-serif' }, y: { formatter: function (val) { return mmFormatIDR(val); } } },
+    legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '12px', fontFamily: 'Geist, Inter, sans-serif', fontWeight: 500, labels: { colors: '#93A19B' }, markers: { width: 8, height: 8, radius: 4 }, offsetY: 0 },
     dataLabels: { enabled: false }
   };
   mmHistoryChart = new ApexCharts(el, options);
   mmHistoryChart.render();
 }
 
+/* --- Month ---------------------------------------------------------- */
 function mmUpdateHistoryMonthLabel() {
   const label = document.getElementById('mmHistoryMonthLabel');
-  if (label) label.textContent = mmFormatMonthLabel(`${MM_HIST_YEAR}-${String(MM_HIST_MONTH).padStart(2,'0')}`);
+  if (label) label.textContent = mmFormatMonthLabel(`${MM_HIST_YEAR}-${String(MM_HIST_MONTH).padStart(2, '0')}`);
 }
 
 function mmPrevMonth() {
@@ -1626,34 +1654,43 @@ function mmNextMonth() {
 function mmLoadMonthHistory() {
   const cacheKey = `${MM_HIST_YEAR}-${MM_HIST_MONTH}`;
   const container = document.getElementById('mmHistoryMonthContent');
+  MM_HIST_DAY = null;
 
-  // Use cache if available
   if (MM_MONTH_CACHE[cacheKey]) {
     mmRenderMonthView(MM_MONTH_CACHE[cacheKey]);
     return;
   }
 
   const grid = document.getElementById('mmHistoryCalendarGrid');
+  const cat = document.getElementById('mmHistoryCategoryBreakdown');
   if (grid) grid.innerHTML = '';
+  if (cat) cat.innerHTML = '';
   if (container) container.innerHTML = skRows(5);
+  const wanted = cacheKey;
   google.script.run
     .withSuccessHandler(data => {
-      MM_MONTH_CACHE[cacheKey] = data;
-      mmRenderMonthView(data);
+      MM_MONTH_CACHE[wanted] = data;
+      // Pengguna bisa pindah bulan sebelum respons tiba; jangan timpa.
+      if (wanted === `${MM_HIST_YEAR}-${MM_HIST_MONTH}`) mmRenderMonthView(data);
     })
-    .withFailureHandler(err => { if (container) container.innerHTML = '<div class="empty-state">Failed to load.</div>'; })
+    .withFailureHandler(() => {
+      if (container) {
+        container.innerHTML = mmEmpty('alert-circle', 'Gagal memuat bulan ini', 'Periksa koneksi, lalu coba pindah bulan lagi.');
+        if (window.lucide) lucide.createIcons();
+      }
+    })
     .mmGetCalendarData(MM_HIST_YEAR, MM_HIST_MONTH);
 }
 
-/* Merged month view: totals + calendar + (default) full-month transaction list */
+/* Ringkasan + rekap kategori + kalender + daftar */
 function mmRenderMonthView(data) {
   if (!data || !data.days) {
     const c = document.getElementById('mmHistoryMonthContent');
-    if (c) c.innerHTML = '<div class="empty-state">No data.</div>';
+    if (c) c.innerHTML = mmEmpty('info', 'Belum ada data', 'Data bulan ini tidak tersedia.');
+    if (window.lucide) lucide.createIcons();
     return;
   }
 
-  // Totals aggregated from per-day data or server summary
   let totalIncome = data.totalIncome !== undefined ? data.totalIncome : 0;
   let totalExpense = data.totalExpense !== undefined ? data.totalExpense : 0;
   if (data.totalIncome === undefined) {
@@ -1667,16 +1704,25 @@ function mmRenderMonthView(data) {
   setText('mmHistExpense', mmFormatIDR(totalExpense));
   const savingEl = document.getElementById('mmHistSaving');
   if (savingEl) {
-    savingEl.textContent = (saving >= 0 ? '+' : '') + mmFormatIDR(saving);
-    savingEl.className = saving >= 0 ? 'positive' : 'negative';
+    savingEl.textContent = (saving > 0 ? '+' : '') + mmFormatIDR(saving);
+    savingEl.classList.toggle('positive', saving > 0);
+    savingEl.classList.toggle('negative', saving < 0);
   }
 
-  // Render category breakdown ("pengeluaran kategori ini berapa-berapanya")
-  mmRenderHistCategoryBreakdown(data);
+  // Batang pengeluaran terhadap pemasukan, sama seperti kartu "Bulan Ini" di Home.
+  const bar = document.getElementById('mmHistFlowBar');
+  const fill = document.getElementById('mmHistFlowFill');
+  if (bar && fill) {
+    const ratio = totalIncome > 0 ? totalExpense / totalIncome : (totalExpense > 0 ? 1 : 0);
+    fill.style.setProperty('--w', Math.min(100, Math.round(ratio * 100)) + '%');
+    bar.classList.remove('is-good', 'is-warn', 'is-bad');
+    bar.classList.add(ratio > 1 ? 'is-bad' : ratio > 0.85 ? 'is-warn' : 'is-good');
+  }
 
+  mmRenderHistCategoryBreakdown(data);
   mmRenderMonthCalendar(data);
   mmPopulateHistoryAccountFilter();
-  mmHistShowAll();
+  mmHistRenderList();
   if (window.lucide) lucide.createIcons();
 }
 
@@ -1684,81 +1730,68 @@ function mmRenderHistCategoryBreakdown(data) {
   const wrap = document.getElementById('mmHistoryCategoryBreakdown');
   if (!wrap) return;
 
+  // Pertahankan keadaan buka/tutup saat pindah bulan.
+  const wasOpen = !!(wrap.querySelector('details') && wrap.querySelector('details').open);
+
   const categories = data.categoryBreakdown || [];
   const totalExpense = data.totalExpense || 0;
 
-  if (!categories || categories.length === 0) {
-    if (data.isArchived) {
-      wrap.innerHTML = '<div class="mm-hist-archived-banner"><i data-lucide="archive"></i> Data bulan ini diarsipkan dan tidak ada rincian pengeluaran.</div>';
-    } else {
-      wrap.innerHTML = '';
-    }
+  if (!categories.length) {
+    wrap.innerHTML = data.isArchived
+      ? '<div class="mm-hist-archived-banner"><i data-lucide="archive"></i> Data bulan ini diarsipkan; rincian pengeluaran tidak tersedia.</div>'
+      : '';
     return;
   }
 
-  const colors = ['#22d3ee', '#fbbf24', '#f472b6', '#818cf8', '#fb923c', '#a78bfa', '#2dd4bf', '#60a5fa', '#e879f9', '#94a3b8'];
-  
-  let html = `
-    <div class="mm-hist-cat-card">
-      <div class="mm-hist-cat-head">
-        <div>
-          <h4>Rekap Pengeluaran Kategori</h4>
-          <span class="mm-hist-cat-sub">${categories.length} kategori · Total ${mmFormatIDR(totalExpense)}</span>
-        </div>
-        ${data.isArchived ? '<span class="mm-hist-archived-tag">Arsip</span>' : ''}
-      </div>
-      <div class="mm-hist-cat-list">`;
-
-  categories.forEach((cat, idx) => {
-    const color = (typeof mmCategoryColor === 'function' ? mmCategoryColor(cat.category) : null) || colors[idx % colors.length];
-    const pct = cat.percent ? Number(cat.percent).toFixed(1) : (totalExpense > 0 ? ((cat.amount / totalExpense) * 100).toFixed(1) : '0');
-    const hasSubs = cat.subcategories && cat.subcategories.length > 0;
-    const catId = `hist-cat-${idx}-${data.year}-${data.month}`;
-
-    html += `
-      <div class="mm-hist-cat-item ${hasSubs ? 'has-subs' : ''}" ${hasSubs ? `onclick="mmToggleHistSubcat('${catId}')" title="Klik untuk rincian subkategori"` : ''}>
-        <div class="mm-hist-cat-row">
-          <div class="mm-hist-cat-name-col">
-            <span class="mm-hist-cat-dot" style="background-color: ${color};"></span>
-            <span class="mm-hist-cat-title">${escapeHtml(cat.category)}</span>
-            ${hasSubs ? `<span class="mm-hist-sub-count">(${cat.subcategories.length} sub)</span>` : ''}
-          </div>
-          <div class="mm-hist-cat-amount-col">
-            <strong>${mmFormatIDR(cat.amount)}</strong>
-            <small>${pct}%</small>
-          </div>
-        </div>
-        <div class="mm-hist-cat-bar">
-          <div class="mm-hist-cat-fill" style="width: ${Math.min(pct, 100)}%; background-color: ${color};"></div>
-        </div>`;
-
-    if (hasSubs) {
-      html += `
-        <div id="${catId}" class="mm-hist-subcat-list" style="display: none;">
-          ${cat.subcategories.map(sub => `
-            <div class="mm-hist-subcat-row">
-              <span>${escapeHtml(sub.subcategory || 'General')}</span>
-              <span><strong>${mmFormatIDR(sub.amount)}</strong> <small>(${sub.percent ? Number(sub.percent).toFixed(0) : 0}%)</small></span>
-            </div>
-          `).join('')}
-        </div>`;
-    }
-
-    html += `</div>`;
+  const palette = ['#22d3ee', '#fbbf24', '#f472b6', '#818cf8', '#fb923c', '#a78bfa', '#2dd4bf', '#60a5fa', '#e879f9', '#94a3b8'];
+  const rows = categories.map((cat, idx) => {
+    const color = (typeof mmCategoryColor === 'function' ? mmCategoryColor(cat.category) : null) || palette[idx % palette.length];
+    const pct = cat.percent ? Number(cat.percent) : (totalExpense > 0 ? (cat.amount / totalExpense) * 100 : 0);
+    return { cat, color, pct, idx };
   });
 
-  html += `
-      </div>
-    </div>`;
+  const segs = rows.map(r => `<span style="flex:${Math.max(r.pct, 0.5)};background:${r.color}" title="${escapeHtml(r.cat.category)} ${r.pct.toFixed(0)}%"></span>`).join('');
+  const top = rows[0];
 
-  wrap.innerHTML = html;
+  const list = rows.map(r => {
+    const subs = r.cat.subcategories || [];
+    const hasSubs = subs.length > 0;
+    const id = `hist-cat-${r.idx}-${data.year}-${data.month}`;
+    const head = `
+      <span class="ah-cat-dot" style="background:${r.color}"></span>
+      <span class="ah-cat-name">${escapeHtml(r.cat.category)}${hasSubs ? `<small>${subs.length} sub</small>` : ''}</span>
+      <span class="ah-cat-pct">${r.pct.toFixed(0)}%</span>
+      <strong class="ah-cat-amt">${mmFormatIDR(r.cat.amount)}</strong>
+      ${hasSubs ? lucideIconSvg('chevron-down', 14) : ''}`;
+    const subHtml = hasSubs ? `
+      <div id="${id}" class="ah-subs" hidden>
+        ${subs.map(s => `<div class="ah-sub-row"><span>${escapeHtml(s.subcategory || 'Umum')}</span><strong>${mmFormatIDR(s.amount)}</strong></div>`).join('')}
+      </div>` : '';
+    return hasSubs
+      ? `<div class="ah-cat"><button type="button" class="ah-cat-row" aria-expanded="false" onclick="mmToggleHistSubcat('${id}', this)">${head}</button>${subHtml}</div>`
+      : `<div class="ah-cat"><div class="ah-cat-row">${head}</div></div>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <details class="hx-card ah-fold"${wasOpen ? ' open' : ''}>
+      <summary>
+        <span class="ah-fold-row">
+          <span class="ah-fold-title">Pengeluaran per kategori</span>
+          <span class="ah-fold-hint">${escapeHtml(top.cat.category)} ${top.pct.toFixed(0)}%${data.isArchived ? ' · arsip' : ''}</span>
+          ${lucideIconSvg('chevron-down', 16).replace('<svg', '<svg class="ah-fold-chev"')}
+        </span>
+        <span class="ah-catbar" aria-hidden="true">${segs}</span>
+      </summary>
+      <div class="ah-cats">${list}</div>
+    </details>`;
 }
 
-function mmToggleHistSubcat(id) {
+function mmToggleHistSubcat(id, btn) {
   const el = document.getElementById(id);
   if (!el) return;
-  const isHidden = el.style.display === 'none';
-  el.style.display = isHidden ? 'flex' : 'none';
+  el.hidden = !el.hidden;
+  if (btn) btn.setAttribute('aria-expanded', el.hidden ? 'false' : 'true');
+  if (btn) btn.classList.toggle('is-open', !el.hidden);
 }
 
 function mmHistOpenInsight() {
@@ -1779,240 +1812,281 @@ function mmSelectMonthFromAllTime(monthStr) {
   }
 }
 
+/* Kalender mulai Senin (kebiasaan di Indonesia). Sel hari memakai titik
+   hijau/merah untuk ada-tidaknya pemasukan/pengeluaran; nominalnya ada di
+   daftar saat tanggalnya diketuk. */
 function mmRenderMonthCalendar(data) {
   const grid = document.getElementById('mmHistoryCalendarGrid');
   if (!grid) return;
 
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNames = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
   let html = dayNames.map(d => `<div class="mm-cal-header">${d}</div>`).join('');
 
-  const firstDay = new Date(data.year, data.month - 1, 1).getDay();
-  const today = new Date();
-  const isCurrentMonth = today.getFullYear() === data.year && (today.getMonth() + 1) === data.month;
+  const lead = (new Date(data.year, data.month - 1, 1).getDay() + 6) % 7;
+  const now = new Date();
+  const isCurrentMonth = now.getFullYear() === data.year && (now.getMonth() + 1) === data.month;
+  const monthName = new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(data.year, data.month - 1, 1));
 
-  for (let i = 0; i < firstDay; i++) html += '<div class="mm-cal-day empty"></div>';
+  for (let i = 0; i < lead; i++) html += '<div class="mm-cal-day empty" aria-hidden="true"></div>';
 
   for (let d = 1; d <= data.endDay; d++) {
-    const dayData = data.days[d] || { income: 0, expense: 0, transactions: [] };
-    const isToday = isCurrentMonth && today.getDate() === d;
-    const net = (dayData.income || 0) - (dayData.expense || 0);
-    let netHtml = '';
-    if (net !== 0) {
-      const color = net > 0 ? 'var(--success)' : 'var(--error)';
-      const prefix = net > 0 ? '+' : '';
-      netHtml = `<span class="mm-cal-amount" style="color:${color}">${prefix}${mmFormatShort(net)}</span>`;
-    }
-    html += `<div class="mm-cal-day ${isToday ? 'today' : ''}" onclick="mmHistShowDay(${d})">
-      <span class="mm-cal-num">${d}</span>${netHtml}
-    </div>`;
+    const dd = data.days[d] || { income: 0, expense: 0, transactions: [] };
+    const isToday = isCurrentMonth && now.getDate() === d;
+    const n = (dd.transactions || []).length;
+    const dots = (dd.income > 0 ? '<i class="ah-dot is-in"></i>' : '') + (dd.expense > 0 ? '<i class="ah-dot is-out"></i>' : '');
+    const label = `${d} ${monthName}${n ? ', ' + n + ' transaksi' : ', tidak ada transaksi'}`;
+    html += `<button type="button" class="mm-cal-day${isToday ? ' today' : ''}${MM_HIST_DAY === d ? ' selected' : ''}" data-day="${d}" aria-pressed="${MM_HIST_DAY === d}" aria-label="${label}" onclick="mmHistShowDay(${d})">
+      <span class="mm-cal-num">${d}</span><span class="ah-dots">${dots}</span>
+    </button>`;
   }
 
   grid.innerHTML = html;
 }
 
-/* Show all transactions for the currently loaded month (default view) */
-function mmHistShowAll() {
-  const cacheKey = `${MM_HIST_YEAR}-${MM_HIST_MONTH}`;
-  const data = MM_MONTH_CACHE[cacheKey];
-  const container = document.getElementById('mmHistoryMonthContent');
-  if (!data || !container) return;
-
-  document.querySelectorAll('#mmHistoryCalendarGrid .mm-cal-day.selected').forEach(el => el.classList.remove('selected'));
-  setText('mmHistoryListLabel', 'Transactions this month');
-  const btn = document.getElementById('mmHistoryShowAllBtn');
-  if (btn) btn.style.display = 'none';
-
-  let all = [];
-  if (data.days) {
-    Object.keys(data.days).forEach(d => { all = all.concat(data.days[d].transactions || []); });
-  }
-  if (all.length === 0 && data.isArchived) {
-    container.innerHTML = '<div class="empty-state" style="padding:16px 8px;font-size:13px;color:var(--text-muted);">Transaksi detail bulan ini sudah diarsipkan. Rekap pengeluaran per kategori dapat dilihat pada kartu di atas.</div>';
-    return;
-  }
-  all.sort((a, b) => new Date(b.date) - new Date(a.date));
-  container.innerHTML = mmRenderTransactionList(all);
+function mmHistSyncCalendar() {
+  document.querySelectorAll('#mmHistoryCalendarGrid .mm-cal-day[data-day]').forEach(el => {
+    const on = Number(el.dataset.day) === MM_HIST_DAY;
+    el.classList.toggle('selected', on);
+    el.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
 }
 
-/* Show transactions for a single day when its calendar cell is tapped */
+/* Semua tanggal bulan ini */
+function mmHistShowAll() {
+  MM_HIST_DAY = null;
+  mmHistSyncCalendar();
+  mmHistRenderList();
+}
+
+/* Ketuk tanggal = saring ke tanggal itu; ketuk lagi = batal. */
 function mmHistShowDay(day) {
-  const cacheKey = `${MM_HIST_YEAR}-${MM_HIST_MONTH}`;
-  const data = MM_MONTH_CACHE[cacheKey];
-  const container = document.getElementById('mmHistoryMonthContent');
-  if (!data || !container) return;
+  MM_HIST_DAY = (MM_HIST_DAY === day) ? null : day;
+  mmHistSyncCalendar();
+  mmHistRenderList();
 
-  const dayData = data.days[day] || { transactions: [] };
+  if (MM_HIST_DAY) {
+    // Kalender ada di atas daftar: tutup dan bawa daftar ke layar, kalau tidak
+    // hasil ketukan tidak terlihat.
+    const fold = document.getElementById('mmHistCalFold');
+    if (fold) fold.open = false;
+    const target = document.getElementById('mmHistListSection');
+    if (target) {
+      const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      target.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+    }
+  }
+}
 
-  // Highlight selected cell
-  document.querySelectorAll('#mmHistoryCalendarGrid .mm-cal-day.selected').forEach(el => el.classList.remove('selected'));
-  document.querySelectorAll('#mmHistoryCalendarGrid .mm-cal-day:not(.empty)').forEach(el => {
-    const n = el.querySelector('.mm-cal-num');
-    if (n && parseInt(n.textContent, 10) === day) el.classList.add('selected');
+/* Jenis transaksi (chip) */
+function mmHistSetType(type) {
+  const input = document.getElementById('mmHistTypeFilter');
+  if (input) input.value = type;
+  document.querySelectorAll('.ah-chips .ah-chip[data-type]').forEach(b => {
+    const on = b.dataset.type === type;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
+  mmHistRenderList();
+}
 
-  const label = mmFormatMonthLabel(`${MM_HIST_YEAR}-${String(MM_HIST_MONTH).padStart(2, '0')}`);
-  setText('mmHistoryListLabel', `${day} ${label}`);
+function mmHistResetFilters() {
+  const s = document.getElementById('mmHistSearchInput');
+  const a = document.getElementById('mmHistAccountFilter');
+  if (s) s.value = '';
+  if (a) a.value = 'All';
+  MM_HIST_DAY = null;
+  mmHistSyncCalendar();
+  mmHistSetType('All');
+}
+
+function mmFilterMonthHistory() { mmHistRenderList(); }
+
+/* Satu-satunya tempat yang menggambar daftar bulan: tanggal + cari + jenis + akun. */
+function mmHistRenderList() {
+  const container = document.getElementById('mmHistoryMonthContent');
+  if (!container) return;
+  const data = MM_MONTH_CACHE[`${MM_HIST_YEAR}-${MM_HIST_MONTH}`];
+  if (!data || !data.days) return;
+
+  const query = ((document.getElementById('mmHistSearchInput') || {}).value || '').trim().toLowerCase();
+  const type = (document.getElementById('mmHistTypeFilter') || {}).value || 'All';
+  const acc = (document.getElementById('mmHistAccountFilter') || {}).value || 'All';
+
+  let all = [];
+  if (MM_HIST_DAY) {
+    all = ((data.days[MM_HIST_DAY] || {}).transactions || []).slice();
+  } else {
+    Object.keys(data.days).forEach(d => { all = all.concat(data.days[d].transactions || []); });
+  }
+  const monthHasTx = MM_HIST_DAY ? true : all.length > 0;
+
+  if (query) {
+    const terms = query.split(/\s+/).filter(Boolean);
+    all = all.filter(tx => {
+      const hay = [tx.notes, tx.category, tx.subcategory, tx.account, tx.accountTo, tx.amount, tx.type].join(' ').toLowerCase();
+      return terms.every(t => hay.includes(t));
+    });
+  }
+  if (type !== 'All') all = all.filter(tx => tx.type === type);
+  if (acc !== 'All') all = all.filter(tx => tx.account === acc || tx.accountTo === acc);
+
+  const filtering = !!(query || type !== 'All' || acc !== 'All' || MM_HIST_DAY);
+
+  // Judul + sub + tombol "Semua tanggal"
+  const monthName = new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(MM_HIST_YEAR, MM_HIST_MONTH - 1, 1));
+  setText('mmHistoryListLabel', MM_HIST_DAY ? `${MM_HIST_DAY} ${monthName}` : 'Transaksi');
   const btn = document.getElementById('mmHistoryShowAllBtn');
-  if (btn) btn.style.display = '';
+  if (btn) btn.style.display = MM_HIST_DAY ? '' : 'none';
 
-  const txs = (dayData.transactions || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-  container.innerHTML = mmRenderTransactionList(txs);
+  const net = all.reduce((s, t) => s + (t.type === 'Income' ? Number(t.amount) : t.type === 'Expense' ? -Number(t.amount) : 0), 0);
+  const sub = document.getElementById('mmHistoryListSub');
+  if (sub) {
+    sub.textContent = all.length
+      ? `${all.length} transaksi` + (filtering && net !== 0 ? ` · net ${net > 0 ? '+' : '−'}${mmFormatIDR(Math.abs(net))}` : '')
+      : '';
+  }
+
+  if (!all.length) {
+    if (!monthHasTx && data.isArchived) {
+      container.innerHTML = mmEmpty('info', 'Transaksi diarsipkan', 'Rincian bulan ini sudah diarsipkan. Lihat rekap per kategori di atas.');
+    } else if (filtering) {
+      container.innerHTML = mmEmpty('search', 'Tidak ada yang cocok', 'Ubah kata kunci atau filter.',
+        '<button type="button" class="mm-empty-action" onclick="mmHistResetFilters()">Reset filter</button>');
+    } else {
+      container.innerHTML = mmEmpty('arrow-right-left', 'Belum ada transaksi bulan ini', 'Mulai dari yang barusan kamu belanjakan.',
+        '<button type="button" class="mm-empty-action" onclick="mmShowActionSheet(\'expense\')">Catat pengeluaran</button>');
+    }
+  } else {
+    container.innerHTML = mmRenderTransactionList(all);
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+/* --- Period --------------------------------------------------------- */
+function mmHistPreset(range, quiet) {
+  const end = new Date();
+  const start = new Date();
+  if (range === 'month') start.setDate(1);
+  else start.setDate(start.getDate() - (Number(range) - 1));
+  const s = document.getElementById('mmPeriodStart');
+  const e = document.getElementById('mmPeriodEnd');
+  if (s) s.value = localISODate(start);
+  if (e) e.value = localISODate(end);
+  mmLoadPeriod(quiet);
 }
 
 function mmLoadPeriod() {
-  const start = document.getElementById('mmPeriodStart').value;
-  const end = document.getElementById('mmPeriodEnd').value;
+  let start = document.getElementById('mmPeriodStart').value;
+  let end = document.getElementById('mmPeriodEnd').value;
   if (!start || !end) {
-    showToast('Select start and end date.', 'error');
+    showToast('Pilih tanggal awal dan akhir.', 'error');
     return;
   }
+  if (start > end) {   // tertukar: balik saja daripada menolak
+    const t = start; start = end; end = t;
+    document.getElementById('mmPeriodStart').value = start;
+    document.getElementById('mmPeriodEnd').value = end;
+  }
   const container = document.getElementById('mmHistoryPeriodContent');
-  container.innerHTML = skRows(5);
+  container.innerHTML = '<div class="hx-card">' + skRows(5) + '</div>';
   google.script.run
     .withSuccessHandler(data => mmRenderPeriod(data, container))
-    .withFailureHandler(err => { container.innerHTML = '<div class="empty-state">Failed to load.</div>'; })
+    .withFailureHandler(() => {
+      container.innerHTML = '<div class="hx-card">' + mmEmpty('alert-circle', 'Gagal memuat', 'Periksa koneksi, lalu coba lagi.') + '</div>';
+      if (window.lucide) lucide.createIcons();
+    })
     .mmGetTransactions({ startDate: start, endDate: end });
 }
 
 function mmRenderPeriod(data, container) {
   if (!data || !data.length) {
-    container.innerHTML = '<div class="empty-state">No transactions in this period.</div>';
+    container.innerHTML = '<div class="hx-card">' + mmEmpty('clock', 'Tidak ada transaksi', 'Belum ada catatan pada rentang tanggal ini.') + '</div>';
+    if (window.lucide) lucide.createIcons();
     return;
   }
   let totalIn = 0, totalOut = 0;
   data.forEach(tx => {
-    if (tx.type === 'Income') totalIn += tx.amount;
-    if (tx.type === 'Expense') totalOut += tx.amount;
+    if (tx.type === 'Income') totalIn += Number(tx.amount) || 0;
+    if (tx.type === 'Expense') totalOut += Number(tx.amount) || 0;
   });
-  let html = `
-    <div class="mm-month-summary">
-      <div class="item"><span>Income</span><strong class="positive">${mmFormatIDR(totalIn)}</strong></div>
-      <div class="item"><span>Expense</span><strong class="negative">${mmFormatIDR(totalOut)}</strong></div>
-      <div class="item"><span>Net</span><strong>${mmFormatIDR(totalIn - totalOut)}</strong></div>
-    </div>`;
-  html += mmRenderTransactionList(data);
-  container.innerHTML = html;
+  const net = totalIn - totalOut;
+  container.innerHTML = `
+    <section class="hx-card ah-psum" aria-label="Ringkasan rentang">
+      <dl class="hx-flow ah-flow">
+        <div class="hx-flow-item is-in"><dt><span class="hx-dot"></span>Masuk</dt><dd>${mmFormatIDR(totalIn)}</dd></div>
+        <div class="hx-flow-item is-out"><dt><span class="hx-dot"></span>Keluar</dt><dd>${mmFormatIDR(totalOut)}</dd></div>
+        <div class="hx-flow-item is-net"><dt><span class="hx-dot"></span>Sisa</dt><dd class="${net > 0 ? 'positive' : net < 0 ? 'negative' : ''}">${net > 0 ? '+' : ''}${mmFormatIDR(net)}</dd></div>
+      </dl>
+    </section>
+    <section class="hx-block">
+      <div class="hx-head"><div class="hx-head-text"><h3 class="hx-title">Transaksi</h3><p class="hx-sub">${data.length} transaksi</p></div></div>
+      <div class="hx-card hx-activity ah-tx">${mmRenderTransactionList(data)}</div>
+    </section>`;
+  if (window.lucide) lucide.createIcons();
 }
 
+/* Baris transaksi dikelompokkan per hari — pola yang sama dengan "Aktivitas
+   Terbaru" di Home (hx-day / hx-tx), tanpa chip jenis: warna & tanda +/− sudah
+   menyampaikannya. */
 function mmRenderTransactionList(transactions) {
-  if (!transactions || !transactions.length) return '<div class="empty-state">Belum ada transaksi.</div>';
+  if (!transactions || !transactions.length) return mmEmpty('arrow-right-left', 'Belum ada transaksi', '');
 
-  // Group by date
-  const groups = {};
-  transactions.forEach(tx => {
-    const d = tx.date || 'Lainnya';
-    if (!groups[d]) groups[d] = { date: d, items: [], net: 0 };
-    groups[d].items.push(tx);
-    if (tx.type === 'Income') groups[d].net += (Number(tx.amount) || 0);
-    else if (tx.type === 'Expense') groups[d].net -= (Number(tx.amount) || 0);
+  const sorted = [...transactions].sort((a, b) =>
+    (b.date || '').localeCompare(a.date || '') || ((b.rowNumber || 0) - (a.rowNumber || 0)));
+
+  const groups = [];
+  sorted.forEach(tx => {
+    const last = groups[groups.length - 1];
+    if (last && last.date === tx.date) last.items.push(tx);
+    else groups.push({ date: tx.date, items: [tx] });
   });
 
-  return Object.values(groups).map(g => {
-    const formattedDate = mmFormatDate(g.date);
-    const netFormatted = (g.net >= 0 ? '+' : '') + mmFormatIDR(g.net);
-    const netClass = g.net > 0 ? 'positive' : (g.net < 0 ? 'negative' : 'neutral');
+  return groups.map(g => {
+    const net = g.items.reduce((s, t) => s + (t.type === 'Income' ? Number(t.amount) : t.type === 'Expense' ? -Number(t.amount) : 0), 0);
+    const netClass = net > 0 ? 'income-color' : net < 0 ? 'expense-color' : '';
+    const netText = net === 0 ? '' : (net > 0 ? '+' : '−') + mmFormatIDR(Math.abs(net));
+
+    const rows = g.items.map(tx => {
+      const isIn = tx.type === 'Income', isOut = tx.type === 'Expense';
+      const prefix = isIn ? '+' : isOut ? '−' : '';
+      const colorClass = isIn ? 'income-color' : isOut ? 'expense-color' : 'transfer-color';
+      const label = tx.notes || tx.subcategory || tx.category || tx.type;
+      const meta = tx.type === 'Transfer'
+        ? (tx.account || '') + (tx.accountTo ? ' → ' + tx.accountTo : '')
+        : [tx.subcategory || tx.category || tx.type, tx.account].filter(Boolean).join(' · ');
+      return `
+      <div class="hx-tx" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
+        <div class="hx-tx-ic" style="--c:${mmCategoryColor(tx.category, tx.type)}">${mmCategoryEmoji(tx.category, tx.type)}</div>
+        <div class="hx-tx-info">
+          <div class="hx-tx-name">${escapeHtml(label)}</div>
+          <div class="hx-tx-meta">${escapeHtml(meta)}</div>
+        </div>
+        <div class="hx-tx-amt ${colorClass}">${prefix}${mmFormatIDR(tx.amount)}</div>
+      </div>`;
+    }).join('');
 
     return `
-      <div class="ed-tx-group">
-        <div class="ed-tx-group-header">
-          <span class="ed-tx-group-date">${formattedDate}</span>
-          <span class="ed-tx-group-net ${netClass}">Net: ${netFormatted}</span>
+      <div class="hx-day">
+        <div class="hx-day-head">
+          <span>${mmDayLabel(g.date)}</span>
+          <strong class="${netClass}">${netText}</strong>
         </div>
-        <div class="ed-tx-group-items">
-          ${g.items.map(tx => {
-            let amtClass = 'income-amt';
-            let prefix = '+';
-            let subtitle = escapeHtml(tx.account || '');
-
-            if (tx.type === 'Expense') {
-              amtClass = 'expense-amt';
-              prefix = '-';
-              subtitle = `${escapeHtml(tx.account || '')} · ${escapeHtml(tx.category || '')}${tx.subcategory ? ' / ' + escapeHtml(tx.subcategory) : ''}`;
-            } else if (tx.type === 'Transfer') {
-              amtClass = 'transfer-amt';
-              prefix = '';
-              subtitle = `${escapeHtml(tx.account || '')} → ${escapeHtml(tx.accountTo || '')}`;
-            } else {
-              subtitle = `${escapeHtml(tx.account || '')}${tx.category ? ' · ' + escapeHtml(tx.category) : ''}`;
-            }
-
-            const catColor = mmCategoryColor(tx.category, tx.type);
-            const catIcon = mmCategoryEmoji(tx.category, tx.type);
-
-            return `
-              <div class="ed-tx-row mm-tx-item" onclick="mmShowTxDetail(${tx.rowNumber}, '${jsStr(tx.type)}', '${jsStr(tx.account)}', '${jsStr(tx.accountTo || '')}', '${jsStr(tx.category || '')}', '${jsStr(tx.subcategory || '')}', ${tx.amount}, '${jsStr(tx.notes || '')}', '${jsStr(tx.date || '')}')">
-                <div class="ed-tx-left">
-                  <div class="ed-tx-icon" style="color:${catColor}">${catIcon}</div>
-                  <div class="ed-tx-details">
-                    <span class="ed-tx-title">${escapeHtml(tx.notes || tx.category || tx.type)}</span>
-                    <span class="ed-tx-sub">${subtitle}</span>
-                  </div>
-                </div>
-                <div class="ed-tx-right">
-                  <span class="ed-tx-amount ${amtClass}">${prefix}${mmFormatIDR(tx.amount)}</span>
-                  <span class="ed-tx-tag is-${tx.type.toLowerCase()}">${tx.type}</span>
-                </div>
-              </div>`;
-          }).join('')}
-        </div>
+        ${rows}
       </div>`;
   }).join('');
-}
-
-/* === ACTIVITY SEARCH & FILTERS === */
-function mmFilterMonthHistory() {
-  const searchInput = document.getElementById('mmHistSearchInput');
-  const typeFilter = document.getElementById('mmHistTypeFilter');
-  const accFilter = document.getElementById('mmHistAccountFilter');
-  const container = document.getElementById('mmHistoryMonthContent');
-  if (!container) return;
-
-  const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
-  const selectedType = typeFilter ? typeFilter.value : 'All';
-  const selectedAcc = accFilter ? accFilter.value : 'All';
-
-  const cacheKey = `${MM_HIST_YEAR}-${MM_HIST_MONTH}`;
-  const data = MM_MONTH_CACHE[cacheKey];
-  if (!data || !data.days) return;
-
-  let all = [];
-  Object.keys(data.days).forEach(d => { all = all.concat(data.days[d].transactions || []); });
-
-  if (query) {
-    all = all.filter(tx => {
-      const notes = (tx.notes || '').toLowerCase();
-      const cat = (tx.category || '').toLowerCase();
-      const sub = (tx.subcategory || '').toLowerCase();
-      const acc = (tx.account || '').toLowerCase();
-      const accTo = (tx.accountTo || '').toLowerCase();
-      const amtStr = String(tx.amount || '');
-      return notes.includes(query) || cat.includes(query) || sub.includes(query) || acc.includes(query) || accTo.includes(query) || amtStr.includes(query);
-    });
-  }
-
-  if (selectedType !== 'All') {
-    all = all.filter(tx => tx.type === selectedType);
-  }
-
-  if (selectedAcc !== 'All') {
-    all = all.filter(tx => tx.account === selectedAcc || tx.accountTo === selectedAcc);
-  }
-
-  all.sort((a, b) => new Date(b.date) - new Date(a.date));
-  container.innerHTML = mmRenderTransactionList(all);
 }
 
 function mmPopulateHistoryAccountFilter() {
   const select = document.getElementById('mmHistAccountFilter');
   if (!select) return;
   const currentVal = select.value;
-  let opts = '<option value="All">Semua Akun</option>';
+  let opts = '<option value="All">Semua akun</option>';
   const accounts = (MM_DASHBOARD && MM_DASHBOARD.accounts) || MM_ACCOUNTS || [];
   accounts.forEach(a => {
     opts += `<option value="${escapeHtml(a.name)}">${escapeHtml(a.name)}</option>`;
   });
   select.innerHTML = opts;
-  if (currentVal) select.value = currentVal;
+  if (currentVal && [...select.options].some(o => o.value === currentVal)) select.value = currentVal;
 }
 
 /* === CALENDAR HELPERS === */
@@ -2650,6 +2724,7 @@ function lucideIconSvg(name, size) {
     'tag': '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>',
     'chevron-right': '<path d="m9 18 6-6-6-6"/>',
     'chevron-down': '<path d="m6 9 6 6 6-6"/>',
+    'search': '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
     'plus': '<path d="M5 12h14"/><path d="M12 5v14"/>',
     'arrow-down-to-line': '<path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/>',
     'credit-card': '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',

@@ -709,122 +709,138 @@
           </section>
         </div>
 
-        <!-- ===== MM HISTORY / ACTIVITY PAGE ===== -->
+        <!-- ===== MM HISTORY / ACTIVITY PAGE (redesign — compact) =====
+             Satu pertanyaan per blok, urutan dari yang paling sering dipakai:
+             1. Top bar      — judul + unduh CSV
+             2. Segmented    — per bulan / semua waktu / rentang tanggal
+             3. Ringkasan    — navigasi bulan + masuk / keluar / sisa
+             4. Filter       — cari, jenis, akun
+             5. Rekap        — per kategori (dilipat)
+             6. Kalender     — aktivitas harian (dilipat)
+             7. Daftar       — transaksi, dikelompokkan per hari
+             Tombol "Catat" sudah ada di bottom nav, jadi tidak diulang di sini.
+             Semua id data (mmHist*, mmHistory*) dipertahankan; render ada di
+             Script_Keuangan.html. -->
         <div id="mmHistoryPage" class="page">
-          <section class="ed-page-wrap">
-            <header class="ed-page-header">
-              <div>
-                <span class="ed-eyebrow">ACTIVITY LOG</span>
-                <h2 class="ed-page-title">Riwayat Transaksi</h2>
-                <p class="ed-page-sub">Catatan seluruh arus pemasukan, pengeluaran, dan mutasi saldo.</p>
+          <div class="hx ah">
+
+            <header class="ah-top">
+              <div class="ah-top-text">
+                <h1 class="ah-title">Aktivitas</h1>
+                <p class="ah-sub">Arus kas &amp; mutasi saldo</p>
               </div>
-              <div class="ed-header-right">
-                <button type="button" class="btn-ghost" onclick="mmExportData('transactions')" title="Unduh CSV">
-                  <i data-lucide="download"></i>
-                  <span>Export CSV</span>
-                </button>
-                <button type="button" class="btn-primary" onclick="mmShowActionSheet('expense')">
-                  <i data-lucide="plus"></i>
-                  <span>Catat Transaksi</span>
-                </button>
-              </div>
+              <button type="button" class="ah-icon-btn is-bordered" onclick="mmExportData('transactions')" aria-label="Unduh CSV">
+                <i data-lucide="download"></i>
+              </button>
             </header>
 
-            <div class="tab-bar mm-history-tabs ed-tabs-bar">
-              <button class="tab-btn active" onclick="mmSwitchHistoryTab('month')">Bulan Ini</button>
-              <button class="tab-btn" onclick="mmSwitchHistoryTab('alltime')">Semua Waktu</button>
-              <button class="tab-btn" onclick="mmSwitchHistoryTab('period')">Rentang Tanggal</button>
+            <div class="ah-seg mm-history-tabs" role="tablist" aria-label="Rentang riwayat">
+              <button type="button" role="tab" class="ah-seg-btn active" data-tab="month" aria-selected="true" onclick="mmSwitchHistoryTab('month')">Per Bulan</button>
+              <button type="button" role="tab" class="ah-seg-btn" data-tab="alltime" aria-selected="false" onclick="mmSwitchHistoryTab('alltime')">Semua Waktu</button>
+              <button type="button" role="tab" class="ah-seg-btn" data-tab="period" aria-selected="false" onclick="mmSwitchHistoryTab('period')">Rentang</button>
             </div>
 
             <!-- Month View -->
-            <div id="mmHistoryMonth" class="mm-history-content">
-              <!-- Month Navigator -->
-              <div class="ed-month-nav">
-                <button class="ed-month-nav-btn" aria-label="Bulan sebelumnya" onclick="mmPrevMonth()"><i data-lucide="chevron-left"></i></button>
-                <strong class="ed-month-title" id="mmHistoryMonthLabel">-</strong>
-                <button class="ed-month-nav-btn" aria-label="Bulan berikutnya" onclick="mmNextMonth()"><i data-lucide="chevron-right"></i></button>
-                <button type="button" class="btn-ghost ed-insight-btn-pill" onclick="mmHistOpenInsight()">
-                  <i data-lucide="sparkles"></i> Insight Bulan Ini &rarr;
-                </button>
-              </div>
+            <div id="mmHistoryMonth" class="mm-history-content ah-stack">
 
-              <!-- Month Summary Bar -->
-              <div class="ed-month-summary">
-                <div class="ed-msum-card in">
-                  <span>Pemasukan</span>
-                  <strong class="positive" id="mmHistIncome">Rp 0</strong>
+              <section class="hx-card ah-sum" aria-label="Ringkasan bulan">
+                <div class="ah-monthbar">
+                  <button type="button" class="ah-icon-btn" aria-label="Bulan sebelumnya" onclick="mmPrevMonth()"><i data-lucide="chevron-left"></i></button>
+                  <strong class="ah-month" id="mmHistoryMonthLabel" aria-live="polite">-</strong>
+                  <button type="button" class="ah-icon-btn" aria-label="Bulan berikutnya" onclick="mmNextMonth()"><i data-lucide="chevron-right"></i></button>
+                  <button type="button" class="ah-insight" onclick="mmHistOpenInsight()"><i data-lucide="sparkles"></i>Insight</button>
                 </div>
-                <div class="ed-msum-card out">
-                  <span>Pengeluaran</span>
-                  <strong class="negative" id="mmHistExpense">Rp 0</strong>
+                <div class="hx-flowbar ah-flowbar" id="mmHistFlowBar" role="img" aria-label="Perbandingan pengeluaran terhadap pemasukan">
+                  <span class="hx-flowbar-fill" id="mmHistFlowFill"></span>
                 </div>
-                <div class="ed-msum-card net">
-                  <span>Sisa (Net)</span>
-                  <strong id="mmHistSaving">Rp 0</strong>
-                </div>
-              </div>
+                <dl class="hx-flow ah-flow">
+                  <div class="hx-flow-item is-in">
+                    <dt><span class="hx-dot"></span>Masuk</dt>
+                    <dd id="mmHistIncome">Rp 0</dd>
+                  </div>
+                  <div class="hx-flow-item is-out">
+                    <dt><span class="hx-dot"></span>Keluar</dt>
+                    <dd id="mmHistExpense">Rp 0</dd>
+                  </div>
+                  <div class="hx-flow-item is-net">
+                    <dt><span class="hx-dot"></span>Sisa</dt>
+                    <dd id="mmHistSaving">Rp 0</dd>
+                  </div>
+                </dl>
+              </section>
 
-              <!-- Filter Toolbar -->
-              <div class="ed-tx-filter-bar">
-                <div class="ed-tx-search-wrap">
-                  <i data-lucide="search"></i>
-                  <input type="text" id="mmHistSearchInput" placeholder="Cari transaksi bulan ini..." oninput="mmFilterMonthHistory()">
-                </div>
-                <div class="ed-tx-filter-selects">
-                  <select id="mmHistTypeFilter" class="ed-select" onchange="mmFilterMonthHistory()">
-                    <option value="All">Semua Tipe</option>
-                    <option value="Expense">Pengeluaran</option>
-                    <option value="Income">Pemasukan</option>
-                    <option value="Transfer">Transfer</option>
-                  </select>
-                  <select id="mmHistAccountFilter" class="ed-select" onchange="mmFilterMonthHistory()">
-                    <option value="All">Semua Akun</option>
+              <!-- Filters -->
+              <div class="ah-filters">
+                <div class="ah-row">
+                  <label class="ah-search">
+                    <i data-lucide="search"></i>
+                    <input type="search" id="mmHistSearchInput" placeholder="Cari transaksi" aria-label="Cari transaksi bulan ini" autocomplete="off" enterkeyhint="search" oninput="mmFilterMonthHistory()">
+                  </label>
+                  <select id="mmHistAccountFilter" class="ah-select" aria-label="Filter akun" onchange="mmFilterMonthHistory()">
+                    <option value="All">Semua akun</option>
                   </select>
                 </div>
+                <input type="hidden" id="mmHistTypeFilter" value="All">
+                <div class="ah-chips" role="group" aria-label="Filter jenis transaksi">
+                  <button type="button" class="ah-chip active" data-type="All" aria-pressed="true" onclick="mmHistSetType('All')">Semua</button>
+                  <button type="button" class="ah-chip" data-type="Expense" aria-pressed="false" onclick="mmHistSetType('Expense')">Keluar</button>
+                  <button type="button" class="ah-chip" data-type="Income" aria-pressed="false" onclick="mmHistSetType('Income')">Masuk</button>
+                  <button type="button" class="ah-chip" data-type="Transfer" aria-pressed="false" onclick="mmHistSetType('Transfer')">Transfer</button>
+                </div>
               </div>
 
-              <!-- Category breakdown -->
+              <!-- Category breakdown (rendered as a <details> card by JS) -->
               <div id="mmHistoryCategoryBreakdown" class="mm-hist-category-wrap"></div>
 
-              <!-- Calendar Day Grid -->
-              <div class="ed-calendar-card">
-                <div class="ed-cal-header-row">
-                  <span class="ed-cal-title">Aktivitas Harian</span>
-                  <button class="btn-ghost btn-mini" id="mmHistoryShowAllBtn" style="display:none;" onclick="mmHistShowAll()">Tampilkan Semua</button>
+              <!-- Calendar -->
+              <details class="hx-card ah-fold" id="mmHistCalFold">
+                <summary>
+                  <span class="ah-fold-row">
+                    <span class="ah-fold-title">Kalender harian</span>
+                    <span class="ah-fold-hint">Ketuk tanggal untuk memfilter</span>
+                    <i data-lucide="chevron-down" class="ah-fold-chev"></i>
+                  </span>
+                </summary>
+                <div class="ah-fold-body">
+                  <div id="mmHistoryCalendarGrid" class="mm-calendar-grid ah-cal"></div>
                 </div>
-                <div id="mmHistoryCalendarGrid" class="mm-calendar-grid"></div>
-              </div>
+              </details>
 
               <!-- Grouped Transaction List -->
-              <div class="ed-month-list-section">
-                <div class="ed-list-head-row">
-                  <strong id="mmHistoryListLabel">Daftar Transaksi</strong>
+              <section class="hx-block ah-list" id="mmHistListSection" aria-labelledby="mmHistoryListLabel">
+                <div class="hx-head">
+                  <div class="hx-head-text">
+                    <h3 class="hx-title" id="mmHistoryListLabel">Transaksi</h3>
+                    <p class="hx-sub" id="mmHistoryListSub" aria-live="polite"></p>
+                  </div>
+                  <button type="button" class="hx-link ah-link" id="mmHistoryShowAllBtn" style="display:none;" onclick="mmHistShowAll()">Semua tanggal</button>
                 </div>
-                <div id="mmHistoryMonthContent" class="ed-tx-container"></div>
-              </div>
+                <div id="mmHistoryMonthContent" class="hx-card hx-activity ah-tx"></div>
+              </section>
             </div>
 
             <!-- All Time View -->
-            <div id="mmHistoryAllTime" class="mm-history-content" style="display:none;"></div>
+            <div id="mmHistoryAllTime" class="mm-history-content ah-stack" style="display:none;"></div>
 
             <!-- Custom Period View -->
-            <div id="mmHistoryPeriod" class="mm-history-content" style="display:none;">
-              <div class="ed-period-picker">
-                <div class="ed-period-inputs">
-                  <div class="ed-period-field">
-                    <label>Dari Tanggal</label>
-                    <input type="date" id="mmPeriodStart" class="form-input">
-                  </div>
-                  <div class="ed-period-field">
-                    <label>Sampai Tanggal</label>
-                    <input type="date" id="mmPeriodEnd" class="form-input">
-                  </div>
+            <div id="mmHistoryPeriod" class="mm-history-content ah-stack" style="display:none;">
+              <form class="hx-card ah-period" onsubmit="event.preventDefault(); mmLoadPeriod();">
+                <div class="ah-period-grid">
+                  <label class="ah-field"><span>Dari</span><input type="date" id="mmPeriodStart"></label>
+                  <label class="ah-field"><span>Sampai</span><input type="date" id="mmPeriodEnd"></label>
                 </div>
-                <button class="btn-primary" onclick="mmLoadPeriod()">Filter Periode</button>
-              </div>
-              <div id="mmHistoryPeriodContent" class="ed-tx-container"></div>
+                <div class="ah-chips" role="group" aria-label="Rentang cepat">
+                  <button type="button" class="ah-chip" onclick="mmHistPreset(7)">7 hari</button>
+                  <button type="button" class="ah-chip" onclick="mmHistPreset(30)">30 hari</button>
+                  <button type="button" class="ah-chip" onclick="mmHistPreset(90)">90 hari</button>
+                  <button type="button" class="ah-chip" onclick="mmHistPreset('month')">Bulan ini</button>
+                </div>
+                <button type="submit" class="ah-primary">Tampilkan</button>
+              </form>
+              <div id="mmHistoryPeriodContent" class="ah-stack"></div>
             </div>
-          </section>
+
+          </div>
         </div>
 
         <!-- ===== MM SETTINGS PAGE =====
