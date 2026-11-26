@@ -441,7 +441,9 @@ function mmRenderDashboard(data) {
   if (window.lucide) lucide.createIcons();
 }
 
-/* === DEDICATED ACCOUNTS PAGE RENDERING === */
+/* === ACCOUNTS PAGE ===
+   Same language as Home: total as plain type, then one hairline list per
+   group. Tap a row for its transactions; the pencil edits it. */
 function mmRenderAccountsPage() {
   const container = document.getElementById('mmAccountsFullList');
   const totalEl = document.getElementById('mmAccountsTotalBalance');
@@ -452,92 +454,60 @@ function mmRenderAccountsPage() {
   if (!accounts.length) {
     if (totalEl) totalEl.textContent = 'Rp 0';
     if (metaEl) metaEl.textContent = 'Belum ada rekening';
-    container.innerHTML = mmEmpty('wallet', 'Belum Ada Rekening', 'Tambahkan rekening bank, dompet digital, atau uang tunai untuk mulai mencatat keuangan.', `<button class="btn-primary" onclick="mmShowAddAccount()">+ Tambah Rekening</button>`);
+    container.innerHTML = mmEmpty('wallet', 'Belum ada rekening', 'Tambahkan rekening bank, dompet digital, atau uang tunai untuk mulai mencatat.', `<button class="mm-empty-action" onclick="mmShowAddAccount()">Tambah rekening</button>`);
     return;
   }
 
-  const total = accounts.reduce((sum, a) => sum + (Number(a.balance ?? a.initialBalance) || 0), 0);
+  const balOf = (a) => Number(a.balance ?? a.initialBalance) || 0;
+  const total = accounts.reduce((sum, a) => sum + balOf(a), 0);
+  const positive = accounts.reduce((sum, a) => sum + Math.max(balOf(a), 0), 0);
   if (totalEl) totalEl.textContent = mmFormatIDR(total);
-  if (metaEl) metaEl.textContent = `${accounts.length} rekening terdaftar · Total likuiditas aktif`;
+  if (metaEl) metaEl.textContent = `${accounts.length} rekening`;
 
-  // Group accounts into Bank, E-Wallet, Cash, Other
-  const groups = {
-    'Bank Accounts': { title: 'Rekening Bank', icon: 'landmark', accounts: [] },
-    'E-Wallets': { title: 'Dompet Digital (E-Wallet)', icon: 'smartphone', accounts: [] },
-    'Cash': { title: 'Uang Tunai (Cash)', icon: 'banknote', accounts: [] },
-    'Other Accounts': { title: 'Lainnya & Investasi', icon: 'wallet-cards', accounts: [] }
-  };
-
+  const groups = [
+    { title: 'Rekening bank', test: (t, n) => t.includes('bank') || /bca|mandiri|bri|bni|jago|seabank|btn|cimb|permata/.test(n), accounts: [] },
+    { title: 'Dompet digital', test: (t, n) => t.includes('wallet') || /gopay|ovo|shopee|dana|linkaja/.test(n), accounts: [] },
+    { title: 'Tunai', test: (t, n) => t.includes('cash') || t.includes('tunai') || /dompet|cash|kas/.test(n), accounts: [] },
+    { title: 'Lainnya', test: () => true, accounts: [] }
+  ];
   accounts.forEach(a => {
-    const type = (a.type || '').toLowerCase();
-    const name = (a.name || '').toLowerCase();
-    if (type.includes('bank') || name.includes('bca') || name.includes('mandiri') || name.includes('bri') || name.includes('bni') || name.includes('jago') || name.includes('seabank')) {
-      groups['Bank Accounts'].accounts.push(a);
-    } else if (type.includes('wallet') || name.includes('gopay') || name.includes('ovo') || name.includes('shopee') || name.includes('dana') || name.includes('linkaja')) {
-      groups['E-Wallets'].accounts.push(a);
-    } else if (type.includes('cash') || type.includes('tunai') || name.includes('dompet') || name.includes('cash') || name.includes('kas')) {
-      groups['Cash'].accounts.push(a);
-    } else {
-      groups['Other Accounts'].accounts.push(a);
-    }
+    const t = (a.type || '').toLowerCase(), n = (a.name || '').toLowerCase();
+    groups.find(g => g.test(t, n)).accounts.push(a);
   });
 
-  let html = '';
-  Object.values(groups).forEach(g => {
-    if (!g.accounts.length) return;
-    const subtotal = g.accounts.reduce((s, a) => s + (Number(a.balance ?? a.initialBalance) || 0), 0);
-    const groupShare = total > 0 ? Math.round((Math.max(subtotal, 0) / total) * 100) : 0;
-
-    html += `
-      <div class="ed-acc-section-group">
-        <div class="ed-acc-group-header">
-          <div class="ed-acc-group-title">
-            <span class="ed-acc-group-icon">${lucideIconSvg(g.icon, 16)}</span>
-            <h4>${g.title}</h4>
-            <span class="ed-acc-group-badge">${g.accounts.length} akun</span>
+  container.innerHTML = groups.filter(g => g.accounts.length).map(g => {
+    const list = g.accounts.slice().sort((x, y) => balOf(y) - balOf(x));
+    const subtotal = list.reduce((s2, a) => s2 + balOf(a), 0);
+    const share = positive > 0 ? Math.round(Math.max(subtotal, 0) / positive * 100) : 0;
+    const rows = list.map(a => {
+      const bal = balOf(a);
+      const accShare = positive > 0 ? Math.round(Math.max(bal, 0) / positive * 100) : 0;
+      const color = MM_ACC_TYPE_COLORS[a.type] || MM_ACC_TYPE_COLORS['Other'];
+      return `
+        <div class="hq-row-wrap">
+          <button type="button" class="hq-row" style="--c:${color}" onclick="mmShowAccountTransactions('${jsStr(a.name)}')" aria-label="${escapeHtml(a.name)}, saldo ${escapeHtml(mmFormatIDR(bal))}, lihat mutasi">
+            <span class="hq-row-ic">${a.icon ? mmAccountIconSvg(a.icon, 16) : lucideIconSvg('wallet', 16)}</span>
+            <span class="hq-row-main">
+              <span class="hq-row-name">${escapeHtml(a.name)}${!a.showOnDashboard ? ' <small class="hq-tag">Disembunyikan</small>' : ''}</span>
+              <span class="hq-row-meta">${accShare}% dari total</span>
+            </span>
+            <strong class="hq-row-amt ${bal < 0 ? 'expense-color' : ''}">${mmFormatIDR(bal)}</strong>
+          </button>
+          <button type="button" class="ah-icon-btn hq-row-edit" aria-label="Edit ${escapeHtml(a.name)}" onclick="mmShowEditAccount('${jsStr(a.id)}', '${jsStr(a.name)}', '${jsStr(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">${lucideIconSvg('pencil', 16)}</button>
+        </div>`;
+    }).join('');
+    return `
+      <section class="hq-list-block">
+        <div class="hx-head hq-head">
+          <div class="hx-head-text">
+            <h3 class="hx-title">${g.title}</h3>
+            <p class="hx-sub">${list.length} rekening · ${share}% dari total</p>
           </div>
-          <div class="ed-acc-group-totals">
-            <strong class="ed-acc-group-amount">${mmFormatIDR(subtotal)}</strong>
-            <span class="ed-acc-group-share">${groupShare}% total</span>
-          </div>
+          <strong class="hq-head-amt">${mmFormatIDR(subtotal)}</strong>
         </div>
-        <div class="ed-acc-group-cards">
-          ${g.accounts.map(a => {
-            const bal = Number(a.balance ?? a.initialBalance) || 0;
-            const accShare = total > 0 ? Math.round((Math.max(bal, 0) / total) * 100) : 0;
-            const isNegative = bal < 0;
-            return `
-              <div class="ed-acc-card">
-                <div class="ed-acc-card-main" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
-                  <div class="ed-acc-card-icon">${a.icon ? mmAccountIconSvg(a.icon, 20) : lucideIconSvg('wallet', 20)}</div>
-                  <div class="ed-acc-card-info">
-                    <div class="ed-acc-card-name">
-                      <strong>${escapeHtml(a.name)}</strong>
-                      ${!a.showOnDashboard ? '<span class="ed-chip-muted">Hidden</span>' : ''}
-                    </div>
-                    <div class="ed-acc-card-meta">${escapeHtml(a.type || 'Akun')} · ${accShare}% alokasi</div>
-                  </div>
-                </div>
-                <div class="ed-acc-card-side">
-                  <div class="ed-acc-card-balance ${isNegative ? 'expense-color' : ''}" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
-                    ${mmFormatIDR(bal)}
-                  </div>
-                  <div class="ed-acc-card-actions">
-                    <button type="button" class="ed-btn-sm" title="Lihat mutasi transaksi" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
-                      ${lucideIconSvg('receipt', 13)} Riwayat
-                    </button>
-                    <button type="button" class="ed-btn-sm" title="Edit rekening" onclick="mmShowEditAccount('${jsStr(a.id)}', '${jsStr(a.name)}', '${jsStr(a.icon)}', ${a.initialBalance}, ${a.showOnDashboard})">
-                      ${lucideIconSvg('pencil', 13)} Edit
-                    </button>
-                  </div>
-                </div>
-              </div>`;
-          }).join('')}
-        </div>
-      </div>`;
-  });
-
-  container.innerHTML = html;
+        <div class="hq-list">${rows}</div>
+      </section>`;
+  }).join('');
   if (window.lucide) lucide.createIcons();
 }
 
@@ -968,7 +938,7 @@ function mmRenderSparkline(data) {
     // End marker: a zero-length round-capped stroke stays a true circle even
     // though the SVG stretches (preserveAspectRatio="none"); a <circle> would
     // squash into an ellipse on wide screens.
-    `<path class="lx-trend-dot-ring" d="M${last[0].toFixed(1)} ${last[1].toFixed(1)}h0.01" stroke="#0F1D21" stroke-width="14" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` +
+    `<path class="lx-trend-dot-ring" d="M${last[0].toFixed(1)} ${last[1].toFixed(1)}h0.01" stroke="#090F12" stroke-width="12" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` +
     `<path class="lx-trend-dot-core" d="M${last[0].toFixed(1)} ${last[1].toFixed(1)}h0.01" stroke="#00B88A" stroke-width="8" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
 
   // Remove any obsolete absolute dot that might have floated outside the chart
@@ -1008,30 +978,35 @@ const MM_ACC_TYPE_COLORS = {
 function mmRenderAccountCards(accounts) {
   const box = document.getElementById('mmAccountsScroll');
   if (!box) return;
-  const manage = `<button type="button" class="hx-acct is-ghost" onclick="mmShowPage('mmSettingsPage')"><span class="hx-acct-ic">${lucideIconSvg('sliders-horizontal', 18)}</span><span class="hx-acct-name">Kelola rekening</span></button>`;
+  const sub = document.getElementById('mmAcctSub');
 
   const visible = (accounts || []).filter(a => a.showOnDashboard).sort((a, b) => (b.balance || 0) - (a.balance || 0));
   if (!visible.length) {
-    box.innerHTML = `<button type="button" class="hx-acct is-ghost" onclick="mmShowPage('mmSettingsPage')"><span class="hx-acct-ic">${lucideIconSvg('plus', 18)}</span><span class="hx-acct-name">Tambah rekening</span></button>`;
+    if (sub) sub.textContent = '';
+    box.innerHTML = `<button type="button" class="hq-row hq-row-ghost" onclick="mmShowAddAccount()"><span class="hq-row-ic">${lucideIconSvg('plus', 16)}</span><span class="hq-row-main"><span class="hq-row-name">Tambah rekening</span></span></button>`;
     return;
   }
-  // Empty accounts stay off the strip; Settings still lists them.
+  // Empty accounts stay off Home; the Accounts page still lists them.
   const shown = visible.filter(a => a.balance || 0);
   const total = visible.reduce((s, a) => s + Math.max(a.balance || 0, 0), 0);
-  box.innerHTML = shown.map(a => {
+  const MAX = 4;
+  if (sub) sub.textContent = `${shown.length} rekening aktif`;
+  box.innerHTML = shown.slice(0, MAX).map(a => {
     const color = MM_ACC_TYPE_COLORS[a.type] || MM_ACC_TYPE_COLORS['Other'];
     const bal = a.balance || 0;
     const share = total > 0 ? Math.round(Math.max(bal, 0) / total * 100) : 0;
     return `
-      <button type="button" class="hx-acct" style="--c:${color}" aria-label="${escapeHtml(a.name)}, saldo ${escapeHtml(mmFormatIDR(bal))}, ${share}% dari total" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
-        <span class="hx-acct-top">
-          <span class="hx-acct-ic">${a.icon ? mmAccountIconSvg(a.icon, 18) : lucideIconSvg('wallet', 18)}</span>
-          <span class="hx-acct-share">${share}%</span>
+      <button type="button" class="hq-row" style="--c:${color}" aria-label="${escapeHtml(a.name)}, saldo ${escapeHtml(mmFormatIDR(bal))}, ${share}% dari total" onclick="mmShowAccountTransactions('${jsStr(a.name)}')">
+        <span class="hq-row-ic">${a.icon ? mmAccountIconSvg(a.icon, 16) : lucideIconSvg('wallet', 16)}</span>
+        <span class="hq-row-main">
+          <span class="hq-row-name">${escapeHtml(a.name)}</span>
+          <span class="hq-row-meta">${a.type ? escapeHtml(a.type) + ' · ' : ''}${share}% dari total</span>
         </span>
-        <span class="hx-acct-name">${escapeHtml(a.name)}</span>
-        <strong class="hx-acct-bal ${bal < 0 ? 'expense-color' : ''}">${mmFormatIDRShort(bal)}</strong>
+        <strong class="hq-row-amt ${bal < 0 ? 'expense-color' : ''}">${mmFormatIDR(bal)}</strong>
       </button>`;
-  }).join('') + manage;
+  }).join('') + (shown.length > MAX
+    ? `<button type="button" class="hx-more" onclick="mmShowPage('mmAccountsPage')">${shown.length - MAX} rekening lainnya ${lucideIconSvg('chevron-right', 16)}</button>`
+    : '');
 }
 
 /* === BUDGET ===
@@ -1118,7 +1093,7 @@ function mmBudgetRowHtml(c, detailed) {
 }
 
 // Home budget row: icon, name, used %, thin bar, "spent / target" and what is left.
-function mmBudgetTileHtml(c) {
+function mmBudgetTileHtml(c, detailed) {
   const b = mmBudgetState(c);
   const color = mmCategoryColor(c.category);
   const note = b.state === 'goal' ? 'Target tercapai' : b.note;
@@ -1128,7 +1103,7 @@ function mmBudgetTileHtml(c) {
       <span class="hx-bgt-ic" style="--c:${color}">${mmCategoryEmoji(c.category)}</span>
       <span class="hx-bgt-body">
         <span class="hx-bgt-top">
-          <span class="hx-bgt-name">${escapeHtml(c.category)}</span>
+          <span class="hx-bgt-name">${escapeHtml(c.category)}${detailed && c.percent ? ` <small class="hx-of">${c.percent}% dana</small>` : ''}</span>
           <span class="hx-bgt-pct">${b.pct}%</span>
         </span>
         <span class="hx-bar" role="progressbar" aria-label="${escapeHtml(c.category)} terpakai" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="--w:${pct}%"></span></span>
@@ -1158,46 +1133,58 @@ function mmRenderBudgetCard(allocationCards, totalIncome, carryover) {
 
   const t = mmBudgetTotals(cards);
   if (summary) summary.textContent = `${t.left < 0 ? 'Lewat ' : 'Sisa '}${mmFormatIDRShort(Math.abs(t.left))} dari ${mmFormatIDRShort(t.totalTarget)} · ${t.pct}% terpakai`;
-  list.innerHTML = cards.map(mmBudgetTileHtml).join('');
+  list.innerHTML = cards.map(c => mmBudgetTileHtml(c)).join('');
 }
 
-/* Budget tab: the same posts in full, plus what each is allowed to grow to. */
+/* Budget tab: what is left as plain type, then every post as a hairline
+   row - the same rows as Home, with each post's share of the money. */
 function mmRenderBudgetPage() {
   const box = document.getElementById('mmBudgetPageContent');
   if (!box) return;
   const ctx = mmMonthContext();
-  setText('mmBudgetPageSub', `${ctx.monthName.charAt(0).toUpperCase() + ctx.monthName.slice(1)} ${ctx.now.getFullYear()} · ${ctx.daysLeft - 1} hari lagi`);
+  const monthTitle = ctx.monthName.charAt(0).toUpperCase() + ctx.monthName.slice(1);
+  setText('mmBudgetPageSub', `${monthTitle} ${ctx.now.getFullYear()} · ${ctx.daysLeft - 1} hari lagi`);
 
   const cards = (MM_ALLOC_CARDS && MM_ALLOC_CARDS.length) ? MM_ALLOC_CARDS
     : ((MM_DASHBOARD && MM_DASHBOARD.allocationCards) || []);
   const active = cards.filter(c => (c.target || 0) > 0 || (c.spent || 0) > 0);
   if (!active.length) {
-    box.innerHTML = `<div class="mm-dash-card">${mmEmpty('circle-dollar', 'Budget belum terbentuk',
+    box.innerHTML = mmEmpty('circle-dollar', 'Budget belum terbentuk',
       'Budget dibentuk dari sisa saldo bulan lalu ditambah pemasukan, lalu dibagi sesuai persentase di Settings.',
-      `<button class="mm-empty-action" onclick="mmShowActionSheet('income')">Catat pemasukan</button>`)}</div>`;
+      `<button class="mm-empty-action" onclick="mmShowActionSheet('income')">Catat pemasukan</button>`);
     return;
   }
 
   const t = mmBudgetTotals(active);
   const spend = active.filter(c => !MM_NON_SPEND_RE.test(c.category || ''));
   const counts = { ok: 0, warn: 0, over: 0 };
-  spend.forEach(c => { const s = mmBudgetState(c).state; if (counts[s] !== undefined) counts[s]++; });
+  spend.forEach(c => { const st = mmBudgetState(c).state; if (counts[st] !== undefined) counts[st]++; });
+  const b = MM_BUDGET_BASIS;
+  const pct = Math.min(t.pct, 100);
 
   box.innerHTML = `
-    <div class="mm-dash-card lx-budget-hero">
-      ${mmBudgetSummaryHtml(t)}
-      <div class="lx-budget-legend">
+    <section class="hq-hero hq-budget-hero is-${t.state}" aria-label="Ringkasan budget">
+      <p class="hq-label">${t.left < 0 ? 'Lewat budget' : 'Sisa budget'}</p>
+      <h2 class="hq-amount ${t.left < 0 ? 'expense-color' : ''}">${t.left < 0 ? '−' : ''}${mmFormatIDR(Math.abs(t.left))}</h2>
+      <p class="hq-change"><span class="hq-change-note"><strong>${t.pct}%</strong> terpakai · ${mmFormatIDRShort(t.totalSpent)} dari ${mmFormatIDRShort(t.totalTarget)}</span></p>
+      <span class="hx-bar hq-bigbar" role="progressbar" aria-label="Budget terpakai" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><span style="--w:${pct}%"></span></span>
+      <p class="hq-legend">
         <span class="is-ok"><span class="lx-state-dot"></span>${counts.ok} aman</span>
         <span class="is-warn"><span class="lx-state-dot"></span>${counts.warn} hampir habis</span>
-        <span class="is-over"><span class="lx-state-dot"></span>${counts.over} lewat budget</span>
+        <span class="is-over"><span class="lx-state-dot"></span>${counts.over} lewat</span>
+      </p>
+    </section>
+    <section class="hq-list-block">
+      <div class="hx-head hq-head">
+        <div class="hx-head-text">
+          <h3 class="hx-title">Per pos</h3>
+          <p class="hx-sub">Ketuk untuk melihat transaksinya</p>
+        </div>
       </div>
-      ${mmBudgetBasisHtml()}
-    </div>
-    <div class="mm-section-header lx-sub-head"><div><h3>Per pos</h3><p class="mm-section-sub">Ketuk untuk melihat transaksinya</p></div></div>
-    <div class="mm-dash-card mm-budget-list">
-      <div class="lx-budget-rows">${active.map(c => mmBudgetRowHtml(c, true)).join('')}</div>
-    </div>
-    <button type="button" class="btn-ghost btn-full lx-page-action" onclick="mmOpenBudgetSettings()">${lucideIconSvg('sliders-horizontal', 16)} Atur pembagian budget</button>`;
+      <div class="hq-list hx-budget">${active.map(c => mmBudgetTileHtml(c, true)).join('')}</div>
+      <p class="hq-note">Dana bulan ini = sisa bulan lalu <strong>${mmFormatIDRShort(b.carryover)}</strong> + pemasukan <strong>${mmFormatIDRShort(b.income)}</strong>.
+        <button type="button" class="hq-inline-link" onclick="mmOpenBudgetSettings()">Atur pembagian</button></p>
+    </section>`;
 }
 
 function mmOpenBudgetSettings() {
@@ -1812,15 +1799,29 @@ function mmSelectMonthFromAllTime(monthStr) {
   }
 }
 
-/* Kalender mulai Senin (kebiasaan di Indonesia). Sel hari memakai titik
-   hijau/merah untuk ada-tidaknya pemasukan/pengeluaran; nominalnya ada di
-   daftar saat tanggalnya diketuk. */
+/* Kalender mulai Senin (kebiasaan di Indonesia), selalu tampil. Di bawah
+   tiap tanggal: nett hari itu = pemasukan − pengeluaran (transfer hanya
+   memindah uang, jadi tidak dihitung). Tanda +/− dan warna dipakai
+   bersamaan supaya tidak bergantung pada warna saja. Ketuk tanggal untuk
+   memfilter daftar di bawah. */
+function mmCalNet(v) {
+  if (typeof AMOUNTS_HIDDEN !== 'undefined' && AMOUNTS_HIDDEN) return '••';
+  const abs = Math.abs(v);
+  const dec = (x) => x.toFixed(1).replace(/\.0$/, '').replace('.', ',');
+  let t;
+  if (abs >= 1e9) t = dec(abs / 1e9) + 'M';
+  else if (abs >= 1e6) t = (abs >= 1e7 ? Math.round(abs / 1e6) : dec(abs / 1e6)) + 'jt';
+  else if (abs >= 1e3) t = Math.round(abs / 1e3) + 'rb';
+  else t = String(Math.round(abs));
+  return (v > 0 ? '+' : '−') + t;
+}
+
 function mmRenderMonthCalendar(data) {
   const grid = document.getElementById('mmHistoryCalendarGrid');
   if (!grid) return;
 
   const dayNames = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-  let html = dayNames.map(d => `<div class="mm-cal-header">${d}</div>`).join('');
+  let html = dayNames.map((d, i) => `<div class="mm-cal-header${i > 4 ? ' is-weekend' : ''}" aria-hidden="true">${d}</div>`).join('');
 
   const lead = (new Date(data.year, data.month - 1, 1).getDay() + 6) % 7;
   const now = new Date();
@@ -1832,11 +1833,19 @@ function mmRenderMonthCalendar(data) {
   for (let d = 1; d <= data.endDay; d++) {
     const dd = data.days[d] || { income: 0, expense: 0, transactions: [] };
     const isToday = isCurrentMonth && now.getDate() === d;
+    const isFuture = (isCurrentMonth && d > now.getDate())
+      || data.year > now.getFullYear() || (data.year === now.getFullYear() && data.month > now.getMonth() + 1);
     const n = (dd.transactions || []).length;
-    const dots = (dd.income > 0 ? '<i class="ah-dot is-in"></i>' : '') + (dd.expense > 0 ? '<i class="ah-dot is-out"></i>' : '');
-    const label = `${d} ${monthName}${n ? ', ' + n + ' transaksi' : ', tidak ada transaksi'}`;
-    html += `<button type="button" class="mm-cal-day${isToday ? ' today' : ''}${MM_HIST_DAY === d ? ' selected' : ''}" data-day="${d}" aria-pressed="${MM_HIST_DAY === d}" aria-label="${label}" onclick="mmHistShowDay(${d})">
-      <span class="mm-cal-num">${d}</span><span class="ah-dots">${dots}</span>
+    const net = (dd.income || 0) - (dd.expense || 0);
+    const tone = net > 0 ? 'is-in' : net < 0 ? 'is-out' : 'is-zero';
+    const netHtml = net !== 0
+      ? `<span class="ah-net ${tone}">${mmCalNet(net)}</span>`
+      : `<span class="ah-net is-zero">${n ? '0' : (isFuture ? '' : '·')}</span>`;
+    const label = `${d} ${monthName}` + (n
+      ? `, ${n} transaksi, nett ${net > 0 ? 'plus' : net < 0 ? 'minus' : ''} ${mmFormatIDR(Math.abs(net))}`
+      : ', tidak ada transaksi');
+    html += `<button type="button" class="mm-cal-day ${tone}${isToday ? ' today' : ''}${isFuture ? ' is-future' : ''}${MM_HIST_DAY === d ? ' selected' : ''}" data-day="${d}" aria-pressed="${MM_HIST_DAY === d}" aria-label="${escapeHtml(label)}" onclick="mmHistShowDay(${d})">
+      <span class="mm-cal-num">${d}</span>${netHtml}
     </button>`;
   }
 
@@ -1865,14 +1874,15 @@ function mmHistShowDay(day) {
   mmHistRenderList();
 
   if (MM_HIST_DAY) {
-    // Kalender ada di atas daftar: tutup dan bawa daftar ke layar, kalau tidak
-    // hasil ketukan tidak terlihat.
-    const fold = document.getElementById('mmHistCalFold');
-    if (fold) fold.open = false;
+    // Kalender tetap terbuka. Bawa daftar ke layar hanya kalau judulnya
+    // belum terlihat, supaya hasil ketukan tidak tersembunyi.
     const target = document.getElementById('mmHistListSection');
     if (target) {
-      const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      target.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+      const r = target.getBoundingClientRect();
+      if (r.top > window.innerHeight - 120) {
+        const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        target.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+      }
     }
   }
 }

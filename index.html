@@ -502,20 +502,20 @@
     <div id="moneyWorkspace" class="workspace active">
       <main class="main-content">
 
-        <!-- ===== MM HOME (redesign v3 — "Pocket Ledger") =====
-             Mobile-first, one question per block:
-             1. Top bar        — siapa & kapan
-             2. Hero           — berapa total uangku (+ tren 6 bulan)
-             3. Actions        — catat sesuatu (3 aksi, 56px)
-             4. Today          — berapa yang boleh kupakai hari ini (+ peringatan)
-             5. Month          — bulan ini: masuk / keluar / sisa + belanja harian
-             6. Accounts       — uangku ada di mana
-             7. Budget         — pos mana yang aman / hampir habis
-             8. Activity       — apa yang baru terjadi
-             Desktop (>=1024): dua kolom — kiri: 2-5, kanan: 6-8.
+        <!-- ===== MM HOME (v4 — "Quiet Ledger") =====
+             Satu kartu saja; sisanya tipografi dan garis tipis.
+             1. Top bar      — sapaan & tanggal
+             2. Saldo        — angka besar + tren 6 bulan, tanpa kartu
+             3. Aksi         — satu bilah segmen: Keluar / Masuk / Transfer
+             4. Bulan ini    — SATU kartu: jatah hari ini, laju belanja,
+                               masuk / keluar / sisa, belanja harian, peringatan
+             5. Rekening     — daftar polos
+             6. Anggaran     — daftar polos
+             7. Aktivitas    — daftar polos
+             Desktop (>=1024): dua kolom — kiri: 2-4, kanan: 5-7.
              Semua id data (mm*) dipertahankan; render ada di Script_Keuangan.html. -->
         <div id="mmDashboardPage" class="page active-page">
-          <div class="hx">
+          <div class="hx hq">
 
             <!-- 1. TOP BAR -->
             <header class="hx-top">
@@ -529,57 +529,46 @@
             <div class="hx-cols">
               <div class="hx-col hx-col-main">
 
-                <!-- 2. HERO: total saldo + tren -->
-                <section class="hx-hero" id="mmNetworthCard" aria-labelledby="hxHeroLabel">
-                  <span class="hx-hero-glow" aria-hidden="true"></span>
-                  <p class="hx-label" id="hxHeroLabel">Total saldo bersih</p>
-                  <h2 class="hx-amount" id="mmNetWorthValue">Rp 0</h2>
-                  <p class="hx-change">
+                <!-- 2. SALDO -->
+                <section class="hq-hero" id="mmNetworthCard" aria-labelledby="hxHeroLabel">
+                  <p class="hq-label" id="hxHeroLabel">Total saldo bersih</p>
+                  <h2 class="hq-amount" id="mmNetWorthValue">Rp 0</h2>
+                  <p class="hq-change">
                     <span class="mm-change-badge up" id="mmChangeBadge">+0%</span>
-                    <span class="hx-change-note" id="mmChangeText">vs akhir bulan lalu</span>
+                    <span class="hq-change-note" id="mmChangeText">vs akhir bulan lalu</span>
                   </p>
-                  <button type="button" class="hx-trend" id="mmTrendWrap" onclick="mmShowPage('mmInsightPage')" aria-label="Tren saldo 6 bulan terakhir, buka analitik">
+                  <button type="button" class="hq-trend" id="mmTrendWrap" onclick="mmShowPage('mmInsightPage')" aria-label="Tren saldo 6 bulan terakhir, buka analitik">
                     <svg id="mmNetworthSparkline" viewBox="0 0 320 72" preserveAspectRatio="none" aria-hidden="true"></svg>
                     <span class="hx-trend-labels" id="mmTrendLabels" aria-hidden="true"></span>
                   </button>
                 </section>
 
-                <!-- 3. ACTIONS -->
-                <nav class="hx-actions" aria-label="Catat transaksi cepat">
-                  <button type="button" class="hx-act is-out" onclick="mmShowActionSheet('expense')">
-                    <span class="hx-act-ic"><i data-lucide="arrow-up-right"></i></span>
-                    <span class="hx-act-tx">Keluar</span>
+                <!-- 3. AKSI -->
+                <nav class="hq-actions" aria-label="Catat transaksi cepat">
+                  <button type="button" class="hq-act is-out" onclick="mmShowActionSheet('expense')">
+                    <i data-lucide="arrow-up-right"></i><span>Keluar</span>
                   </button>
-                  <button type="button" class="hx-act is-in" onclick="mmShowActionSheet('income')">
-                    <span class="hx-act-ic"><i data-lucide="arrow-down-left"></i></span>
-                    <span class="hx-act-tx">Masuk</span>
+                  <button type="button" class="hq-act is-in" onclick="mmShowActionSheet('income')">
+                    <i data-lucide="arrow-down-left"></i><span>Masuk</span>
                   </button>
-                  <button type="button" class="hx-act is-tf" onclick="mmShowActionSheet('transfer')">
-                    <span class="hx-act-ic"><i data-lucide="arrow-right-left"></i></span>
-                    <span class="hx-act-tx">Transfer</span>
+                  <button type="button" class="hq-act is-tf" onclick="mmShowActionSheet('transfer')">
+                    <i data-lucide="arrow-right-left"></i><span>Transfer</span>
                   </button>
                 </nav>
 
-                <!-- 4. TODAY: jatah harian + peringatan -->
-                <section class="hx-block hx-today-block" aria-label="Jatah hari ini">
-                  <div class="hx-card hx-today" id="mmTodayCard"></div>
-                  <div class="hx-alerts mm-alerts" id="mmAlerts"></div>
-                </section>
-
-                <!-- 5. MONTH -->
-                <section class="hx-block" id="mmMonthSection" aria-labelledby="mmCashflowTitle">
-                  <div class="hx-head">
+                <!-- 4. BULAN INI — satu-satunya kartu -->
+                <section class="hx-card hq-month" id="mmMonthSection" aria-labelledby="mmCashflowTitle">
+                  <div class="hq-month-head">
                     <div class="hx-head-text">
                       <h3 class="hx-title" id="mmCashflowTitle">Bulan Ini</h3>
                       <p class="hx-sub" id="mmCashflowSub"></p>
                     </div>
-                    <button type="button" class="hx-link" onclick="mmShowPage('mmInsightPage')">Detail <i data-lucide="chevron-right"></i></button>
+                    <button type="button" class="hx-link" onclick="mmShowPage('mmInsightPage')">Analitik <i data-lucide="chevron-right"></i></button>
                   </div>
 
-                  <div class="hx-card hx-month">
-                    <div class="hx-flowbar" id="mmFlowBar" role="img" aria-label="Perbandingan pengeluaran terhadap pemasukan">
-                      <span class="hx-flowbar-fill" id="mmFlowFill"></span>
-                    </div>
+                  <div class="hx-today hq-today" id="mmTodayCard"></div>
+
+                  <div class="hq-sec">
                     <dl class="hx-flow">
                       <div class="hx-flow-item is-in">
                         <dt><span class="hx-dot"></span>Masuk</dt>
@@ -597,56 +586,62 @@
                         <dd class="hx-flow-delta"><span class="mm-rate-chip" id="mmSavingRate"></span></dd>
                       </div>
                     </dl>
-
-                    <div class="hx-daily">
-                      <div class="hx-daily-head">
-                        <span>Belanja harian</span>
-                        <span id="mmDailySub"></span>
-                      </div>
-                      <div class="mm-daily-chart" id="mmDailyChart"></div>
-                      <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
+                    <div class="hx-flowbar" id="mmFlowBar" role="img" aria-label="Perbandingan pengeluaran terhadap pemasukan">
+                      <span class="hx-flowbar-fill" id="mmFlowFill"></span>
                     </div>
-                    <div id="mmBreakdown" style="display:none;"></div>
                   </div>
+
+                  <div class="hq-sec hx-daily">
+                    <div class="hx-daily-head">
+                      <span>Belanja harian</span>
+                      <span id="mmDailySub"></span>
+                    </div>
+                    <div class="mm-daily-chart" id="mmDailyChart"></div>
+                    <p class="mm-daily-foot" id="mmDailyFoot" aria-live="polite"></p>
+                  </div>
+
+                  <div class="hq-alerts mm-alerts" id="mmAlerts"></div>
+                  <div id="mmBreakdown" style="display:none;"></div>
                 </section>
 
               </div>
 
               <div class="hx-col hx-col-side">
 
-                <!-- 6. ACCOUNTS -->
-                <section class="hx-block" aria-labelledby="hxAcctTitle">
-                  <div class="hx-head">
+                <!-- 5. REKENING -->
+                <section class="hq-list-block" aria-labelledby="hxAcctTitle">
+                  <div class="hx-head hq-head">
                     <div class="hx-head-text">
                       <h3 class="hx-title" id="hxAcctTitle">Rekening</h3>
+                      <p class="hx-sub" id="mmAcctSub"></p>
                     </div>
                     <button type="button" class="hx-link" onclick="mmShowPage('mmAccountsPage')">Semua <i data-lucide="chevron-right"></i></button>
                   </div>
-                  <div class="hx-accts" id="mmAccountsScroll" aria-label="Daftar rekening"></div>
+                  <div class="hq-list" id="mmAccountsScroll" aria-label="Daftar rekening"></div>
                 </section>
 
-                <!-- 7. BUDGET -->
-                <section class="hx-block" id="mmBudgetSection" aria-labelledby="hxBudgetTitle">
-                  <div class="hx-head">
+                <!-- 6. ANGGARAN -->
+                <section class="hq-list-block" id="mmBudgetSection" aria-labelledby="hxBudgetTitle">
+                  <div class="hx-head hq-head">
                     <div class="hx-head-text">
                       <h3 class="hx-title" id="hxBudgetTitle">Anggaran</h3>
                       <p class="hx-sub" id="mmBudgetSummary"></p>
                     </div>
                     <button type="button" class="hx-link" onclick="mmShowPage('mmBudgetPage')">Detail <i data-lucide="chevron-right"></i></button>
                   </div>
-                  <div class="hx-card hx-budget" id="mmBudgetList"></div>
+                  <div class="hq-list hx-budget" id="mmBudgetList"></div>
                 </section>
 
-                <!-- 8. ACTIVITY -->
-                <section class="hx-block" id="mmTransactionsSection" aria-labelledby="hxActTitle">
-                  <div class="hx-head">
+                <!-- 7. AKTIVITAS -->
+                <section class="hq-list-block" id="mmTransactionsSection" aria-labelledby="hxActTitle">
+                  <div class="hx-head hq-head">
                     <div class="hx-head-text">
-                      <h3 class="hx-title" id="hxActTitle">Aktivitas Terbaru</h3>
+                      <h3 class="hx-title" id="hxActTitle">Aktivitas terbaru</h3>
                       <p class="hx-sub" id="mmTxMonthCount"></p>
                     </div>
                     <button type="button" class="hx-link" onclick="mmShowPage('mmHistoryPage')">Semua <i data-lucide="chevron-right"></i></button>
                   </div>
-                  <div class="hx-card hx-activity" id="mmDashboardTransactions"></div>
+                  <div class="hq-list hx-activity" id="mmDashboardTransactions"></div>
                 </section>
 
               </div>
@@ -654,70 +649,58 @@
           </div>
         </div>
 
-        <!-- ===== MM BUDGET PAGE ===== -->
+        <!-- ===== MM BUDGET PAGE (v4 — sama dengan Home: tanpa kartu) ===== -->
         <div id="mmBudgetPage" class="page">
-          <section class="ed-page-wrap">
-            <header class="ed-page-header">
-              <div>
-                <span class="ed-eyebrow">BUDGET ALLOCATION</span>
-                <h2 class="ed-page-title">Anggaran &amp; Pembagian Dana</h2>
-                <p class="ed-page-sub" id="mmBudgetPageSub">Pantau batas belanja agar keuangan tetap terkendali.</p>
+          <div class="hx hq">
+            <header class="ah-top">
+              <div class="ah-top-text">
+                <h1 class="ah-title">Anggaran</h1>
+                <p class="ah-sub" id="mmBudgetPageSub">Batas belanja bulan ini</p>
               </div>
-              <div class="ed-header-right">
-                <button class="btn-primary" onclick="mmOpenBudgetSettings()">
-                  <i data-lucide="sliders-horizontal"></i>
-                  <span>Atur Split Budget</span>
-                </button>
-              </div>
+              <button type="button" class="ah-icon-btn is-bordered" onclick="mmOpenBudgetSettings()" aria-label="Atur pembagian budget">
+                <i data-lucide="sliders-horizontal"></i>
+              </button>
             </header>
-            <div id="mmBudgetPageContent">
-              <div class="mm-dash-card">
-                <div class="sk-list"><div class="sk sk-line lg" style="width:60%"></div><div class="sk sk-line" style="width:40%"></div></div>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <!-- ===== MM DEDICATED ACCOUNTS PAGE ===== -->
-        <div id="mmAccountsPage" class="page">
-          <section class="ed-page-wrap">
-            <header class="ed-page-header">
-              <div>
-                <span class="ed-eyebrow">ACCOUNTS &amp; LIQUIDITY</span>
-                <h2 class="ed-page-title">Rekening &amp; Sumber Dana</h2>
-                <p class="ed-page-sub">Kelola rekening bank, e-wallet, uang kas tunai, dan dompet digital.</p>
-              </div>
-              <div class="ed-header-right">
-                <button type="button" class="btn-primary" onclick="mmShowAddAccount()">
-                  <i data-lucide="plus"></i>
-                  <span>Tambah Rekening</span>
-                </button>
-              </div>
-            </header>
-
-            <div class="ed-accounts-hero">
-              <div class="ed-acc-hero-stat">
-                <span class="ed-acc-hero-label">TOTAL SALDO LIKUID SELURUH SUMBER DANA</span>
-                <h3 class="ed-acc-hero-value" id="mmAccountsTotalBalance">Rp 0</h3>
-                <span class="ed-acc-hero-meta" id="mmAccountsCountMeta">Memuat data rekening...</span>
-              </div>
-            </div>
-
-            <div id="mmAccountsFullList" class="ed-accounts-structured-list">
+            <div id="mmBudgetPageContent" class="hq-body">
               <div class="sk-list"><div class="sk sk-line lg" style="width:60%"></div><div class="sk sk-line" style="width:40%"></div></div>
             </div>
-          </section>
+          </div>
+        </div>
+
+        <!-- ===== MM ACCOUNTS PAGE (v4) ===== -->
+        <div id="mmAccountsPage" class="page">
+          <div class="hx hq">
+            <header class="ah-top">
+              <div class="ah-top-text">
+                <h1 class="ah-title">Rekening</h1>
+                <p class="ah-sub">Bank, e-wallet &amp; tunai</p>
+              </div>
+              <button type="button" class="ah-icon-btn is-bordered" onclick="mmShowAddAccount()" aria-label="Tambah rekening">
+                <i data-lucide="plus"></i>
+              </button>
+            </header>
+
+            <section class="hq-hero" aria-labelledby="mmAccTotalLabel">
+              <p class="hq-label" id="mmAccTotalLabel">Total saldo</p>
+              <h2 class="hq-amount" id="mmAccountsTotalBalance">Rp 0</h2>
+              <p class="hq-change"><span class="hq-change-note" id="mmAccountsCountMeta">Memuat data rekening…</span></p>
+            </section>
+
+            <div id="mmAccountsFullList" class="hq-body">
+              <div class="sk-list"><div class="sk sk-line lg" style="width:60%"></div><div class="sk sk-line" style="width:40%"></div></div>
+            </div>
+          </div>
         </div>
 
         <!-- ===== MM HISTORY / ACTIVITY PAGE (redesign — compact) =====
              Satu pertanyaan per blok, urutan dari yang paling sering dipakai:
              1. Top bar      — judul + unduh CSV
              2. Segmented    — per bulan / semua waktu / rentang tanggal
-             3. Ringkasan    — navigasi bulan + masuk / keluar / sisa
+             3. Ringkasan    — navigasi bulan + masuk / keluar / sisa +
+                               kalender (selalu tampil, nett per tanggal)
              4. Filter       — cari, jenis, akun
              5. Rekap        — per kategori (dilipat)
-             6. Kalender     — aktivitas harian (dilipat)
-             7. Daftar       — transaksi, dikelompokkan per hari
+             6. Daftar       — transaksi, dikelompokkan per hari
              Tombol "Catat" sudah ada di bottom nav, jadi tidak diulang di sini.
              Semua id data (mmHist*, mmHistory*) dipertahankan; render ada di
              Script_Keuangan.html. -->
@@ -750,9 +733,6 @@
                   <button type="button" class="ah-icon-btn" aria-label="Bulan berikutnya" onclick="mmNextMonth()"><i data-lucide="chevron-right"></i></button>
                   <button type="button" class="ah-insight" onclick="mmHistOpenInsight()"><i data-lucide="sparkles"></i>Insight</button>
                 </div>
-                <div class="hx-flowbar ah-flowbar" id="mmHistFlowBar" role="img" aria-label="Perbandingan pengeluaran terhadap pemasukan">
-                  <span class="hx-flowbar-fill" id="mmHistFlowFill"></span>
-                </div>
                 <dl class="hx-flow ah-flow">
                   <div class="hx-flow-item is-in">
                     <dt><span class="hx-dot"></span>Masuk</dt>
@@ -767,6 +747,19 @@
                     <dd id="mmHistSaving">Rp 0</dd>
                   </div>
                 </dl>
+                <div class="hx-flowbar ah-flowbar" id="mmHistFlowBar" role="img" aria-label="Perbandingan pengeluaran terhadap pemasukan">
+                  <span class="hx-flowbar-fill" id="mmHistFlowFill"></span>
+                </div>
+
+                <!-- Kalender: selalu tampil. Di bawah tiap tanggal: nett hari itu
+                     (pemasukan − pengeluaran; transfer tidak dihitung). -->
+                <div class="ah-calwrap" id="mmHistCalFold">
+                  <div class="ah-cal-head">
+                    <span class="ah-cal-title">Nett harian</span>
+                    <span class="ah-cal-legend"><span class="is-in">+ surplus</span><span class="is-out">− defisit</span></span>
+                  </div>
+                  <div id="mmHistoryCalendarGrid" class="mm-calendar-grid ah-cal" role="group" aria-label="Kalender transaksi, ketuk tanggal untuk memfilter"></div>
+                </div>
               </section>
 
               <!-- Filters -->
@@ -792,19 +785,6 @@
               <!-- Category breakdown (rendered as a <details> card by JS) -->
               <div id="mmHistoryCategoryBreakdown" class="mm-hist-category-wrap"></div>
 
-              <!-- Calendar -->
-              <details class="hx-card ah-fold" id="mmHistCalFold">
-                <summary>
-                  <span class="ah-fold-row">
-                    <span class="ah-fold-title">Kalender harian</span>
-                    <span class="ah-fold-hint">Ketuk tanggal untuk memfilter</span>
-                    <i data-lucide="chevron-down" class="ah-fold-chev"></i>
-                  </span>
-                </summary>
-                <div class="ah-fold-body">
-                  <div id="mmHistoryCalendarGrid" class="mm-calendar-grid ah-cal"></div>
-                </div>
-              </details>
 
               <!-- Grouped Transaction List -->
               <section class="hx-block ah-list" id="mmHistListSection" aria-labelledby="mmHistoryListLabel">

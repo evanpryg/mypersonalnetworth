@@ -9835,5 +9835,211 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
   .ah *, .ah *::before, .ah *::after { transition: none !important; animation: none !important; }
 }
 
+/* ============================================================
+   HOME v4 - "QUIET LEDGER"  (ui-ux-pro-max: Minimalism & Swiss)
+   One card on Home (the month). Everything else is type on the
+   page background, separated by hairlines - fewer boxes, clearer
+   hierarchy. Reuses .hx-* rows; namespace .hq-*. Keep LAST.
+   ============================================================ */
+.hq { gap: 20px; }
+.hq .hx-cols, .hq .hx-col { gap: 24px; }
+
+/* --- Saldo: no card, just the number ---------------------------- */
+.hq-hero { position: relative; display: flex; flex-direction: column; }
+.hq-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+.hq-amount {
+  margin: 4px 0 8px;
+  font-size: clamp(32px, 10vw, 40px);
+  line-height: 1.02;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+.hq-change { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.hq-change-note { font-size: 13px; color: var(--text-secondary); }
+.hq .mm-change-badge { padding: 2px 8px 2px 6px; border-radius: 999px; font-size: 12px; }
+.hq-trend { display: block; width: 100%; margin-top: 14px; padding: 0; text-align: left; border-radius: 12px; }
+.hq-trend svg { display: block; width: 100%; height: 56px; overflow: visible; }
+.hq-trend .lx-trend-area { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 92%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 92%, transparent 100%); }
+.hq-trend .hx-trend-labels span { color: var(--text-muted); }
+.hq-trend:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+/* --- Actions: one segmented bar, not three cards ------------------- */
+.hq-actions {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+}
+.hq-act {
+  --c: var(--accent-rgb);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 0 8px;
+  font-size: 13px; font-weight: 600; color: var(--text);
+  transition: background var(--dur-fast);
+}
+.hq-act + .hq-act { border-left: 1px solid var(--border); }
+.hq-act svg { width: 18px; height: 18px; color: rgb(var(--c)); }
+.hq-act.is-out { --c: var(--expense-rgb); }
+.hq-act.is-in  { --c: var(--income-rgb); }
+.hq-act.is-tf  { --c: var(--info-rgb); }
+.hq-act:active { background: var(--surface-2); }
+.hq-act:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* --- The month: the only card ------------------------------------- */
+.hq-month { display: flex; flex-direction: column; overflow: hidden; }
+.hq-month-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px 4px; }
+.hq-today { border: 0; background: none; border-radius: 0; }
+.hq-today .hx-today-main { padding: 8px 16px 12px; min-height: 0; }
+.hq-today .hx-pace { padding: 12px 16px 14px; }
+.hq-sec { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-top: 1px solid var(--border); }
+.hq .hq-sec.hx-daily { gap: 0; padding-top: 12px; padding-bottom: 8px; }
+.hq-sec .hx-flow-item { padding: 0 10px; }
+.hq-sec .hx-flow-item:first-child { padding-left: 0; }
+.hq-alerts { display: flex; flex-direction: column; border-top: 1px solid var(--border); }
+.hq-alerts:empty { display: none; }
+.hq .hq-alerts .mm-alert {
+  min-height: 44px; padding: 10px 16px; border: 0; border-radius: 0; background: none;
+}
+.hq .hq-alerts .mm-alert + .mm-alert { border-top: 1px solid var(--border); }
+.hq .hq-alerts .mm-alert.is-bad  { background: rgba(var(--error-rgb), 0.06); }
+.hq .hq-alerts .mm-alert.is-warn { background: rgba(var(--warning-rgb), 0.05); }
+.hq .hq-alerts .mm-alert[role="button"] { cursor: pointer; }
+
+/* --- Plain lists: no card, hairline rows -------------------------- */
+.hq-list-block { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.hq-head { padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.hq-list { display: flex; flex-direction: column; }
+.hq-list > * + * { border-top: 1px solid var(--hairline); }
+.hq .hq-list .hx-day + .hx-day { border-top: 1px solid var(--border); }
+.hq .hq-list .hx-tx,
+.hq .hq-list .hx-bgt { padding-left: 0; padding-right: 0; border-radius: 0; }
+.hq .hq-list .hx-day-head { padding: 12px 0 2px; }
+.hq .hq-list .hx-bgt + .hx-bgt { border-top: 1px solid var(--hairline); }
+.hq .hq-list .hx-more { border-top: 1px solid var(--hairline); justify-content: flex-start; padding: 0; }
+.hq .hq-list .mm-empty { padding: 20px 0; }
+
+.hq-row {
+  --c: var(--text-secondary);
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; min-height: 56px; padding: 8px 0; text-align: left;
+  transition: background var(--dur-fast);
+}
+.hq-row:active { background: var(--surface); }
+.hq-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+.hq-row-ic {
+  width: 32px; height: 32px; flex: none; border-radius: 10px; display: grid; place-items: center;
+  color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent);
+}
+.hq-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.hq-row-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hq-row-meta { font-size: 12px; color: var(--text-muted); }
+.hq-row-amt { flex: none; font-size: 14px; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; }
+.hq-row-ghost { color: var(--text-secondary); }
+.hq-row-ghost .hq-row-ic { background: rgba(255, 255, 255, 0.06); color: var(--text-secondary); }
+
+/* Motion: one calm entrance per column. */
+.hq .hx-col > * { animation: hxIn 0.4s var(--ease-out) backwards; }
+
+@media (min-width: 720px) {
+  .hq-act:hover { background: var(--surface); }
+  .hq .hq-list .hx-tx:hover, .hq .hq-list .hx-bgt:hover { background: transparent; }
+  .hq .hq-list .hx-tx:hover .hx-tx-name, .hq .hq-list .hx-bgt:hover .hx-bgt-name, .hq-row:hover .hq-row-name { color: var(--accent); }
+}
+@media (min-width: 1024px) {
+  .hq { gap: 24px; }
+  .hq .hx-cols { gap: 40px; }
+  .hq-amount { font-size: 44px; }
+  .hq-trend svg { height: 72px; }
+}
+
+/* ============================================================
+   ACTIVITY - calendar always visible, daily net under each date
+   ============================================================ */
+.ah-sum .ah-flow { margin-top: 12px; }
+.ah-sum .ah-flowbar { margin: 12px 14px 0; }
+.ah-calwrap { margin-top: 14px; padding: 12px 8px 8px; border-top: 1px solid var(--border); }
+.ah-cal-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 6px 6px; }
+.ah-cal-title { font-size: 13px; font-weight: 600; }
+.ah-cal-legend { display: flex; gap: 10px; font-size: 12px; color: var(--text-muted); }
+.ah-cal-legend .is-in  { color: var(--income); }
+.ah-cal-legend .is-out { color: var(--expense); }
+
+.ah-cal.mm-calendar-grid { gap: 2px; margin: 0; }
+.ah-cal .mm-cal-header { padding: 4px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
+.ah-cal .mm-cal-header.is-weekend { color: var(--text-secondary); }
+.ah-cal .mm-cal-day {
+  min-width: 0; min-height: 50px; gap: 3px; padding: 6px 1px 5px; justify-content: flex-start;
+  border-radius: 10px; border: 1px solid transparent; background: none; color: var(--text);
+}
+.ah-cal .mm-cal-day.is-future { color: var(--text-muted); }
+.ah-cal .mm-cal-day.is-in  { background: rgba(var(--income-rgb), 0.07); }
+.ah-cal .mm-cal-day.is-out { background: rgba(var(--expense-rgb), 0.07); }
+.ah-cal .mm-cal-num { font-size: 13px; font-weight: 600; line-height: 1.1; }
+.ah-net {
+  max-width: 100%; overflow: hidden; white-space: nowrap;
+  font-size: 11px; font-weight: 650; line-height: 1.1; letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.ah-net.is-in  { color: var(--income); }
+.ah-net.is-out { color: var(--expense); }
+.ah-net.is-zero { color: var(--text-muted); font-weight: 500; }
+.ah-cal .mm-cal-day.today { border-color: rgba(var(--accent-rgb), 0.55); }
+.ah-cal .mm-cal-day.today .mm-cal-num { color: var(--accent); }
+.ah-cal .mm-cal-day.selected { background: var(--text); border-color: var(--text); color: var(--bg); box-shadow: none; }
+.ah-cal .mm-cal-day.selected .mm-cal-num,
+.ah-cal .mm-cal-day.selected .ah-net { color: var(--bg); }
+.ah-cal .mm-cal-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (min-width: 720px) {
+  .ah-cal .mm-cal-day { min-height: 58px; }
+  .ah-net { font-size: 12px; }
+}
+
+/* ============================================================
+   BUDGET + ACCOUNTS v4 - same quiet language as Home
+   ============================================================ */
+.hq-body { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.hq-body > .sk-list { padding: 8px 0; }
+.hq-head-amt { flex: none; font-size: 14px; font-weight: 650; white-space: nowrap; }
+.hq-tag {
+  margin-left: 4px; padding: 1px 6px; border-radius: 6px; vertical-align: 1px;
+  font-size: 11px; font-weight: 500; color: var(--text-muted); background: rgba(255, 255, 255, 0.06);
+}
+.hq-row-wrap { display: flex; align-items: center; gap: 4px; }
+.hq-row-wrap .hq-row { flex: 1; min-width: 0; }
+.hq-row-edit { color: var(--text-muted); margin-right: -10px; }
+
+.hq-budget-hero { --tone: var(--accent); }
+.hq-budget-hero.is-warn { --tone: var(--warning); }
+.hq-budget-hero.is-over { --tone: var(--error); }
+.hq-budget-hero .hq-change-note strong { color: var(--tone); font-weight: 650; }
+.hq-bigbar { height: 6px; margin: 14px 0 10px; }
+.hq-bigbar > span { background: var(--tone); }
+.hq-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--text-secondary); }
+.hq-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.hq-legend .lx-state-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.hq-legend .is-ok .lx-state-dot { background: var(--success); }
+.hq-legend .is-warn .lx-state-dot { background: var(--warning); }
+.hq-legend .is-over .lx-state-dot { background: var(--error); }
+.hq-note { margin-top: 10px; font-size: 12px; line-height: 1.5; color: var(--text-muted); }
+.hq-note strong { color: var(--text-secondary); font-weight: 600; }
+.hq .hq-inline-link {
+  display: inline-flex; align-items: center; min-height: 44px; margin: -12px 0; padding: 0 2px;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+}
+
+/* Activity list: plain rows like Home, no card around them. */
+.ah .ah-tx.hx-card { background: none; border: 0; border-radius: 0; overflow: visible; }
+.ah .ah-list .hx-head { padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.ah .ah-tx .hx-tx { padding-left: 0; padding-right: 0; }
+.ah .ah-tx .hx-day-head { padding-left: 0; padding-right: 0; }
+.ah .ah-tx .hx-tx + .hx-tx { border-top: 1px solid var(--hairline); }
+.ah .ah-tx .mm-empty { padding: 24px 0; }
+
+/* The bottom nav already carries "Catat" on every money page; the
+   floating + only covered rows. Desktop hides both and uses the sidebar. */
+#mmFabContainer { display: none !important; }
+
+@media (min-width: 1024px) {
+  .hx.ah { max-width: 760px; }
+}
 </style>
 
