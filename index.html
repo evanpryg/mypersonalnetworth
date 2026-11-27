@@ -10066,6 +10066,399 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
 @media (min-width: 1024px) {
   .hx.ah { max-width: 760px; }
 }
+/* ============================================================
+   INVESTMENT DASHBOARD v4 - "QUIET LEDGER"  (ui-ux-pro-max)
+   Same language as Money Home: no card around the value, one
+   card for the next move, allocation and holdings as plain
+   hairline lists. Namespace .iq-*; reuses .hx / .hq. Keep LAST.
+   ============================================================ */
+.iq-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.iq-goal-chip {
+  display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 58%;
+  font-size: 12px; font-weight: 600; color: var(--text-secondary);
+}
+.iq-goal-chip svg { width: 13px; height: 13px; flex: none; color: var(--accent); }
+.iq-goal-chip > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.iq .iv-pl-amount { font-size: 13px; font-weight: 650; }
+.iq .iv-pl-amount.positive { color: var(--income); }
+.iq .iv-pl-amount.negative { color: var(--expense); }
+
+.iq-goal { margin-top: 16px; }
+.iq-goal-meta { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--text-secondary); }
+.iq-goal-meta strong { font-size: 14px; font-weight: 700; color: var(--text); }
+.iq-goal-bar { height: 6px; margin: 8px 0 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); overflow: hidden; }
+.iq-goal-fill { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--accent); transition: width 0.7s var(--ease-out); }
+.iq-goal-note { font-size: 12px; line-height: 1.5; color: var(--text-muted); text-wrap: pretty; }
+
+.iq-stats { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.iq-stats .hx-flow-item dd:nth-of-type(1) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* --- The one card: next move ------------------------------------- */
+.iq-next { display: flex; flex-direction: column; overflow: hidden; }
+.iq-next-head { padding: 14px 16px 2px; }
+.iq-next-signal { display: flex; gap: 12px; align-items: flex-start; padding: 10px 16px 14px; }
+.iq-next-icon {
+  width: 32px; height: 32px; flex: none; display: grid; place-items: center;
+  border-radius: 10px; color: var(--accent); background: rgba(var(--accent-rgb), 0.12);
+}
+.iq-next-icon svg { width: 17px; height: 17px; }
+.iq-next-text { min-width: 0; }
+.iq-next-text strong { display: block; font-size: 14px; font-weight: 650; }
+.iq-next-text p { margin-top: 2px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
+.iq-sec { padding: 12px 16px 14px; border-top: 1px solid var(--border); }
+.iq .iv-dca-list { gap: 10px; }
+.iq .iv-dca-head { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.iq .iv-dca-name { color: var(--text); }
+.iq .iv-dca-row strong { color: var(--text); font-weight: 650; }
+.iq-sim { border-top: 1px solid var(--border); }
+.iq-sim > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 46px; padding: 0 16px; list-style: none; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--accent);
+}
+.iq-sim > summary::-webkit-details-marker { display: none; }
+.iq-sim > summary svg { width: 16px; height: 16px; transition: transform var(--dur-fast); }
+.iq-sim[open] > summary svg { transform: rotate(180deg); }
+.iq-sim > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.iq-sim-body { display: flex; flex-direction: column; gap: 10px; padding: 0 16px 14px; }
+.iq-sim-body .form-input { margin: 0; }
+
+/* --- Small segmented switch in list heads ------------------------ */
+.iq-seg { display: inline-flex; flex: none; padding: 2px; border: 1px solid var(--border); border-radius: 10px; }
+.iq .iq-seg-btn {
+  min-height: 32px; padding: 0 10px; border-radius: 8px;
+  font-size: 12px; font-weight: 600; color: var(--text-secondary);
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.iq .iq-seg-btn.active { background: var(--surface-2); color: var(--text); }
+.iq .iq-seg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* The 32px pill sits inside a 44px row, so the tap target still clears 44. */
+.iq .hq-head { min-height: 52px; }
+
+/* --- Plain lists: allocation + holdings --------------------------- */
+.iq-list { display: flex; flex-direction: column; }
+.iq-list .empty-state { padding: 20px 0; font-size: 13px; color: var(--text-muted); text-align: left; }
+.iq .iv-alloc-row { padding: 12px 0; }
+.iq .iv-alloc-row + .iv-alloc-row { border-top: 1px solid var(--hairline); }
+.iq .iv-alloc-row:first-child { padding-top: 12px; }
+.iq .iv-alloc-row:last-child { padding-bottom: 6px; }
+.iq .iv-alloc-bar { height: 4px; margin: 8px 0 6px; }
+.iq .iv-alloc-target { background: var(--text); box-shadow: none; }
+.iq .iv-status { padding: 0; background: none !important; border: 0; font-size: 12px; font-weight: 600; }
+.iq button.iv-alloc-row { width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--hairline); color: inherit; font: inherit; cursor: pointer; }
+.iq button.iv-alloc-row:first-child { border-top: 0; }
+
+.iq #ivHoldingsList { padding: 0; }
+.iq .iv-holding { min-height: 60px; padding: 10px 0; }
+.iq .iv-holding + .iv-holding { border-top: 1px solid var(--hairline); }
+.iq .iv-holding-badge { width: 34px; height: 34px; border-radius: 10px; font-size: 10px; }
+.iq .iv-holding-nums strong { font-weight: 650; }
+.iq .iv-holding-nums .positive { color: var(--income); }
+.iq .iv-holding-nums .negative { color: var(--expense); }
+.iq .iv-more { border-top: 1px solid var(--hairline); text-align: left; padding: 0; }
+.iq .iv-more:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.iq .hx-col > *, .iq > .iq-hero { animation: hxIn 0.4s var(--ease-out) backwards; }
+
+@media (min-width: 720px) {
+  .iq .iq-seg-btn:not(.active):hover { color: var(--text); }
+  .iq .iq-sim > summary:hover { background: var(--surface-2); }
+  .iq .iv-holding:hover .iv-holding-name, .iq button.iv-alloc-row:hover .iv-alloc-name { color: var(--accent); }
+}
+@media (min-width: 1024px) {
+  .hx.iq { max-width: 1080px; }
+}
+
+/* ============================================================
+   INSIGHT v4 - "QUIET LEDGER"  (ui-ux-pro-max: Minimalism & Swiss)
+   Was nine boxes; now the score sits on the page, ONE card holds
+   the month (vs last + cash flow), everything else is a hairline
+   list like Home. Namespace .ig-*; reuses .hx / .hq / .ah.
+   ============================================================ */
+#mmInsightPage > #insightContent { min-width: 0; }
+.ig .pos  { color: var(--income); }
+.ig .neg  { color: var(--expense); }
+.ig .warn { color: var(--warning); }
+
+/* --- Month switch --------------------------------------------------- */
+.ig-monthbar {
+  display: flex; align-items: center; gap: 4px;
+  margin-top: -6px; padding: 2px 0; border-bottom: 1px solid var(--border);
+}
+.ig-monthbar .ah-month { flex: 1; }
+.ig-monthbar .ah-icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.ig .ig-today {
+  min-height: 32px; padding: 0 10px; border-radius: 8px; flex: none;
+  font-size: 12px; font-weight: 600; color: var(--accent); background: rgba(var(--accent-rgb), 0.12);
+}
+
+/* --- Score: no card ------------------------------------------------- */
+.ig-hero { display: flex; flex-direction: column; gap: 16px; }
+.ig-score { display: flex; align-items: center; gap: 14px; }
+.ig-ring {
+  --tone: var(--success);
+  position: relative; width: 56px; height: 56px; flex: none;
+  display: grid; place-items: center;
+}
+.ig-ring.tone-ok   { --tone: var(--accent); }
+.ig-ring.tone-warn { --tone: var(--warning); }
+.ig-ring.tone-bad  { --tone: var(--error); }
+.ig-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ig-ring-arc { stroke: var(--tone); transition: stroke-dashoffset 0.8s var(--ease-out); }
+.ig-ring strong { position: relative; font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+.ig-score-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ig-status { font-size: 22px; line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; color: var(--success); }
+.ig-status.tone-ok   { color: var(--accent); }
+.ig-status.tone-warn { color: var(--warning); }
+.ig-status.tone-bad  { color: var(--error); }
+.ig-score-text p { font-size: 13px; color: var(--text-secondary); }
+
+.ig-kpis { padding-top: 14px; border-top: 1px solid var(--border); }
+.ig-kpis .hx-flow-item dd:nth-of-type(1) { font-size: 17px; white-space: nowrap; }
+.ig .ig-kpi-sub { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ig .ig-kpi-sub.pos { color: var(--income); }
+.ig .ig-kpi-sub.neg { color: var(--expense); }
+.ig-kpis-inv { padding-top: 12px; border-top: 0; }
+.ig-kpis-inv .hx-flow-item dd:nth-of-type(1) { font-size: 15px; }
+
+.ig-why > summary {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin: -10px 0;
+  list-style: none; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--accent);
+}
+.ig-why > summary::-webkit-details-marker { display: none; }
+.ig-why > summary svg { width: 14px; height: 14px; transition: transform var(--dur-fast); }
+.ig-why[open] > summary svg { transform: rotate(180deg); }
+.ig-why ul { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ig-why li { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.45; color: var(--text-secondary); }
+.ig-why li svg { width: 14px; height: 14px; margin-top: 1px; flex: none; }
+.ig-why li.good svg { color: var(--success); }
+.ig-why li.bad svg { color: var(--error); }
+
+/* --- The one card --------------------------------------------------- */
+.ig-card { display: flex; flex-direction: column; overflow: hidden; }
+.ig-card-head { padding: 14px 16px 6px; }
+.ig-table { display: flex; flex-direction: column; padding: 0 16px 6px; }
+.ig-tr {
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 0.8fr) minmax(0, 1.1fr);
+  align-items: center; gap: 8px; min-height: 38px; font-size: 13px;
+}
+.ig-tr + .ig-tr { border-top: 1px solid var(--hairline); }
+.ig-tr > :not(:first-child) { text-align: right; white-space: nowrap; }
+.ig-tr [role="rowheader"] { color: var(--text-secondary); }
+.ig-tr strong { font-weight: 650; }
+.ig-tr strong.is-in { color: var(--income); }
+.ig-tr strong.is-out { color: var(--expense); }
+.ig-th { min-height: 28px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--text-muted); }
+.ig-delta { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.ig-proj { color: var(--text-secondary); }
+
+.ig-cf-wrap { padding: 12px 16px 14px; border-top: 1px solid var(--border); }
+.ig-cf-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.ig-cf-title { font-size: 13px; font-weight: 600; }
+.ig-cf-meta { font-size: 12px; color: var(--text-muted); text-align: right; }
+.ig-cf { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+.ig-cf-col { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.ig-cf-bars { display: flex; align-items: flex-end; justify-content: center; gap: 3px; width: 100%; height: 72px; }
+.ig-cf-bars span { width: min(10px, 38%); min-height: 2px; border-radius: 3px 3px 1px 1px; }
+.ig-cf-bars .in { background: var(--income); }
+.ig-cf-bars .out { background: rgba(var(--expense-rgb), 0.75); }
+.ig-cf-net { font-size: 11px; font-weight: 650; white-space: nowrap; }
+.ig-cf-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.ig-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; font-size: 12px; color: var(--text-muted); }
+.ig-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.ig-legend i { width: 8px; height: 8px; border-radius: 2px; }
+.ig-legend i.in { background: var(--income); }
+.ig-legend i.out { background: rgba(var(--expense-rgb), 0.75); }
+
+/* --- Attention: plain rows ------------------------------------------ */
+.ig-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.ig-item { --tone: var(--info); display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; }
+.ig-item + .ig-item { border-top: 1px solid var(--hairline); }
+.ig-item.tone-bad  { --tone: var(--error); }
+.ig-item.tone-warn { --tone: var(--warning); }
+.ig-item-ic {
+  width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 9px;
+  color: var(--tone); background: color-mix(in srgb, var(--tone) 13%, transparent);
+}
+.ig-item-ic svg { width: 15px; height: 15px; }
+.ig-item-body { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ig-item-body strong { font-size: 14px; font-weight: 600; }
+.ig-item-body span { font-size: 12px; line-height: 1.45; color: var(--text-secondary); }
+.ig-more { border-top: 1px solid var(--hairline); }
+.ig-more > summary {
+  display: flex; align-items: center; gap: 4px; min-height: 44px; list-style: none; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+}
+.ig-more > summary::-webkit-details-marker { display: none; }
+.ig-more > summary svg { width: 14px; height: 14px; transition: transform var(--dur-fast); }
+.ig-more[open] > summary svg { transform: rotate(180deg); }
+.ig-more .ig-list { border-top: 1px solid var(--hairline); }
+.ig-allgood, .ig-good {
+  display: flex; align-items: flex-start; gap: 8px; padding: 12px 0 2px;
+  font-size: 12px; line-height: 1.5; color: var(--text-secondary);
+}
+.ig-good { border-top: 1px solid var(--hairline); }
+.ig-allgood svg, .ig-good svg { width: 14px; height: 14px; margin-top: 2px; flex: none; color: var(--success); }
+
+/* --- Budget pace ---------------------------------------------------- */
+.ig-rows { display: flex; flex-direction: column; }
+.ig-rows > * + * { border-top: 1px solid var(--hairline); }
+.ig-pace { --tone: var(--accent); display: flex; flex-direction: column; gap: 6px; padding: 12px 0; }
+.ig-pace.is-warn { --tone: var(--warning); }
+.ig-pace.is-over { --tone: var(--error); }
+.ig-pace.is-done, .ig-pace.is-saving { --tone: var(--info); }
+.ig-pace-top { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 600; }
+.ig-pace-top em { margin-left: 4px; font-style: normal; font-size: 11px; font-weight: 500; color: var(--text-muted); }
+.ig-pace-top strong { color: var(--tone); font-weight: 650; }
+.ig-pace-bar { position: relative; height: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); }
+.ig-pace-fill { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--tone); }
+.ig-pace-mark { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; border-radius: 2px; background: var(--text); }
+.ig-pace-foot { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-muted); }
+.ig-pace-note { color: var(--text-secondary); }
+.ig-pace.is-over .ig-pace-note, .ig-pace.is-warn .ig-pace-note { color: var(--tone); }
+.ig-fine { padding-top: 10px; border-top: 1px solid var(--hairline); font-size: 12px; color: var(--text-muted); }
+
+/* --- Spending: one stacked bar + legend ----------------------------- */
+.ig-stack { display: flex; gap: 2px; height: 8px; margin: 12px 0 4px; border-radius: 999px; overflow: hidden; background: rgba(255, 255, 255, 0.07); }
+.ig-stack span { display: block; height: 100%; }
+.ig-leg { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; min-height: 40px; font-size: 13px; }
+.ig-leg-name { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ig-leg-name i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.ig-leg-pct { font-size: 12px; color: var(--text-muted); }
+.ig-leg strong { min-width: 76px; text-align: right; font-weight: 650; white-space: nowrap; }
+.ig-empty { padding: 16px 0; font-size: 13px; color: var(--text-muted); }
+
+/* --- Investment rows ------------------------------------------------ */
+.ig-kv { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; font-size: 13px; }
+.ig-kv > span { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ig-kv svg { width: 14px; height: 14px; flex: none; color: var(--text-muted); }
+.ig-kv strong { font-weight: 650; white-space: nowrap; }
+.ig-kpis-inv + .ig-rows { margin-top: 10px; border-top: 1px solid var(--hairline); }
+
+/* --- Yearly (folded) ------------------------------------------------ */
+.ig-fold { border-bottom: 1px solid var(--border); }
+.ig-fold > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 52px; list-style: none; cursor: pointer; border-bottom: 1px solid var(--border);
+}
+.ig-fold > summary::-webkit-details-marker { display: none; }
+.ig-fold > summary .hx-head-text { display: flex; flex-direction: column; }
+.ig-fold > summary svg { width: 18px; height: 18px; color: var(--text-muted); transition: transform var(--dur-fast); }
+.ig-fold[open] > summary svg { transform: rotate(180deg); }
+.ig-fold:not([open]) { border-bottom: 0; }
+.ig-fold .ig-yoy { padding: 4px 0 8px; }
+.ig-fold .insight-yoy-note { padding: 0 0 12px; }
+
+.ig summary:focus-visible, .ig .ig-today:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.ig .hx-col > *, .ig > .ah-top, .ig > .ig-monthbar { animation: hxIn 0.4s var(--ease-out) backwards; }
+
+@media (min-width: 720px) {
+  .ig-why > summary:hover, .ig-more > summary:hover { opacity: 0.8; }
+  .ig-fold > summary:hover .hx-title { color: var(--accent); }
+}
+@media (min-width: 1024px) {
+  .hx.ig { max-width: 1080px; }
+}
+@media (max-width: 360px) {
+  .ig-tr { font-size: 12px; gap: 4px; }
+  .ig-status { font-size: 19px; }
+}
+
+/* ============================================================
+   AI ASSISTANT AS A CHAT BUBBLE  (ui-ux-pro-max)
+   A round button floats above the bottom nav (bottom-right, out
+   of the thumb's way of the centre "Catat"); it opens the chat
+   as a popup panel anchored to it instead of a full page.
+   Phones: panel fills most of the height over a light scrim and
+   carries its own close button. Desktop: 400px panel above the
+   bubble, which stays as the toggle.
+   ============================================================ */
+.ai-fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--tab-height) + var(--safe-bottom) + 14px);
+  z-index: 110;
+  width: 52px; height: 52px;
+  display: grid; place-items: center;
+  padding: 0; border-radius: 50%;
+  border: 1px solid rgba(var(--accent-rgb), 0.38);
+  background: var(--surface-2);
+  color: var(--accent);
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.7), 0 0 0 4px rgba(9, 15, 18, 0.55);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast), opacity var(--dur-fast);
+  animation: aiFabIn 0.35s var(--ease-out) backwards;
+}
+.ai-fab svg { grid-area: 1 / 1; transition: opacity var(--dur-fast), transform 0.2s var(--ease-out); }
+.ai-fab .ai-fab-close { opacity: 0; transform: rotate(-90deg) scale(0.6); }
+.ai-fab.is-open .ai-fab-open { opacity: 0; transform: rotate(90deg) scale(0.6); }
+.ai-fab.is-open .ai-fab-close { opacity: 1; transform: none; }
+.ai-fab:active { transform: scale(0.92); }
+.ai-fab:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* Signed out: nothing to ask about yet. */
+body:has(#authGate:not(.hidden)) .ai-fab { display: none; }
+@keyframes aiFabIn { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+
+.ai-scrim {
+  position: fixed; inset: 0; z-index: 305;
+  background: rgba(4, 8, 10, 0.55);
+  animation: fadeIn 0.15s ease;
+}
+
+/* The panel: overrides the old full-screen .ai-chat box. */
+.ai-chat.ai-pop {
+  inset: auto 8px calc(8px + var(--safe-bottom)) 8px;
+  height: min(620px, calc(100dvh - env(safe-area-inset-top, 0px) - var(--safe-bottom) - 64px));
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  overflow: hidden;
+  background: var(--bg);
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.8);
+  transform-origin: calc(100% - 34px) 100%;
+  animation: aiPopIn 0.22s var(--ease-out);
+}
+.ai-pop .ai-bar { padding: 8px 6px 8px 14px; gap: 4px; }
+.ai-bar-mark {
+  width: 32px; height: 32px; flex: none; display: grid; place-items: center;
+  border-radius: 10px; color: var(--accent); background: rgba(var(--accent-rgb), 0.12);
+}
+.ai-pop .ai-bar-title { text-align: left; padding-left: 6px; }
+.ai-pop .ai-bar-title h2 { font-size: 15px; }
+.ai-pop .ai-bar-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ai-pop .ai-log { padding: 16px 16px 10px; gap: 16px; }
+.ai-pop .ai-compose { padding: 8px 12px 10px; }
+.ai-pop .ai-intro h3 { font-size: 18px; }
+.ai-pop .ai-suggest { margin-top: 18px; }
+.ai-pop .ai-chip { min-height: 44px; padding: 10px 14px; }
+@keyframes aiPopIn { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: none; } }
+
+/* Phones: the panel covers the bubble, so hide it while open. */
+@media (max-width: 719px) {
+  body.ai-open .ai-fab { opacity: 0; pointer-events: none; transform: scale(0.6); }
+}
+/* Larger screens: a floating panel, page stays usable behind it. */
+@media (min-width: 720px) {
+  body.ai-open { overflow: auto; }
+  .ai-scrim { display: none; }
+  .ai-chat.ai-pop {
+    left: auto;
+    right: 16px;
+    bottom: calc(var(--tab-height) + var(--safe-bottom) + 78px);
+    width: 400px;
+    height: min(640px, calc(100dvh - var(--tab-height) - var(--safe-bottom) - 110px));
+  }
+  .ai-pop .ai-bar-close { display: none; }
+  .ai-fab:hover { background: var(--surface); border-color: rgba(var(--accent-rgb), 0.6); }
+}
+@media (min-width: 1024px) {
+  .ai-fab { right: 24px; bottom: 24px; }
+  .ai-chat.ai-pop { right: 24px; bottom: 88px; height: min(680px, calc(100dvh - 120px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-fab, .ai-chat.ai-pop, .ai-scrim { animation: none; }
+  .ai-fab svg { transition: none; }
+}
 </style>
 
 
@@ -10222,17 +10615,10 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
         <div class="ws-title-wrap" onclick="switchWorkspace()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchWorkspace();}" role="button" tabindex="0" aria-label="Ganti workspace" title="Ketuk untuk berganti workspace">
           <div class="ws-title-text">
             <h1 id="workspaceTitle">Money Management</h1>
-            <span class="ws-subtitle-row">
-              <span class="ws-subtitle" id="wsSubtitle">Arus kas &amp; anggaran</span>
-              <i data-lucide="chevrons-up-down" class="ws-swap-icon" aria-hidden="true"></i>
-            </span>
           </div>
         </div>
       </div>
       <div class="ws-header-actions">
-        <button type="button" class="ws-action-icon-btn" id="mmBtnAi" aria-label="Tanya Asisten AI" onclick="mmOpenAiChat()" title="AI Assistant">
-          <i data-lucide="sparkles"></i>
-        </button>
         <button type="button" class="ws-action-icon-btn" id="mmBtnSearch" aria-label="Cari Transaksi" onclick="mmOpenSearch()" title="Cari transaksi">
           <i data-lucide="search"></i>
         </button>
@@ -10251,105 +10637,116 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
     <div id="investWorkspace" class="workspace" style="display:none;">
       <main class="main-content">
 
-        <!-- ===== DASHBOARD PAGE =====
-             One screen that answers: what is it worth, am I up or down, how
-             close is the goal, what should the idle cash buy next, and which
-             holdings carry the portfolio. Nothing folded away by default. -->
+        <!-- ===== DASHBOARD PAGE (v4 — "Quiet Ledger", same language as Home) =====
+             One card only (what to buy next); everything else is type on the
+             page background separated by hairlines.
+             1. Nilai      — big number, P/L, goal bar, modal / aset / cash
+             2. Langkah    — the one card: next move, cash split, simulator
+             3. Alokasi    — plain list, sector or platform
+             4. Aset       — plain list, sorted by value or return
+             Desktop (>=1024): two columns — left 1-2, right 3-4.
+             All data ids are unchanged; rendering lives in Script.html. -->
         <div id="dashboardPage" class="page active-page">
-          <section class="dashboard-wrap">
+          <div class="hx hq iq">
 
-            <!-- Value, P/L and goal -->
-            <div class="iv-hero">
-              <div class="iv-hero-top">
-                <span class="iv-hero-label">Nilai portofolio</span>
-                <span class="iv-hero-goal"><i data-lucide="flag"></i><span id="mainTargetTitle">First 100 Million</span></span>
+            <!-- 1. NILAI -->
+            <section class="hq-hero iq-hero" aria-labelledby="ivHeroLabel">
+              <div class="iq-hero-top">
+                <p class="hq-label" id="ivHeroLabel">Nilai portofolio</p>
+                <span class="iq-goal-chip"><i data-lucide="flag" aria-hidden="true"></i><span id="mainTargetTitle">First 100 Million</span></span>
               </div>
-              <h2 class="iv-hero-value" id="progressMainValue">Rp0</h2>
-              <div class="iv-hero-pl">
+              <h2 class="hq-amount" id="progressMainValue">Rp0</h2>
+              <p class="hq-change">
                 <span class="mm-change-badge up" id="ivPlBadge">+0%</span>
                 <span class="iv-pl-amount" id="ivPlAmount">Rp0</span>
-                <span class="iv-muted">belum direalisasi</span>
-              </div>
+                <span class="hq-change-note">belum direalisasi</span>
+              </p>
 
-              <div class="iv-goal">
-                <div class="iv-goal-bar" id="ivGoalBar" role="progressbar" aria-label="Progres target" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                  <span class="iv-goal-fill" id="mainProgressFill"></span>
-                </div>
-                <div class="iv-goal-meta">
+              <div class="iq-goal">
+                <div class="iq-goal-meta">
                   <strong id="mainProgressText">0%</strong>
                   <span id="progressTargetText">dari Rp0</span>
                 </div>
-                <p class="iv-goal-note" id="heroNote">Mulai catat investasi pertamamu.</p>
+                <div class="iq-goal-bar" id="ivGoalBar" role="progressbar" aria-label="Progres target" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <span class="iq-goal-fill" id="mainProgressFill"></span>
+                </div>
+                <p class="iq-goal-note" id="heroNote">Mulai catat investasi pertamamu.</p>
               </div>
 
-              <div class="iv-hero-stats">
-                <div class="iv-hero-stat"><span>Modal</span><strong id="ivStatCapital">Rp0</strong></div>
-                <div class="iv-hero-stat"><span>Aset</span><strong id="ivStatAssets">Rp0</strong></div>
-                <div class="iv-hero-stat"><span>Cash</span><strong id="ivStatCash">Rp0</strong></div>
+              <dl class="hx-flow iq-stats">
+                <div class="hx-flow-item"><dt>Modal</dt><dd id="ivStatCapital">Rp0</dd></div>
+                <div class="hx-flow-item"><dt>Aset</dt><dd id="ivStatAssets">Rp0</dd></div>
+                <div class="hx-flow-item"><dt>Cash</dt><dd id="ivStatCash">Rp0</dd></div>
+              </dl>
+            </section>
+
+            <div class="hx-cols">
+              <div class="hx-col hx-col-main">
+
+                <!-- 2. LANGKAH BERIKUTNYA — the only card -->
+                <section class="hx-card iq-next" aria-labelledby="ivNextTitle">
+                  <div class="iq-next-head">
+                    <div class="hx-head-text">
+                      <h3 class="hx-title" id="ivNextTitle">Langkah berikutnya</h3>
+                      <p class="hx-sub" id="dcaSuggestionTotal"></p>
+                    </div>
+                  </div>
+                  <div class="iq-next-signal">
+                    <span class="iq-next-icon" aria-hidden="true"><i data-lucide="compass"></i></span>
+                    <div class="iq-next-text">
+                      <strong id="nextMoveTitle">Mulai dari catatan pertama.</strong>
+                      <p id="nextMoveText">Tambahkan aset dulu, nanti tracker menyarankan sektor mana yang perlu ditambah.</p>
+                    </div>
+                  </div>
+                  <div id="dcaSuggestionList" class="iv-dca-list iq-sec"></div>
+                  <details class="iq-sim">
+                    <summary><span>Simulasi setoran bulanan</span><i data-lucide="chevron-down" aria-hidden="true"></i></summary>
+                    <div class="iq-sim-body">
+                      <input type="number" id="dcaPlanAmount" class="form-input" placeholder="Contoh: 1000000" inputmode="numeric" aria-label="Nominal setoran bulanan" oninput="renderDcaPlanSimulator()">
+                      <div id="dcaPlanResult" class="iv-dca-list"></div>
+                    </div>
+                  </details>
+                </section>
+
+              </div>
+              <div class="hx-col hx-col-side">
+
+                <!-- 3. ALOKASI -->
+                <section class="hq-list-block" aria-labelledby="ivAllocTitle">
+                  <div class="hx-head hq-head">
+                    <div class="hx-head-text">
+                      <h3 class="hx-title" id="ivAllocTitle">Alokasi</h3>
+                      <p class="hx-sub" id="allocationTotalText"></p>
+                    </div>
+                    <div class="iq-seg" role="group" aria-label="Kelompokkan alokasi">
+                      <button type="button" class="iq-seg-btn active" aria-pressed="true" id="ivAllocTabSector" onclick="switchAllocTab('balance')">Sektor</button>
+                      <button type="button" class="iq-seg-btn" aria-pressed="false" id="ivAllocTabPlatform" onclick="switchAllocTab('platform')">Platform</button>
+                    </div>
+                  </div>
+                  <div id="allocationFocusList" class="iv-alloc-list iq-list">
+                    <div class="empty-state">Belum ada data alokasi.</div>
+                  </div>
+                  <div id="platformCashList" class="iv-alloc-list iq-list" style="display:none;"></div>
+                </section>
+
+                <!-- 4. ASET -->
+                <section class="hq-list-block" aria-labelledby="ivHoldTitle">
+                  <div class="hx-head hq-head">
+                    <div class="hx-head-text">
+                      <h3 class="hx-title" id="ivHoldTitle">Aset</h3>
+                      <p class="hx-sub" id="ivHoldingsSub"></p>
+                    </div>
+                    <div class="iq-seg" role="group" aria-label="Urutkan aset">
+                      <button type="button" class="iq-seg-btn iv-sort-tab active" aria-pressed="true" data-sort="value" onclick="ivSortHoldings('value')">Nilai</button>
+                      <button type="button" class="iq-seg-btn iv-sort-tab" aria-pressed="false" data-sort="pl" onclick="ivSortHoldings('pl')">Return</button>
+                    </div>
+                  </div>
+                  <div class="iq-list" id="ivHoldingsList"></div>
+                </section>
+
               </div>
             </div>
-
-            <!-- Next move: what the idle cash should buy -->
-            <section class="mm-dash-section">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Langkah berikutnya</h3>
-                  <p class="mm-section-sub" id="dcaSuggestionTotal">&nbsp;</p>
-                </div>
-              </div>
-              <div class="mm-dash-card iv-next">
-                <div class="iv-next-signal">
-                  <span class="iv-next-icon" aria-hidden="true"><i data-lucide="compass"></i></span>
-                  <div>
-                    <strong id="nextMoveTitle">Mulai dari catatan pertama.</strong>
-                    <p id="nextMoveText">Tambahkan aset dulu, nanti tracker menyarankan sektor mana yang perlu ditambah.</p>
-                  </div>
-                </div>
-                <div id="dcaSuggestionList" class="iv-dca-list"></div>
-                <details class="iv-sim">
-                  <summary><span>Simulasi setoran bulanan</span><i data-lucide="chevron-down"></i></summary>
-                  <input type="number" id="dcaPlanAmount" class="form-input" placeholder="Contoh: 1000000" inputmode="numeric" oninput="renderDcaPlanSimulator()">
-                  <div id="dcaPlanResult" class="iv-dca-list"></div>
-                </details>
-              </div>
-            </section>
-
-            <!-- Allocation vs target -->
-            <section class="mm-dash-section">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Alokasi</h3>
-                  <p class="mm-section-sub" id="allocationTotalText">&nbsp;</p>
-                </div>
-                <div class="mm-expense-tabs" role="tablist">
-                  <button class="mm-expense-tab active" role="tab" id="ivAllocTabSector" onclick="switchAllocTab('balance')">Sektor</button>
-                  <button class="mm-expense-tab" role="tab" id="ivAllocTabPlatform" onclick="switchAllocTab('platform')">Platform</button>
-                </div>
-              </div>
-              <div class="mm-dash-card">
-                <div id="allocationFocusList" class="iv-alloc-list">
-                  <div class="empty-state">No allocation data yet.</div>
-                </div>
-                <div id="platformCashList" class="iv-alloc-list" style="display:none;"></div>
-              </div>
-            </section>
-
-            <!-- Holdings -->
-            <section class="mm-dash-section">
-              <div class="mm-section-header">
-                <div>
-                  <h3>Aset</h3>
-                  <p class="mm-section-sub" id="ivHoldingsSub">&nbsp;</p>
-                </div>
-                <div class="mm-expense-tabs" role="tablist">
-                  <button class="mm-expense-tab iv-sort-tab active" role="tab" data-sort="value" onclick="ivSortHoldings('value')">Nilai</button>
-                  <button class="mm-expense-tab iv-sort-tab" role="tab" data-sort="pl" onclick="ivSortHoldings('pl')">Return</button>
-                </div>
-              </div>
-              <div class="mm-dash-card mm-transaction-list" id="ivHoldingsList"></div>
-            </section>
-
-          </section>
+          </div>
         </div>
 
         <!-- ===== PLATFORM PAGE =====
@@ -11030,27 +11427,6 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
     </div>
     <!-- END WORKSPACE 2 -->
 
-    <!-- ===== INVESTMENT TRACKER FAB ===== -->
-    <div class="fab-container" id="investFabContainer" style="display:none;">
-      <div class="fab-menu" id="fabMenu">
-        <button class="fab-option" onclick="showActionSheet('buy')">
-          <span><i data-lucide="trending-up" class="fab-icon"></i></span>
-          <small>Buy Asset</small>
-        </button>
-        <button class="fab-option" onclick="showActionSheet('sell')">
-          <span><i data-lucide="trending-down" class="fab-icon"></i></span>
-          <small>Sell Asset</small>
-        </button>
-        <button class="fab-option" onclick="showActionSheet('value')">
-          <span><i data-lucide="bar-chart-3" class="fab-icon"></i></span>
-          <small>Update Value</small>
-        </button>
-      </div>
-      <button class="fab-btn" id="fabBtn" aria-label="Tambah transaksi" onclick="toggleFab()">
-        <i data-lucide="plus" class="fab-main-icon"></i>
-      </button>
-    </div>
-
     <!-- ===== MONEY MANAGEMENT FAB ===== -->
     <div class="fab-container mm-fab" id="mmFabContainer">
       <div class="fab-menu" id="mmFabMenu">
@@ -11072,21 +11448,30 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
       </button>
     </div>
 
-    <!-- ===== INVESTMENT TRACKER BOTTOM TABS ===== -->
-    <nav class="bottom-tabs" id="investBottomTabs" style="display:none;">
-      <button class="tab-item active" data-page="dashboardPage" onclick="showPage('dashboardPage')">
+    <!-- ===== INVESTMENT TRACKER BOTTOM TABS =====
+         Same shape as Money Management: the add button sits in the middle
+         of the bar (Buy / Sell / Value / Transfer are tabs inside the sheet),
+         so no floating + covers the holdings list. -->
+    <nav class="bottom-tabs mm-tabs" id="investBottomTabs" aria-label="Navigasi investasi" style="display:none;">
+      <button class="tab-item active" data-page="dashboardPage" aria-label="Dashboard" onclick="showPage('dashboardPage')">
         <i data-lucide="layout-dashboard" class="tab-icon"></i>
         <small>Dashboard</small>
       </button>
-      <button class="tab-item" data-page="platformPage" onclick="showPage('platformPage')">
+      <button class="tab-item" data-page="platformPage" aria-label="Platform" onclick="showPage('platformPage')">
         <i data-lucide="wallet" class="tab-icon"></i>
         <small>Platform</small>
       </button>
-      <button class="tab-item" data-page="historyPage" onclick="showPage('historyPage')">
+      <button class="tab-item tab-item-add" aria-label="Catat transaksi investasi" onclick="showActionSheet('buy')">
+        <span class="tab-add-bubble">
+          <i data-lucide="plus" class="tab-add-icon"></i>
+        </span>
+        <small>Catat</small>
+      </button>
+      <button class="tab-item" data-page="historyPage" aria-label="History" onclick="showPage('historyPage')">
         <i data-lucide="clock" class="tab-icon"></i>
         <small>History</small>
       </button>
-      <button class="tab-item" data-page="settingsPage" onclick="showPage('settingsPage')">
+      <button class="tab-item" data-page="settingsPage" aria-label="Settings" onclick="showPage('settingsPage')">
         <i data-lucide="settings" class="tab-icon"></i>
         <small>Settings</small>
       </button>
@@ -11347,7 +11732,6 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
   </div>
 
   <!-- ===== FAB OVERLAY ===== -->
-  <div class="fab-overlay hidden" id="fabOverlay" onclick="toggleFab()"></div>
   <div class="fab-overlay hidden" id="mmFabOverlay" onclick="mmToggleFab()"></div>
 
   <!-- ===== TOAST ===== -->
@@ -11377,19 +11761,29 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
   </div>
 
   <!-- ===== AI ASSISTANT =====
-       Full screen like search: a conversation needs the whole height, and
-       the keyboard takes half of it on a phone. -->
-  <div id="mmAiSheet" class="ai-chat hidden" role="dialog" aria-modal="true" aria-labelledby="mmAiTitle">
+       A chat bubble, not a page: the round button floats above the bottom
+       nav on every page of both workspaces and opens the conversation as a
+       popup panel anchored to it. On phones the panel takes most of the
+       height (the keyboard takes the rest) over a light scrim. -->
+  <button type="button" id="aiFab" class="ai-fab" aria-label="Buka asisten keuangan AI" aria-haspopup="dialog" aria-expanded="false" aria-controls="mmAiSheet" onclick="mmToggleAiChat()">
+    <svg class="ai-fab-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/></svg>
+    <svg class="ai-fab-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+  </button>
+  <div id="mmAiScrim" class="ai-scrim hidden" onclick="mmCloseAiChat()" aria-hidden="true"></div>
+  <div id="mmAiSheet" class="ai-chat ai-pop hidden" role="dialog" aria-modal="true" aria-labelledby="mmAiTitle">
     <header class="ai-bar">
-      <button class="mm-search-back" aria-label="Tutup asisten" onclick="mmCloseAiChat()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
-      </button>
+      <span class="ai-bar-mark" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+      </span>
       <div class="ai-bar-title">
         <h2 id="mmAiTitle">Asisten Keuangan</h2>
         <p>DeepSeek · membaca data keuanganmu</p>
       </div>
-      <button class="ai-bar-btn" aria-label="Percakapan baru" title="Percakapan baru" onclick="mmAiNewChat()">
+      <button type="button" class="ai-bar-btn" aria-label="Percakapan baru" title="Percakapan baru" onclick="mmAiNewChat()">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
+      </button>
+      <button type="button" class="ai-bar-btn ai-bar-close" aria-label="Tutup asisten" title="Tutup" onclick="mmCloseAiChat()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>
     </header>
     <div class="ai-log" id="mmAiLog" aria-live="polite"></div>
@@ -13105,6 +13499,7 @@ function injectAuthSettingsCard() {
     const btn = document.getElementById('fabBtn');
     const menu = document.getElementById('fabMenu');
     const overlay = document.getElementById('fabOverlay');
+    if (!btn || !menu || !overlay) return;
     const isOpen = btn.classList.contains('open');
     btn.classList.toggle('open');
     menu.classList.toggle('open');
@@ -13514,8 +13909,10 @@ function injectAuthSettingsCard() {
     const isSector = tab !== 'platform';
     sectorList.style.display = isSector ? '' : 'none';
     platformList.style.display = isSector ? 'none' : '';
-    document.getElementById('ivAllocTabSector')?.classList.toggle('active', isSector);
-    document.getElementById('ivAllocTabPlatform')?.classList.toggle('active', !isSector);
+    const tabS = document.getElementById('ivAllocTabSector');
+    const tabP = document.getElementById('ivAllocTabPlatform');
+    if (tabS) { tabS.classList.toggle('active', isSector); tabS.setAttribute('aria-pressed', String(isSector)); }
+    if (tabP) { tabP.classList.toggle('active', !isSector); tabP.setAttribute('aria-pressed', String(!isSector)); }
     IV_ALLOC_TAB = isSector ? 'balance' : 'platform';
     ivAllocSubtitle();
   }
@@ -14299,7 +14696,10 @@ function injectAuthSettingsCard() {
 
   function ivSortHoldings(mode) {
     IV_HOLDINGS_SORT = mode;
-    document.querySelectorAll('.iv-sort-tab').forEach(b => b.classList.toggle('active', b.dataset.sort === mode));
+    document.querySelectorAll('.iv-sort-tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.sort === mode);
+      b.setAttribute('aria-pressed', String(b.dataset.sort === mode));
+    });
     if (LATEST_DASHBOARD_DATA) renderPortfolio(LATEST_DASHBOARD_DATA.portfolio || []);
   }
 
@@ -14657,10 +15057,7 @@ function injectAuthSettingsCard() {
     const moneyWrap = document.getElementById('moneyWorkspace');
     const investTabs = document.getElementById('investBottomTabs');
     const moneyTabs = document.getElementById('mmBottomTabs');
-    const investFab = document.getElementById('investFabContainer');
-    const moneyFab = document.getElementById('mmFabContainer');
     const title = document.getElementById('workspaceTitle');
-    const subtitle = document.getElementById('wsSubtitle');
     const dots = document.querySelectorAll('.ws-dot');
 
     if (currentWorkspace === 'invest') {
@@ -14669,10 +15066,7 @@ function injectAuthSettingsCard() {
       moneyWrap.style.display = 'block';
       investTabs.style.display = 'none';
       moneyTabs.style.display = 'flex';
-      investFab.style.display = 'none';
-      moneyFab.style.display = 'block';
       title.textContent = 'Money Management';
-      subtitle.textContent = 'Arus kas & anggaran';
       // Dot indicator: first active
       dots[0].classList.add('active');
       dots[1].classList.remove('active');
@@ -14685,10 +15079,7 @@ function injectAuthSettingsCard() {
       investWrap.style.display = 'block';
       moneyTabs.style.display = 'none';
       investTabs.style.display = 'flex';
-      moneyFab.style.display = 'none';
-      investFab.style.display = 'block';
       title.textContent = 'Investment Tracker';
-      subtitle.textContent = 'Portfolio & Growth';
       // Dot indicator: second active
       dots[0].classList.remove('active');
       dots[1].classList.add('active');
@@ -14699,11 +15090,7 @@ function injectAuthSettingsCard() {
 
     // Animate header title
     title.style.opacity = '0';
-    subtitle.style.opacity = '0';
-    setTimeout(() => {
-      title.style.opacity = '1';
-      subtitle.style.opacity = '0.6';
-    }, 100);
+    setTimeout(() => { title.style.opacity = '1'; }, 100);
   }
 
   /* ============================================================
@@ -17995,10 +18382,9 @@ function mmDeleteDataPrompt(target) {
   <script>
 /* ============================================================
    FINANCIAL INSIGHT — Frontend JavaScript
-   Layout, most useful first: score + KPIs, what needs attention,
-   this month vs last (with projection), budget pace, top spending,
-   cash flow trend, investment, then folded extras. Icons are Lucide
-   placeholders swapped in by lucide.createIcons() after render.
+   Same quiet language as Home: score and numbers on the page, ONE card
+   (this month vs last + cash flow), everything else as hairline lists.
+   Icons are Lucide placeholders swapped in by lucide.createIcons().
    ============================================================ */
 
 let INSIGHT_DATA = null;
@@ -18105,17 +18491,32 @@ function insightShort(value) { return mmFormatIDRShort(value); }
 function insIcon(name) { return `<i data-lucide="${name}" aria-hidden="true"></i>`; }
 function insEsc(v) { return escapeHtml(String(v == null ? '' : v)); }
 
-function insightSection(title, sub, body, extraClass) {
+/* Section on the page background: title + optional sub over a hairline,
+   then the body. Same shape as Home's plain lists (.hq-list-block). */
+function insightSection(title, sub, body, extraClass, action) {
   return `
-    <section class="ins-section ${extraClass || ''}">
-      <div class="ins-section-head">
-        <h3>${title}</h3>
-        ${sub ? `<p>${sub}</p>` : ''}
+    <section class="hq-list-block ig-block ${extraClass || ''}">
+      <div class="hx-head hq-head">
+        <div class="hx-head-text">
+          <h3 class="hx-title">${title}</h3>
+          ${sub ? `<p class="hx-sub">${sub}</p>` : ''}
+        </div>
+        ${action || ''}
       </div>
       ${body}
     </section>`;
 }
 
+/* Layout (v4 — "Quiet Ledger", same language as Home):
+   1. Top bar     — title, month switch, refresh
+   2. Skor        — ring + status + three numbers, no card
+   3. Bulan ini   — the ONE card: this month vs last + 6-month cash flow
+   4. Perhatian   — plain list, most urgent first, good news as one line
+   5. Anggaran    — plain list with today's pace marker
+   6. Belanja     — one stacked bar + legend rows
+   7. Investasi   — three numbers + best / worst / top-up rows
+   8. Per tahun   — folded
+   Desktop (>=1024): two columns — left 2-4, right 5-8. */
 function renderFinancialInsight(data) {
   const container = document.getElementById('insightContent');
   if (!container || !data) return;
@@ -18126,34 +18527,36 @@ function renderFinancialInsight(data) {
   const isLatestMonth = data.currentYear === now.getFullYear() && data.currentMonth >= (now.getMonth() + 1);
 
   const subText = isCurrentMonth
-    ? `${monthNames[data.currentMonth - 1]} ${data.currentYear} · hari ke-${data.dayOfMonth} dari ${data.daysInMonth}`
-    : `${monthNames[data.currentMonth - 1]} ${data.currentYear} · Rekap bulan selesai (${data.daysInMonth} hari)${data.isArchived ? ' · Ringkasan Arsip' : ''}`;
+    ? `Hari ke-${data.dayOfMonth} dari ${data.daysInMonth}`
+    : `Rekap ${data.daysInMonth} hari${data.isArchived ? ' · ringkasan arsip' : ''}`;
 
-  let html = `
-    <header class="ins-page-head">
-      <div class="ins-head-left">
-        <h2 class="page-title">Insight</h2>
-        <div class="ins-month-nav">
-          <button class="ins-nav-btn" onclick="insPrevMonth()" aria-label="Bulan sebelumnya">${insIcon('chevron-left')}</button>
-          <strong class="ins-month-title">${monthNames[data.currentMonth - 1]} ${data.currentYear}</strong>
-          <button class="ins-nav-btn" onclick="insNextMonth()" aria-label="Bulan berikutnya" ${isLatestMonth ? 'disabled style="opacity:0.35;cursor:not-allowed;"' : ''}>${insIcon('chevron-right')}</button>
-          ${!isCurrentMonth ? `<button class="ins-today-chip" onclick="insCurrentMonth()">Bulan ini</button>` : ''}
-        </div>
-        <p class="ins-page-sub">${subText}</p>
+  const head = `
+    <header class="ah-top">
+      <div class="ah-top-text">
+        <h1 class="ah-title">Insight</h1>
+        <p class="ah-sub">${subText}</p>
       </div>
-      <button class="ins-refresh" onclick="refreshInsight()" aria-label="Muat ulang analisis">${insIcon('refresh-cw')}</button>
-    </header>`;
+      <button type="button" class="ah-icon-btn is-bordered" onclick="refreshInsight()" aria-label="Muat ulang analisis">${insIcon('refresh-cw')}</button>
+    </header>
+    <div class="ig-monthbar" role="group" aria-label="Pilih bulan">
+      <button type="button" class="ah-icon-btn" onclick="insPrevMonth()" aria-label="Bulan sebelumnya">${insIcon('chevron-left')}</button>
+      <strong class="ah-month" aria-live="polite">${monthNames[data.currentMonth - 1]} ${data.currentYear}</strong>
+      <button type="button" class="ah-icon-btn" onclick="insNextMonth()" aria-label="Bulan berikutnya" ${isLatestMonth ? 'disabled' : ''}>${insIcon('chevron-right')}</button>
+      ${!isCurrentMonth ? `<button type="button" class="ig-today" onclick="insCurrentMonth()">Bulan ini</button>` : ''}
+    </div>`;
 
-  html += renderInsightHero(data);
-  html += renderAttention(data);
-  html += renderMonthCompare(data);
-  html += renderBudgetPace(data);
-  html += renderSpendingAnalysis(data);
-  html += renderCashFlowAnalysis(data);
-  if (data.investmentData) html += renderInvestmentInsight(data);
-  html += renderYearlyProgress(data);
+  const main = renderInsightHero(data) + renderMonthCard(data) + renderAttention(data);
+  const side = renderBudgetPace(data) + renderSpendingAnalysis(data)
+    + (data.investmentData ? renderInvestmentInsight(data) : '') + renderYearlyProgress(data);
 
-  container.innerHTML = html;
+  container.innerHTML = `
+    <div class="hx hq ig">
+      ${head}
+      <div class="hx-cols">
+        <div class="hx-col hx-col-main">${main}</div>
+        <div class="hx-col hx-col-side">${side}</div>
+      </div>
+    </div>`;
   if (window.lucide) lucide.createIcons();
 }
 
@@ -18211,9 +18614,10 @@ function computeHealth(data) {
   return { score, status, tone, reasons };
 }
 
+
 function renderInsightHero(data) {
   const h = computeHealth(data);
-  const r = 26;
+  const r = 22;
   const circumference = 2 * Math.PI * r;
   const offset = circumference - (h.score / 100) * circumference;
 
@@ -18223,66 +18627,121 @@ function renderInsightHero(data) {
   const pred = data.prediction || {};
   const isCurrent = data.isCurrentMonth;
   const hasPred = isCurrent ? (data.dayOfMonth >= 5 && pred.saving !== undefined) : true;
-  const kpi3Label = isCurrent ? 'Proyeksi sisa' : 'Status akhir';
+  const kpi3Label = isCurrent ? 'Proyeksi' : 'Status';
   const kpi3Val = isCurrent
     ? (hasPred ? insightShort(pred.saving) : '—')
     : (data.saving >= 0 ? 'Surplus' : 'Defisit');
-  const kpi3Sub = isCurrent ? (hasPred ? 'akhir bulan' : 'min. hari ke-5') : `${insightShort(Math.abs(data.saving))}`;
+  const kpi3Sub = isCurrent ? (hasPred ? 'akhir bulan' : 'mulai hari ke-5') : insightShort(Math.abs(data.saving));
+  const kpi3Cls = !hasPred ? '' : (isCurrent ? (pred.saving >= 0 ? 'pos' : 'neg') : (data.saving >= 0 ? 'pos' : 'neg'));
 
   const expenseShare = data.totalIncome > 0 ? Math.round(data.totalExpense / data.totalIncome * 100) : null;
-  const line = isCurrent
-    ? (expenseShare === null ? 'Belum ada pemasukan tercatat bulan ini.' : `Pengeluaran ${expenseShare}% dari pemasukan bulan ini.`)
-    : (expenseShare === null ? 'Tidak ada pemasukan tercatat pada bulan ini.' : `Pengeluaran ${expenseShare}% dari total pemasukan.`);
+  const line = expenseShare === null
+    ? (isCurrent ? 'Belum ada pemasukan tercatat bulan ini.' : 'Tidak ada pemasukan tercatat.')
+    : `Pengeluaran ${expenseShare}% dari pemasukan.`;
 
   return `
-    <section class="ins-hero">
-      <div class="ins-hero-top">
-        <div class="ins-ring tone-${h.tone}" role="img" aria-label="Skor kesehatan ${h.score} dari 100">
-          <svg viewBox="0 0 64 64" aria-hidden="true">
-            <circle cx="32" cy="32" r="${r}" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="6"/>
-            <circle class="ins-ring-arc" cx="32" cy="32" r="${r}" fill="none" stroke-width="6"
+    <section class="ig-hero" aria-label="Skor kesehatan keuangan">
+      <div class="ig-score">
+        <div class="ig-ring tone-${h.tone}" role="img" aria-label="Skor kesehatan ${h.score} dari 100">
+          <svg viewBox="0 0 52 52" aria-hidden="true">
+            <circle cx="26" cy="26" r="${r}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="5"/>
+            <circle class="ig-ring-arc" cx="26" cy="26" r="${r}" fill="none" stroke-width="5"
               stroke-dasharray="${circumference.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"
-              stroke-linecap="round" transform="rotate(-90 32 32)"/>
+              stroke-linecap="round" transform="rotate(-90 26 26)"/>
           </svg>
           <strong>${h.score}</strong>
         </div>
-        <div class="ins-hero-text">
-          <span class="ins-label">Skor kesehatan</span>
-          <span class="ins-status tone-${h.tone}">${h.status}</span>
+        <div class="ig-score-text">
+          <span class="ig-status tone-${h.tone}">${h.status}</span>
           <p>${line}</p>
         </div>
       </div>
 
-      <div class="ins-kpis">
-        <div class="ins-kpi">
-          <span>Saving rate</span>
-          <strong class="${data.savingRate >= 20 ? 'pos' : data.savingRate < 0 ? 'neg' : 'warn'}">${data.savingRate.toFixed(1)}%</strong>
-          <small class="${rateDelta === null ? '' : rateDelta >= 0 ? 'pos' : 'neg'}">${rateSub}</small>
+      <dl class="hx-flow ig-kpis">
+        <div class="hx-flow-item">
+          <dt>Saving rate</dt>
+          <dd class="${data.savingRate >= 20 ? 'pos' : data.savingRate < 0 ? 'neg' : 'warn'}">${data.savingRate.toFixed(1)}%</dd>
+          <dd class="ig-kpi-sub ${rateDelta === null ? '' : rateDelta >= 0 ? 'pos' : 'neg'}">${rateSub}</dd>
         </div>
-        <div class="ins-kpi">
-          <span>${isCurrent ? 'Sisa bulan ini' : 'Sisa akhir'}</span>
-          <strong class="${data.saving >= 0 ? 'pos' : 'neg'}">${insightShort(data.saving)}</strong>
-          <small>masuk − keluar</small>
+        <div class="hx-flow-item">
+          <dt>Sisa</dt>
+          <dd class="${data.saving >= 0 ? 'pos' : 'neg'}">${insightShort(data.saving)}</dd>
+          <dd class="ig-kpi-sub">masuk − keluar</dd>
         </div>
-        <div class="ins-kpi">
-          <span>${kpi3Label}</span>
-          <strong class="${!hasPred ? '' : (isCurrent ? (pred.saving >= 0 ? 'pos' : 'neg') : (data.saving >= 0 ? 'pos' : 'neg'))}">${kpi3Val}</strong>
-          <small>${kpi3Sub}</small>
+        <div class="hx-flow-item">
+          <dt>${kpi3Label}</dt>
+          <dd class="${kpi3Cls}">${kpi3Val}</dd>
+          <dd class="ig-kpi-sub">${kpi3Sub}</dd>
         </div>
-      </div>
+      </dl>
 
-      <details class="ins-why">
+      <details class="ig-why">
         <summary>Kenapa skor ${h.score}? ${insIcon('chevron-down')}</summary>
         <ul>
-          ${h.reasons.map(x => `<li class="${x.good ? 'good' : 'bad'}">${insIcon(x.good ? 'check' : 'x')}${insEsc(x.text)}</li>`).join('')}
+          ${h.reasons.map(x => `<li class="${x.good ? 'good' : 'bad'}">${insIcon(x.good ? 'check' : 'x')}<span>${insEsc(x.text)}</span></li>`).join('')}
         </ul>
       </details>
     </section>`;
 }
 
+/* === THE ONE CARD: this month vs last, then the 6-month cash flow ===
+   Two answers to "how is money moving" in one box instead of two. */
+function renderMonthCard(data) {
+  const isCurrent = data.isCurrentMonth;
+  const hasPred = isCurrent && data.dayOfMonth >= 5 && data.prediction;
+  const pred = data.prediction || {};
+  const delta = (cur, prev, upIsGood) => {
+    if (!prev) return '<span class="ig-delta">—</span>';
+    const pct = (cur - prev) / Math.abs(prev) * 100;
+    if (!isFinite(pct)) return '<span class="ig-delta">—</span>';
+    const good = upIsGood ? pct >= 0 : pct <= 0;
+    return `<span class="ig-delta ${good ? 'pos' : 'neg'}">${pct >= 0 ? '↑' : '↓'}${Math.abs(pct).toFixed(0)}%</span>`;
+  };
+  const col4 = (predVal, pastText, isPositive) => isCurrent
+    ? `<span role="cell" class="ig-proj">${hasPred ? insightShort(predVal) : '—'}</span>`
+    : `<span role="cell" class="ig-proj ${isPositive === undefined ? '' : (isPositive ? 'pos' : 'neg')}">${pastText}</span>`;
+  const rows = [
+    { label: 'Masuk', cls: 'is-in', now: insightShort(data.totalIncome), d: delta(data.totalIncome, data.prevIncome, true), c4: col4(pred.income, 'Tercatat') },
+    { label: 'Keluar', cls: 'is-out', now: insightShort(data.totalExpense), d: delta(data.totalExpense, data.prevExpense, false), c4: col4(pred.expense, 'Selesai') },
+    { label: 'Sisa', cls: data.saving >= 0 ? 'pos' : 'neg', now: insightShort(data.saving), d: delta(data.saving, data.prevSaving, true), c4: col4(pred.saving, data.saving >= 0 ? 'Surplus' : 'Defisit', data.saving >= 0) },
+    { label: 'Net worth', cls: '', now: insightShort(data.netWorth), d: '<span class="ig-delta">—</span>', c4: col4(pred.netWorth, 'Akhir bln') }
+  ];
+  const table = `
+    <div class="ig-table" role="table" aria-label="Bulan ini dibanding bulan lalu">
+      <div class="ig-tr ig-th" role="row">
+        <span role="columnheader"></span>
+        <span role="columnheader">${isCurrent ? 'Sekarang' : 'Realisasi'}</span>
+        <span role="columnheader">vs lalu</span>
+        <span role="columnheader">${isCurrent ? 'Proyeksi' : 'Status'}</span>
+      </div>
+      ${rows.map(r => `
+        <div class="ig-tr" role="row">
+          <span role="rowheader">${r.label}</span>
+          <strong role="cell" class="${r.cls}">${r.now}</strong>
+          <span role="cell">${r.d}</span>
+          ${r.c4}
+        </div>`).join('')}
+    </div>`;
+
+  const sub = isCurrent
+    ? (hasPred ? `Proyeksi dari ${data.dayOfMonth} hari berjalan` : 'Proyeksi muncul mulai hari ke-5')
+    : 'Dibanding bulan sebelumnya';
+
+  return `
+    <section class="hx-card ig-card" aria-labelledby="igMonthTitle">
+      <div class="ig-card-head">
+        <div class="hx-head-text">
+          <h3 class="hx-title" id="igMonthTitle">${isCurrent ? 'Bulan ini' : 'Ringkasan bulan'}</h3>
+          <p class="hx-sub">${sub}</p>
+        </div>
+      </div>
+      ${table}
+      ${renderCashFlowAnalysis(data)}
+    </section>`;
+}
+
 /* === WHAT NEEDS ATTENTION ===
-   Key insights and recommendations used to be two cards saying the same
-   things. One list now, most urgent first; good news becomes chips. */
+   One list, most urgent first; good news is a single quiet line. */
 function renderAttention(data) {
   const items = [];   // { rank, tone, icon, title, detail }
   const good = [];    // { icon, text }
@@ -18366,71 +18825,29 @@ function renderAttention(data) {
 
   items.sort((a, b) => a.rank - b.rank);
   const row = i => `
-    <li class="ins-item tone-${i.tone}">
-      <span class="ins-item-icon">${insIcon(i.icon)}</span>
-      <span class="ins-item-body"><strong>${i.title}</strong><span>${i.detail}</span></span>
+    <li class="ig-item tone-${i.tone}">
+      <span class="ig-item-ic">${insIcon(i.icon)}</span>
+      <span class="ig-item-body"><strong>${i.title}</strong><span>${i.detail}</span></span>
     </li>`;
 
-  const shown = items.slice(0, 4);
-  const rest = items.slice(4);
+  const shown = items.slice(0, 3);
+  const rest = items.slice(3);
   const list = items.length
-    ? `<ul class="ins-list">${shown.map(row).join('')}</ul>
-       ${rest.length ? `<details class="ins-more"><summary>${rest.length} lainnya ${insIcon('chevron-down')}</summary><ul class="ins-list">${rest.map(row).join('')}</ul></details>` : ''}`
-    : `<div class="ins-allgood">${insIcon('circle-check')}<span>Tidak ada yang perlu dikhawatirkan di bulan ini.</span></div>`;
+    ? `<ul class="ig-list">${shown.map(row).join('')}</ul>
+       ${rest.length ? `<details class="ig-more"><summary>${rest.length} lainnya ${insIcon('chevron-down')}</summary><ul class="ig-list">${rest.map(row).join('')}</ul></details>` : ''}`
+    : `<p class="ig-allgood">${insIcon('circle-check')}<span>Tidak ada yang perlu dikhawatirkan.</span></p>`;
 
-  const chips = good.length
-    ? `<div class="ins-chips" aria-label="Kabar baik">${good.map(g => `<span class="ins-chip">${insIcon(g.icon)}${g.text}</span>`).join('')}</div>`
+  const goodLine = good.length
+    ? `<p class="ig-good" aria-label="Kabar baik">${insIcon('sparkles')}<span>${good.map(g => g.text).join(' · ')}</span></p>`
     : '';
 
   const sub = items.length ? `${items.length} hal, paling mendesak di atas` : '';
-  return insightSection('Perlu perhatian', sub, `<div class="ins-card">${list}${chips}</div>`);
-}
-
-/* === THIS MONTH VS LAST, WITH PROJECTION === */
-function renderMonthCompare(data) {
-  const isCurrent = data.isCurrentMonth;
-  const hasPred = isCurrent && data.dayOfMonth >= 5 && data.prediction;
-  const pred = data.prediction || {};
-  const delta = (cur, prev, upIsGood) => {
-    if (!prev) return '<span class="ins-delta">—</span>';
-    const pct = (cur - prev) / Math.abs(prev) * 100;
-    if (!isFinite(pct)) return '<span class="ins-delta">—</span>';
-    const good = upIsGood ? pct >= 0 : pct <= 0;
-    return `<span class="ins-delta ${good ? 'pos' : 'neg'}">${pct >= 0 ? '↑' : '↓'}${Math.abs(pct).toFixed(0)}%</span>`;
-  };
-  const fourthCol = (predVal, pastText, isPositive) => {
-    if (isCurrent) return `<span role="cell" class="ins-proj">${hasPred ? insightShort(predVal) : '—'}</span>`;
-    return `<span role="cell" class="${isPositive === undefined ? '' : (isPositive ? 'pos' : 'neg')}"><strong>${pastText}</strong></span>`;
-  };
-  const rows = [
-    { label: 'Pemasukan', now: insightShort(data.totalIncome), d: delta(data.totalIncome, data.prevIncome, true), col4: fourthCol(pred.income, 'Tercatat') },
-    { label: 'Pengeluaran', now: insightShort(data.totalExpense), d: delta(data.totalExpense, data.prevExpense, false), col4: fourthCol(pred.expense, 'Selesai') },
-    { label: 'Sisa', now: insightShort(data.saving), d: delta(data.saving, data.prevSaving, true), col4: fourthCol(pred.saving, data.saving >= 0 ? 'Surplus' : 'Defisit', data.saving >= 0), cls: data.saving >= 0 ? 'pos' : 'neg' },
-    { label: 'Net worth', now: insightShort(data.netWorth), d: '<span class="ins-delta">—</span>', col4: fourthCol(pred.netWorth, 'Akhir bln') }
-  ];
-  const col4Header = isCurrent ? 'Proyeksi' : 'Status';
-  const body = `
-    <div class="ins-card ins-table" role="table" aria-label="Bulan ini dibanding bulan lalu">
-      <div class="ins-tr ins-th" role="row">
-        <span role="columnheader"></span><span role="columnheader">${isCurrent ? 'Sekarang' : 'Realisasi'}</span><span role="columnheader">vs lalu</span><span role="columnheader">${col4Header}</span>
-      </div>
-      ${rows.map(r => `
-        <div class="ins-tr" role="row">
-          <span role="rowheader">${r.label}</span>
-          <strong role="cell" class="${r.cls || ''}">${r.now}</strong>
-          <span role="cell">${r.d}</span>
-          ${r.col4}
-        </div>`).join('')}
-    </div>`;
-  const sub = isCurrent
-    ? (hasPred ? `Proyeksi dari rata-rata ${data.dayOfMonth} hari berjalan` : 'Proyeksi muncul mulai hari ke-5')
-    : 'Dibandingkan dengan bulan sebelumnya';
-  return insightSection(isCurrent ? 'Bulan ini' : 'Ringkasan bulan', sub, body);
+  return insightSection('Perlu perhatian', sub, `${list}${goodLine}`);
 }
 
 /* === BUDGET PACE ===
-   The dashboard shows how much is used; this shows whether that is ahead
-   of the calendar — the marker is where spending "should" be today. */
+   Home shows how much is used; this shows whether that is ahead of the
+   calendar — the tick is where spending "should" be today. */
 function renderBudgetPace(data) {
   const items = data.budgetAnalysis.filter(b => b.target > 0);
   if (!items.length) return '';
@@ -18451,51 +18868,50 @@ function renderBudgetPace(data) {
         : (left >= 0 ? `${insightShort(left / Math.max(daysLeft, 1))}/hari` : `lebih ${insightShort(-left)}`))
       : (b.isSaving
         ? (left > 0 ? `kurang ${insightShort(left)}` : `tercapai +${insightShort(-left)}`)
-        : (left >= 0 ? `sisa hemat ${insightShort(left)}` : `overbudget +${insightShort(-left)}`));
+        : (left >= 0 ? `hemat ${insightShort(left)}` : `over +${insightShort(-left)}`));
     return `
-      <div class="ins-pace is-${state}">
-        <div class="ins-pace-top">
+      <div class="ig-pace is-${state}">
+        <div class="ig-pace-top">
           <span>${insEsc(b.category)}${b.isSaving ? ' <em>tabungan</em>' : ''}</span>
           <strong>${pct.toFixed(0)}%</strong>
         </div>
-        <div class="ins-pace-bar">
-          <span class="ins-pace-fill" style="width:${Math.min(pct, 100)}%"></span>
-          ${b.isSaving || !isCurrent ? '' : `<span class="ins-pace-mark" style="left:${timePct}%" aria-hidden="true"></span>`}
+        <div class="ig-pace-bar">
+          <span class="ig-pace-fill" style="width:${Math.min(pct, 100)}%"></span>
+          ${b.isSaving || !isCurrent ? '' : `<span class="ig-pace-mark" style="left:${timePct}%" aria-hidden="true"></span>`}
         </div>
-        <div class="ins-pace-foot"><span>${insightShort(b.spent)} / ${insightShort(b.target).replace('Rp ', '')}${!b.isSaving && left > 0 ? ' · sisa ' + insightShort(left).replace('Rp ', '') : ''}</span><span class="ins-pace-note">${foot}</span></div>
+        <div class="ig-pace-foot"><span>${insightShort(b.spent)} / ${insightShort(b.target).replace('Rp ', '')}</span><span class="ig-pace-note">${foot}</span></div>
       </div>`;
   }).join('');
 
-  const basis = `Dana ${insightShort(data.budgetBase || 0)} = sisa bulan lalu ${insightShort(data.carryover || 0)} + pemasukan ${insightShort(data.totalIncome)}`;
   const sub = isCurrent
-    ? `${basis} · garis putih = batas ideal hari ini (${timePct.toFixed(0)}%)`
-    : `${basis} · realisasi akhir`;
-  return insightSection(isCurrent ? 'Laju budget' : 'Realisasi budget', sub, `<div class="ins-card">${rows}</div>`);
+    ? `Dana ${insightShort(data.budgetBase || 0)} · garis = batas ideal hari ini`
+    : `Dana ${insightShort(data.budgetBase || 0)} · realisasi akhir`;
+  const note = `<p class="ig-fine">Dana = sisa bulan lalu ${insightShort(data.carryover || 0)} + pemasukan ${insightShort(data.totalIncome)}</p>`;
+  return insightSection(isCurrent ? 'Laju anggaran' : 'Realisasi anggaran', sub, `<div class="ig-rows">${rows}</div>${note}`);
 }
 
-/* === TOP SPENDING === */
+/* === TOP SPENDING ===
+   One stacked bar for the shares, then a legend row per category. */
 function renderSpendingAnalysis(data) {
   const monthNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   const monthLabel = monthNames[data.currentMonth - 1] || 'Bulan ini';
   if (!data.spendingByCategory.length) {
-    return insightSection('Pengeluaran terbesar', `${monthLabel} ${data.currentYear}, per kategori`, '<div class="ins-card"><div class="empty-state" style="padding:12px;font-size:13px;color:var(--text-muted);">Tidak ada pengeluaran tercatat di bulan ini.</div></div>');
+    return insightSection('Pengeluaran terbesar', `${monthLabel} ${data.currentYear}`, '<p class="ig-empty">Tidak ada pengeluaran tercatat di bulan ini.</p>');
   }
   const top = data.spendingByCategory.slice(0, 5);
   const colors = ['#22d3ee', '#fbbf24', '#f472b6', '#818cf8', '#fb923c'];
-  const max = top[0] ? top[0].amount : 1;
-  const note = top[0] && top[0].percent > 40
-    ? `<p class="ins-note">${insIcon('info')}${insEsc(top[0].category)} mengambil ${top[0].percent.toFixed(0)}% pengeluaran.</p>` : '';
-
+  const stack = top.map((c, i) => `<span style="width:${Math.max(c.percent, 0).toFixed(1)}%;background:${colors[i]}" title="${insEsc(c.category)} ${c.percent.toFixed(0)}%"></span>`).join('');
   const rows = top.map((c, i) => `
-    <div class="ins-bar-row">
-      <span class="ins-bar-name"><i class="ins-dot" style="background:${colors[i]}"></i>${insEsc(c.category)}</span>
-      <span class="ins-bar-track"><span style="width:${(c.amount / max * 100).toFixed(0)}%;background:${colors[i]}"></span></span>
-      <span class="ins-bar-val"><strong>${insightShort(c.amount)}</strong><small>${c.percent.toFixed(0)}%</small></span>
+    <div class="ig-leg">
+      <span class="ig-leg-name"><i style="background:${colors[i]}"></i>${insEsc(c.category)}</span>
+      <span class="ig-leg-pct">${c.percent.toFixed(0)}%</span>
+      <strong>${insightShort(c.amount)}</strong>
     </div>`).join('');
-  return insightSection('Pengeluaran terbesar', `${monthLabel} ${data.currentYear}, per kategori`, `<div class="ins-card">${rows}${note}</div>`);
+  return insightSection('Pengeluaran terbesar', `${monthLabel} ${data.currentYear}, per kategori`,
+    `<div class="ig-stack" role="img" aria-label="Porsi pengeluaran per kategori">${stack}</div><div class="ig-rows">${rows}</div>`);
 }
 
-/* === CASH FLOW TREND === */
+/* === CASH FLOW TREND (lives inside the month card) === */
 function renderCashFlowAnalysis(data) {
   const history = data.monthlyHistory;
   if (history.length < 2) return '';
@@ -18504,25 +18920,28 @@ function renderCashFlowAnalysis(data) {
   const positive = history.filter(h => h.saving > 0).length;
 
   const cols = history.map(h => `
-    <div class="ins-cf-col" title="${insEsc(h.label)} · masuk ${insightIDR(h.income)} · keluar ${insightIDR(h.expense)}">
-      <div class="ins-cf-bars">
+    <div class="ig-cf-col" title="${insEsc(h.label)} · masuk ${insightIDR(h.income)} · keluar ${insightIDR(h.expense)}">
+      <div class="ig-cf-bars">
         <span class="in" style="height:${(h.income / max * 100).toFixed(0)}%"></span>
         <span class="out" style="height:${(h.expense / max * 100).toFixed(0)}%"></span>
       </div>
-      <span class="ins-cf-net ${h.saving >= 0 ? 'pos' : 'neg'}">${h.saving >= 0 ? '+' : '−'}${insightShort(Math.abs(h.saving)).replace('Rp ', '')}</span>
-      <span class="ins-cf-label">${insEsc(h.label)}</span>
+      <span class="ig-cf-net ${h.saving >= 0 ? 'pos' : 'neg'}">${h.saving >= 0 ? '+' : '−'}${insightShort(Math.abs(h.saving)).replace('Rp ', '')}</span>
+      <span class="ig-cf-label">${insEsc(h.label)}</span>
     </div>`).join('');
 
-  const body = `
-    <div class="ins-card">
-      <div class="ins-cf">${cols}</div>
-      <div class="ins-legend">
-        <span><i class="ins-sw in"></i>Masuk</span>
-        <span><i class="ins-sw out"></i>Keluar</span>
-        <span>Angka = sisa</span>
+  return `
+    <div class="ig-cf-wrap">
+      <div class="ig-cf-head">
+        <span class="ig-cf-title">Cash flow ${history.length} bulan</span>
+        <span class="ig-cf-meta">${positive}/${history.length} positif · rata-rata ${insightShort(avgSaving)}</span>
+      </div>
+      <div class="ig-cf" role="img" aria-label="Pemasukan dan pengeluaran ${history.length} bulan terakhir">${cols}</div>
+      <div class="ig-legend">
+        <span><i class="in"></i>Masuk</span>
+        <span><i class="out"></i>Keluar</span>
+        <span>angka = sisa</span>
       </div>
     </div>`;
-  return insightSection('Cash flow', `${positive} dari ${history.length} bulan positif · rata-rata sisa ${insightShort(avgSaving)}`, body);
 }
 
 /* === INVESTMENT === */
@@ -18534,27 +18953,20 @@ function renderInvestmentInsight(data) {
   const worst = portfolio.length ? portfolio.reduce((a, b) => a.GrowthPercent < b.GrowthPercent ? a : b) : null;
   const pl = inv.profitLoss >= 0;
 
-  const perf = best ? `
-    <div class="ins-perf">
-      <span>${insIcon('arrow-up-right')}Terbaik <strong>${insEsc(best.Asset)}</strong><em class="pos">+${(best.GrowthPercent * 100).toFixed(1)}%</em></span>
-      ${worst && worst.Asset !== best.Asset ? `<span>${insIcon('arrow-down-right')}Terlemah <strong>${insEsc(worst.Asset)}</strong><em class="${worst.GrowthPercent >= 0 ? 'pos' : 'neg'}">${(worst.GrowthPercent * 100).toFixed(1)}%</em></span>` : ''}
-    </div>` : '';
-
-  const rebalance = inv.rebalanceSuggestions && inv.rebalanceSuggestions.length ? `
-    <div class="ins-rebal">
-      <span class="ins-label">Saran top-up</span>
-      ${inv.rebalanceSuggestions.slice(0, 3).map(r => `<div><span>${insEsc(r.sector)}</span><strong>+${insightShort(r.suggestedAmountIDR)}</strong></div>`).join('')}
-    </div>` : '';
+  const rows = [];
+  if (best) rows.push(`<div class="ig-kv"><span>${insIcon('arrow-up-right')}Terbaik · ${insEsc(best.Asset)}</span><strong class="pos">+${(best.GrowthPercent * 100).toFixed(1)}%</strong></div>`);
+  if (worst && best && worst.Asset !== best.Asset) rows.push(`<div class="ig-kv"><span>${insIcon('arrow-down-right')}Terlemah · ${insEsc(worst.Asset)}</span><strong class="${worst.GrowthPercent >= 0 ? 'pos' : 'neg'}">${(worst.GrowthPercent * 100).toFixed(1)}%</strong></div>`);
+  (inv.rebalanceSuggestions || []).slice(0, 2).forEach(r => {
+    rows.push(`<div class="ig-kv"><span>${insIcon('plus')}Top-up · ${insEsc(r.sector)}</span><strong>${insightShort(r.suggestedAmountIDR)}</strong></div>`);
+  });
 
   const body = `
-    <div class="ins-card">
-      <div class="ins-kpis ins-kpis-flat">
-        <div class="ins-kpi"><span>Nilai</span><strong>${insightShort(inv.totalValue)}</strong></div>
-        <div class="ins-kpi"><span>Profit/Loss</span><strong class="${pl ? 'pos' : 'neg'}">${pl ? '+' : ''}${insightShort(inv.profitLoss)}</strong></div>
-        <div class="ins-kpi"><span>Return</span><strong class="${inv.returnPercent >= 0 ? 'pos' : 'neg'}">${inv.returnPercent >= 0 ? '+' : ''}${inv.returnPercent.toFixed(1)}%</strong></div>
-      </div>
-      ${perf}${rebalance}
-    </div>`;
+    <dl class="hx-flow ig-kpis ig-kpis-inv">
+      <div class="hx-flow-item"><dt>Nilai</dt><dd>${insightShort(inv.totalValue)}</dd></div>
+      <div class="hx-flow-item"><dt>Profit/Loss</dt><dd class="${pl ? 'pos' : 'neg'}">${pl ? '+' : ''}${insightShort(inv.profitLoss)}</dd></div>
+      <div class="hx-flow-item"><dt>Return</dt><dd class="${inv.returnPercent >= 0 ? 'pos' : 'neg'}">${inv.returnPercent >= 0 ? '+' : ''}${inv.returnPercent.toFixed(1)}%</dd></div>
+    </dl>
+    ${rows.length ? `<div class="ig-rows">${rows.join('')}</div>` : ''}`;
   return insightSection('Investasi', `${portfolio.length} aset`, body);
 }
 
@@ -18610,9 +19022,9 @@ function renderYearlyProgress(data) {
     : '';
 
   return `
-    <details class="ins-section ins-fold">
-      <summary><span><strong>Perkembangan per tahun</strong><small>${years.length} tahun</small></span>${insIcon('chevron-down')}</summary>
-      <div class="ins-card"><div class="insight-yoy">${rows}</div>${archivedNote}</div>
+    <details class="ig-fold">
+      <summary><span class="hx-head-text"><span class="hx-title">Perkembangan per tahun</span><span class="hx-sub">${years.length} tahun</span></span>${insIcon('chevron-down')}</summary>
+      <div class="insight-yoy ig-yoy">${rows}</div>${archivedNote}
     </details>`;
 }
 
@@ -19263,12 +19675,36 @@ let MM_AI_EXTRA = null;
 function mmAiGetKey() { return (safeStorage.getItem(MM_AI_KEY_STORE) || '').trim(); }
 
 /* ---------- open / close ---------- */
+/* The chat is a popup tied to the floating bubble (#aiFab): the bubble
+   turns into a "close" chevron while the panel is open. */
+function mmAiSetFab(open) {
+  const fab = document.getElementById('aiFab');
+  const scrim = document.getElementById('mmAiScrim');
+  if (fab) {
+    fab.classList.toggle('is-open', open);
+    fab.setAttribute('aria-expanded', String(open));
+    fab.setAttribute('aria-label', open ? 'Tutup asisten keuangan AI' : 'Buka asisten keuangan AI');
+  }
+  if (scrim) scrim.classList.toggle('hidden', !open);
+}
+
+function mmToggleAiChat() {
+  const sheet = document.getElementById('mmAiSheet');
+  if (sheet && !sheet.classList.contains('hidden')) mmCloseAiChat();
+  else mmOpenAiChat();
+}
+
 function mmOpenAiChat() {
   const sheet = document.getElementById('mmAiSheet');
   if (!sheet) return;
-  MM_AI_OPENER = document.activeElement;
+  if (!sheet.classList.contains('hidden')) return;
+  const fab = document.getElementById('aiFab');
+  // Focus returns to the bubble when the panel closes, unless the chat was
+  // opened from somewhere else (drawer, settings) that is still on screen.
+  MM_AI_OPENER = (document.activeElement && document.activeElement !== document.body) ? document.activeElement : fab;
   sheet.classList.remove('hidden');
   document.body.classList.add('ai-open');
+  mmAiSetFab(true);
   mmAiRender();
   // Warm the full history in the background; the first answer needs it.
   if (typeof mmLoadSearchData === 'function' && !MM_SEARCH_CACHE) mmLoadSearchData();
@@ -19278,17 +19714,21 @@ function mmOpenAiChat() {
   // first control so the on-screen keyboard doesn't cover the suggestions.
   setTimeout(() => {
     if (input && mmAiGetKey() && window.matchMedia('(pointer: fine)').matches) input.focus();
-    else { const back = sheet.querySelector('.mm-search-back'); if (back) back.focus({ preventScroll: true }); }
+    else { const close = sheet.querySelector('.ai-bar-close'); if (close) close.focus({ preventScroll: true }); }
   }, 80);
 }
 
 function mmCloseAiChat() {
   const sheet = document.getElementById('mmAiSheet');
-  if (sheet) sheet.classList.add('hidden');
+  if (!sheet || sheet.classList.contains('hidden')) return;
+  sheet.classList.add('hidden');
   document.body.classList.remove('ai-open');
+  mmAiSetFab(false);
   const input = document.getElementById('mmAiInput');
   if (input) input.blur();
-  if (MM_AI_OPENER && document.contains(MM_AI_OPENER)) MM_AI_OPENER.focus({ preventScroll: true });
+  const back = (MM_AI_OPENER && document.contains(MM_AI_OPENER) && MM_AI_OPENER.getClientRects().length)
+    ? MM_AI_OPENER : document.getElementById('aiFab');
+  if (back) back.focus({ preventScroll: true });
   MM_AI_OPENER = null;
 }
 
