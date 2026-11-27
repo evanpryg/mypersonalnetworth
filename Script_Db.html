@@ -355,6 +355,55 @@ var DB_API = {
     })(transactions);
     var estimatedMonthsLeft = averageMonthlyInvestmentIDR > 0 ? Math.ceil(remainingAmountIDR / averageMonthlyInvestmentIDR) : null;
 
+    // Month-by-month money in the portfolio, for the growth chart. Buy/Sell
+    // only move money between cash and an asset, so they do not change it;
+    // deposits, withdrawals, transfers, initial holdings and cash
+    // adjustments do. `net` is what was put in (adjustments excluded),
+    // `book` the running total at month end. Market prices are only known
+    // for today, so the client swaps the current month for market value.
+    var monthlyGrowth = (function(txs) {
+      function monthKey(d) {
+        var str = String(d || '');
+        var m = str.match(/^(\d{4})-(\d{2})/);
+        if (m) return m[1] + '-' + m[2];
+        var dt = new Date(d);
+        if (isNaN(dt.getTime())) return null;
+        return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0');
+      }
+      var byMonth = {};
+      txs.forEach(function(r) {
+        var type = normalize_(r.TransactionType), platform = normalize_(r.Platform);
+        if (!platform || !type) return;
+        if (type === 'Initial Holding' && (!normalize_(r.Sector) || !normalize_(r.Asset))) return;
+        var amt = toNumber_(r.AmountIDR), net = 0, adj = 0;
+        if (type === 'Deposit' || type === 'Transfer In' || type === 'Initial Holding') net = amt;
+        else if (type === 'Withdraw' || type === 'Transfer Out') net = -amt;
+        else if (type === 'Cash Adjustment') adj = amt;
+        else return;
+        var k = monthKey(r.Date);
+        if (!k) return;
+        if (!byMonth[k]) byMonth[k] = { net: 0, adj: 0 };
+        byMonth[k].net += net;
+        byMonth[k].adj += adj;
+      });
+      var keys = Object.keys(byMonth).sort();
+      if (!keys.length) return [];
+      var now = new Date();
+      var nowKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      var last = keys[keys.length - 1] > nowKey ? keys[keys.length - 1] : nowKey;
+      var out = [], book = 0;
+      var y = Number(keys[0].slice(0, 4)), mo = Number(keys[0].slice(5, 7));
+      for (var guard = 0; guard < 600; guard++) {
+        var k = y + '-' + String(mo).padStart(2, '0');
+        var e = byMonth[k] || { net: 0, adj: 0 };
+        book += e.net + e.adj;
+        out.push({ month: k, net: e.net, adj: e.adj, book: book });
+        if (k === last) break;
+        mo++; if (mo > 12) { mo = 1; y++; }
+      }
+      return out;
+    })(transactions);
+
     var sectorMap = {};
     portfolio.forEach(function(i) { if (!sectorMap[i.Sector]) sectorMap[i.Sector]=0; sectorMap[i.Sector]+=i.CurrentValueIDR; });
     var totalSectorVal = Object.values(sectorMap).reduce(function(s,v){return s+v;},0);
@@ -375,7 +424,7 @@ var DB_API = {
       return uw.map(function(i){var p=tg>0?i.gapPercent/tg:0;return{sector:i.sector,actualPercent:i.actualPercent,targetPercent:i.targetPercent,gapPercent:i.gapPercent,portion:p,suggestedAmountIDR:tc*p};}).sort(function(a,b){return b.suggestedAmountIDR-a.suggestedAmountIDR;});
     })(allocationBySector, totalCashIDR);
 
-    return { target:{name:target.TargetName||'First 100 Million',amount:targetAmount,currency:target.TargetCurrency||'IDR'}, summary:{totalPortfolioValueIDR:totalPortfolioValueIDR,totalInvestedAssetsIDR:totalInvestedAssetsIDR,totalCashIDR:totalCashIDR,totalCapitalIDR:totalCapitalIDR,totalProfitLossIDR:totalProfitLossIDR,progressPercent:progressPercent,remainingAmountIDR:remainingAmountIDR,averageMonthlyInvestmentIDR:averageMonthlyInvestmentIDR,estimatedMonthsLeft:estimatedMonthsLeft}, allocationTargets:allocationTargets, allocationBySector:allocationBySector, cashByPlatform:cashByPlatform, rebalanceSuggestions:rebalanceSuggestions, portfolio:portfolio };
+    return { target:{name:target.TargetName||'First 100 Million',amount:targetAmount,currency:target.TargetCurrency||'IDR'}, summary:{totalPortfolioValueIDR:totalPortfolioValueIDR,totalInvestedAssetsIDR:totalInvestedAssetsIDR,totalCashIDR:totalCashIDR,totalCapitalIDR:totalCapitalIDR,totalProfitLossIDR:totalProfitLossIDR,progressPercent:progressPercent,remainingAmountIDR:remainingAmountIDR,averageMonthlyInvestmentIDR:averageMonthlyInvestmentIDR,estimatedMonthsLeft:estimatedMonthsLeft}, allocationTargets:allocationTargets, allocationBySector:allocationBySector, cashByPlatform:cashByPlatform, rebalanceSuggestions:rebalanceSuggestions, portfolio:portfolio, monthlyGrowth:monthlyGrowth };
   },
 
   async addTransaction(payload) {

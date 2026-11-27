@@ -202,11 +202,12 @@
         <!-- ===== DASHBOARD PAGE (v4 — "Quiet Ledger", same language as Home) =====
              One card only (what to buy next); everything else is type on the
              page background separated by hairlines.
-             1. Nilai      — big number, P/L, goal bar, modal / aset / cash
-             2. Langkah    — the one card: next move, cash split, simulator
-             3. Alokasi    — plain list, sector or platform
-             4. Aset       — plain list, sorted by value or return
-             Desktop (>=1024): two columns — left 1-2, right 3-4.
+             1. Nilai       — big number, P/L, goal bar, modal / aset / cash
+             2. Pertumbuhan — monthly bar chart (value / net deposits)
+             3. Langkah     — the one card: next move, cash split, simulator
+             4. Alokasi     — plain list, sector or platform
+             5. Aset        — plain list, sorted by value or return
+             Desktop (>=1024): two columns — left 2-3, right 4-5.
              All data ids are unchanged; rendering lives in Script.html. -->
         <div id="dashboardPage" class="page active-page">
           <div class="hx hq iq">
@@ -245,7 +246,28 @@
             <div class="hx-cols">
               <div class="hx-col hx-col-main">
 
-                <!-- 2. LANGKAH BERIKUTNYA — the only card -->
+                <!-- 2. PERTUMBUHAN — month-by-month bars, no card.
+                     "Nilai": value at each month end (book value for past
+                     months, market value for this month). "Setoran": net
+                     money put in that month. Rendered by ivRenderGrowth(). -->
+                <section class="hq-list-block ivg" aria-labelledby="ivGrowthTitle">
+                  <div class="hx-head hq-head">
+                    <div class="hx-head-text">
+                      <h3 class="hx-title" id="ivGrowthTitle">Pertumbuhan</h3>
+                      <p class="hx-sub" id="ivGrowthSub"></p>
+                    </div>
+                    <div class="iq-seg" role="group" aria-label="Tampilan grafik pertumbuhan">
+                      <button type="button" class="iq-seg-btn ivg-tab active" aria-pressed="true" data-mode="value" onclick="ivGrowthMode('value')">Nilai</button>
+                      <button type="button" class="iq-seg-btn ivg-tab" aria-pressed="false" data-mode="flow" onclick="ivGrowthMode('flow')">Setoran</button>
+                    </div>
+                  </div>
+                  <div class="ivg-chart" id="ivGrowthChart">
+                    <div class="empty-state">Memuat grafik…</div>
+                  </div>
+                  <p class="ivg-read" id="ivGrowthRead" aria-live="polite"></p>
+                </section>
+
+                <!-- 3. LANGKAH BERIKUTNYA — the only card -->
                 <section class="hx-card iq-next" aria-labelledby="ivNextTitle">
                   <div class="iq-next-head">
                     <div class="hx-head-text">
@@ -273,7 +295,7 @@
               </div>
               <div class="hx-col hx-col-side">
 
-                <!-- 3. ALOKASI -->
+                <!-- 4. ALOKASI -->
                 <section class="hq-list-block" aria-labelledby="ivAllocTitle">
                   <div class="hx-head hq-head">
                     <div class="hx-head-text">
@@ -291,7 +313,7 @@
                   <div id="platformCashList" class="iv-alloc-list iq-list" style="display:none;"></div>
                 </section>
 
-                <!-- 4. ASET -->
+                <!-- 5. ASET -->
                 <section class="hq-list-block" aria-labelledby="ivHoldTitle">
                   <div class="hx-head hq-head">
                     <div class="hx-head-text">
@@ -311,52 +333,55 @@
           </div>
         </div>
 
-        <!-- ===== PLATFORM PAGE =====
-             One card per account (Pluang, Bibit, …): its total, then exactly
-             where that money sits — idle cash first, then every holding —
-             with full rupiah amounts, never rounded to "jt". -->
+        <!-- ===== PLATFORM PAGE (Quiet Ledger) =====
+             No cards: the total sits on the page like the dashboard value,
+             then every account is a hairline row that unfolds into where
+             its money sits (cash first, then each holding, full rupiah). -->
         <div id="platformPage" class="page">
-          <section class="dashboard-wrap">
-            <header class="ins-page-head iv-pf-head">
-              <div>
-                <h2 class="page-title">Platform</h2>
-                <p class="ins-page-sub" id="ivPfSub">&nbsp;</p>
-              </div>
+          <div class="hx hq ip">
+            <header class="ip-head">
+              <h2 class="ip-title">Platform</h2>
+              <p class="hx-sub" id="ivPfSub"></p>
             </header>
-            <div class="iv-pf-overview" id="ivPfOverview"></div>
-            <div class="iv-pf-list" id="ivPfList">
-              <div class="empty-state">Memuat data platform…</div>
-            </div>
-          </section>
+            <section class="hq-hero ip-hero" id="ivPfOverview" aria-label="Ringkasan semua platform"></section>
+            <section class="hq-list-block" aria-labelledby="ivPfListTitle">
+              <div class="hx-head hq-head">
+                <div class="hx-head-text">
+                  <h3 class="hx-title" id="ivPfListTitle">Akun</h3>
+                  <p class="hx-sub">Ketuk untuk melihat isinya</p>
+                </div>
+              </div>
+              <div class="ip-pf-list" id="ivPfList">
+                <div class="empty-state">Memuat data platform…</div>
+              </div>
+            </section>
+          </div>
         </div>
 
-        <!-- ===== HISTORY PAGE ===== -->
+        <!-- ===== HISTORY PAGE (Quiet Ledger) =====
+             Filter chips instead of a dropdown, rows grouped by month on the
+             page background. Tap a row to delete it (asks first). -->
         <div id="historyPage" class="page">
-          <section class="page-header-card">
-            <p class="panel-eyebrow">History</p>
-            <h2 class="page-title">Activity Log</h2>
-            <p class="page-desc">Review your transactions.</p>
-          </section>
-          <section class="panel-card">
-            <div class="panel-header">
-              <div>
-                <p class="panel-eyebrow">Transactions</p>
-                <h3 class="panel-title">Recent Moves</h3>
-              </div>
-              <select id="historyTypeFilter" class="filter-select" onchange="renderHistory()">
-                <option value="All">All Types</option>
-                <option value="Initial Holding">Initial Holding</option>
-                <option value="Deposit">Deposit</option>
-                <option value="Buy">Buy</option>
-                <option value="Sell">Sell</option>
-                <option value="Withdraw">Withdraw</option>
-                <option value="Transfer Out">Transfer Out</option>
-                <option value="Transfer In">Transfer In</option>
-                <option value="Cash Adjustment">Cash Adjustment</option>
-              </select>
+          <div class="hx hq ip">
+            <header class="ip-head">
+              <h2 class="ip-title">History</h2>
+              <p class="hx-sub" id="ivHistSub"></p>
+            </header>
+            <div class="ip-chips" id="ivHistChips" role="group" aria-label="Filter tipe transaksi">
+              <button type="button" class="ip-chip active" aria-pressed="true" data-type="All" onclick="ivHistFilter('All')">Semua</button>
+              <button type="button" class="ip-chip" aria-pressed="false" data-type="Buy" onclick="ivHistFilter('Buy')">Beli</button>
+              <button type="button" class="ip-chip" aria-pressed="false" data-type="Sell" onclick="ivHistFilter('Sell')">Jual</button>
+              <button type="button" class="ip-chip" aria-pressed="false" data-type="Deposit" onclick="ivHistFilter('Deposit')">Setor</button>
+              <button type="button" class="ip-chip" aria-pressed="false" data-type="Withdraw" onclick="ivHistFilter('Withdraw')">Tarik</button>
+              <button type="button" class="ip-chip" aria-pressed="false" data-type="Transfer" onclick="ivHistFilter('Transfer')">Transfer</button>
+              <button type="button" class="ip-chip" aria-pressed="false" data-type="Initial Holding" onclick="ivHistFilter('Initial Holding')">Saldo awal</button>
+              <button type="button" class="ip-chip" aria-pressed="false" data-type="Cash Adjustment" onclick="ivHistFilter('Cash Adjustment')">Penyesuaian</button>
             </div>
-            <div id="transactionHistoryList" class="history-list">Loading transactions...</div>
-          </section>
+            <input type="hidden" id="historyTypeFilter" value="All">
+            <div id="transactionHistoryList" class="ip-hist">
+              <div class="empty-state">Memuat transaksi…</div>
+            </div>
+          </div>
         </div>
 
         <!-- ===== SETTINGS PAGE =====
@@ -508,7 +533,7 @@
 
         <!-- ===== MM HOME (v4 — "Quiet Ledger") =====
              Satu kartu saja; sisanya tipografi dan garis tipis.
-             1. Top bar      — sapaan & tanggal
+             (Tanpa sapaan / tanggal / avatar — aplikasi pribadi.)
              2. Saldo        — angka besar + tren 6 bulan, tanpa kartu
              3. Aksi         — satu bilah segmen: Keluar / Masuk / Transfer
              4. Bulan ini    — SATU kartu: jatah hari ini, laju belanja,
@@ -520,15 +545,6 @@
              Semua id data (mm*) dipertahankan; render ada di Script_Keuangan.html. -->
         <div id="mmDashboardPage" class="page active-page">
           <div class="hx hq">
-
-            <!-- 1. TOP BAR -->
-            <header class="hx-top">
-              <div class="hx-top-text">
-                <p class="hx-top-meta"><span id="mmGreeting">Selamat datang</span><span aria-hidden="true"> · </span><span id="mmDateText"></span></p>
-                <h1 class="hx-top-name" id="mmUserName">Mr Evan</h1>
-              </div>
-              <button type="button" class="hx-avatar" id="mmHomeAvatar" onclick="mmShowPage('mmSettingsPage')" aria-label="Buka profil">E</button>
-            </header>
 
             <div class="hx-cols">
               <div class="hx-col hx-col-main">

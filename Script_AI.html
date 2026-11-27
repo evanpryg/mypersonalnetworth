@@ -29,6 +29,33 @@ const MM_AI_SUGGESTIONS = [
 ];
 
 let MM_AI_HISTORY = [];   // {role: 'user' | 'model', parts: [{text}]}, plus status/error on answers
+// The conversation is kept in this browser so closing the panel, switching
+// workspace or reloading the app never loses earlier chats. Only "Percakapan
+// baru" clears it, and that asks first.
+const MM_AI_HISTORY_STORE = 'mm_ai_history_v1';
+const MM_AI_HISTORY_KEEP = 200;   // messages kept on this device
+const MM_AI_CONTEXT_TURNS = 40;   // most recent messages sent back to the model
+
+function mmAiCleanHistory(list) {
+  return (list || []).filter(m => m && (m.role === 'user' || m.role === 'model') && !m.error
+    && (m.parts || []).some(p => p && typeof p.text === 'string' && p.text.trim()))
+    .map(m => ({ role: m.role, parts: [{ text: m.parts.map(p => p.text || '').join('') }], t: m.t || Date.now() }));
+}
+
+function mmAiSaveHistory() {
+  try {
+    const clean = mmAiCleanHistory(MM_AI_HISTORY).slice(-MM_AI_HISTORY_KEEP);
+    if (clean.length) safeStorage.setItem(MM_AI_HISTORY_STORE, JSON.stringify(clean));
+    else safeStorage.removeItem(MM_AI_HISTORY_STORE);
+  } catch (e) { /* storage full or blocked: the chat still works for this session */ }
+}
+
+(function mmAiLoadHistory() {
+  try {
+    const raw = safeStorage.getItem(MM_AI_HISTORY_STORE);
+    if (raw) MM_AI_HISTORY = mmAiCleanHistory(JSON.parse(raw));
+  } catch (e) { MM_AI_HISTORY = []; }
+})();
 let MM_AI_BUSY = false;
 let MM_AI_ABORT = null;
 let MM_AI_OPENER = null;  // focus returns here when the chat closes
@@ -98,8 +125,13 @@ function mmCloseAiChat() {
 }
 
 function mmAiNewChat() {
+  const saved = mmAiCleanHistory(MM_AI_HISTORY).length;
+  if (saved && !confirm(`Mulai percakapan baru?
+
+${saved} pesan sebelumnya akan dihapus dari perangkat ini.`)) return;
   if (MM_AI_ABORT) MM_AI_ABORT.abort();
   MM_AI_HISTORY = [];
+  mmAiSaveHistory();
   mmAiRender();
 }
 
@@ -468,7 +500,8 @@ function mmAiSubmit(e) {
   if (!text) return;
   input.value = '';
   mmAiAutosize();
-  MM_AI_HISTORY.push({ role: 'user', parts: [{ text }] });
+  MM_AI_HISTORY.push({ role: 'user', parts: [{ text }], t: Date.now() });
+  mmAiSaveHistory();
   mmAiRun();
 }
 
@@ -499,7 +532,7 @@ function mmAiAutosize() {
 async function mmAiRun() {
   const key = mmAiGetKey();
   if (!key) { mmAiRender(); return; }
-  const answer = { role: 'model', parts: [{ text: '' }] };
+  const answer = { role: 'model', parts: [{ text: '' }], t: Date.now() };
   MM_AI_HISTORY.push(answer);
   mmAiRender();
   mmAiSetBusy(true);
@@ -516,7 +549,7 @@ async function mmAiRun() {
         { role: 'system', content: MM_AI_RULES + '\n\n=== DATA KEUANGAN ===\n' + context },
         // Only finished turns go back to the model; the empty answer slot and
         // failed attempts stay local.
-        ...MM_AI_HISTORY.filter(m => m !== answer && !m.error).map(m => ({
+        ...MM_AI_HISTORY.filter(m => m !== answer && !m.error).slice(-MM_AI_CONTEXT_TURNS).map(m => ({
           role: m.role === 'model' ? 'assistant' : 'user',
           content: (m.parts || []).map(p => p.text || '').join('')
         }))
@@ -533,6 +566,7 @@ async function mmAiRun() {
   } finally {
     MM_AI_ABORT = null;
     mmAiSetBusy(false);
+    mmAiSaveHistory();
     mmAiRender();
   }
 }

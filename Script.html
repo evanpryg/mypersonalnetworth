@@ -645,16 +645,21 @@
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 
-  /* === PLATFORM PAGE ===
-     Every account as an open card: total and return up top, a stacked bar
-     of where the money sits, then saldo + each holding in full rupiah. */
+  /* === PLATFORM PAGE (Quiet Ledger) ===
+     Total on the page (no card), one stacked bar for how the money is
+     split across accounts, then each account as a hairline row that
+     unfolds into its cash + holdings in full rupiah. */
   const IV_PF_COLLAPSED = new Set();
+  const IV_PF_OPENED = new Set();   // accounts the user unfolded
 
   function ivPlatformInitials(name) {
     const words = String(name || '?').trim().split(/\s+/);
     const txt = words.length > 1 ? words[0][0] + words[1][0] : words[0].substring(0, 2);
     return txt.toUpperCase();
   }
+
+  // One colour per account, biggest first (the workspace gold leads).
+  const IV_PF_SHADES = ['var(--accent)', '#60a5fa', '#a78bfa', '#22d3ee', '#f472b6', '#34d399', '#fb923c', '#94a3b8'];
 
   function renderPlatformAccounts(portfolio) {
     const list = document.getElementById('ivPfList');
@@ -663,7 +668,7 @@
     if (!list) return;
     const platforms = ivGroupPlatforms(portfolio);
     if (!platforms.length) {
-      if (sub) sub.innerHTML = '&nbsp;';
+      if (sub) sub.textContent = '';
       if (overview) overview.innerHTML = '';
       list.innerHTML = '<div class="empty-state">Belum ada platform. Catat deposit atau pembelian pertama lewat tombol +.</div>';
       return;
@@ -672,45 +677,51 @@
     const total = platforms.reduce((s, p) => s + p.value, 0);
     const totalCash = platforms.reduce((s, p) => s + p.cash, 0);
     const totalInvested = platforms.reduce((s, p) => s + p.invested, 0);
+    const totalCapital = platforms.reduce((s, p) => s + p.capital, 0);
+    const totalPl = platforms.reduce((s, p) => s + p.pl, 0);
+    const plCls = totalPl > 0 ? 'positive' : totalPl < 0 ? 'negative' : '';
     if (sub) sub.textContent = `${platforms.length} platform · ${platforms.reduce((s, p) => s + p.holdings.length, 0)} aset`;
+
+    const shade = (i) => IV_PF_SHADES[i % IV_PF_SHADES.length];
     if (overview) {
+      const split = platforms.map((p, i) => p.value > 0
+        ? `<span style="width:${p.value / Math.max(total, 1) * 100}%;background:${shade(i)}" title="${escapeHtml(p.platform)}"></span>` : '').join('');
       overview.innerHTML = `
-        <div class="iv-pf-ov-total">
-          <span>Total semua platform</span>
-          <strong>${ivFull(total)}</strong>
-        </div>
-        <div class="iv-pf-ov-split">
-          <div><span>Diinvestasikan</span><strong>${ivFull(totalInvested)}</strong></div>
-          <div><span>Saldo cash</span><strong>${ivFull(totalCash)}</strong></div>
-        </div>`;
+        <p class="hq-label">Total semua platform</p>
+        <h3 class="hq-amount">${ivFull(total)}</h3>
+        <p class="hq-change">
+          <span class="iv-pl-amount ${plCls}">${ivFull(totalPl, true)}${totalCapital > 0 ? ` (${ivPct(totalPl / totalCapital, true)})` : ''}</span>
+          <span class="hq-change-note">belum direalisasi</span>
+        </p>
+        <div class="ip-split" aria-hidden="true">${split}</div>
+        <dl class="hx-flow iq-stats">
+          <div class="hx-flow-item"><dt>Diinvestasikan</dt><dd>${ivShort(totalInvested)}</dd></div>
+          <div class="hx-flow-item"><dt>Cash</dt><dd>${ivShort(totalCash)}</dd></div>
+          <div class="hx-flow-item"><dt>Akun</dt><dd>${platforms.length}</dd></div>
+        </dl>`;
     }
 
-    list.innerHTML = platforms.map(p => {
+    list.innerHTML = platforms.map((p, idx) => {
       const share = total > 0 ? p.value / total : 0;
       const retCls = p.ret === null ? '' : p.ret > 0 ? 'positive' : p.ret < 0 ? 'negative' : '';
-      const plLine = p.ret === null
-        ? '<span class="iv-muted-2">Belum ada aset</span>'
-        : `<span class="${retCls}">${ivFull(p.pl, true)} (${ivPct(p.ret, true)})</span><span class="iv-muted-2">belum direalisasi</span>`;
+      const color = shade(idx);
 
-      // Stacked bar: cash in slate, holdings in their sector colour.
       const barBase = Math.max(p.value, 1);
       const segs = (p.cash > 0 ? [{ v: p.cash, c: ivSectorColor('Cash'), t: 'Saldo' }] : [])
         .concat(p.holdings.map(h => ({ v: Number(h.CurrentValueIDR) || 0, c: ivSectorColor(h.Sector), t: h.Asset })))
-        .filter(s => s.v > 0)
-        .map(s => `<span style="width:${s.v / barBase * 100}%;background:${s.c}" title="${escapeHtml(s.t)}"></span>`)
+        .filter(x => x.v > 0)
+        .map(x => `<span style="width:${x.v / barBase * 100}%;background:${x.c}" title="${escapeHtml(x.t)}"></span>`)
         .join('');
 
       const cashShare = p.value > 0 ? p.cash / p.value : 0;
       const cashRow = `
-        <div class="iv-pf-row">
-          <span class="iv-pf-icon iv-pf-icon-cash" aria-hidden="true"><i data-lucide="wallet"></i></span>
-          <span class="iv-pf-info">
-            <span class="iv-pf-name">Saldo</span>
-            <span class="iv-pf-meta">Cash · ${ivPct(cashShare)}</span>
+        <div class="ip-sub-row">
+          <span class="ip-sub-dot" style="background:${ivSectorColor('Cash')}" aria-hidden="true"></span>
+          <span class="ip-sub-info">
+            <span class="ip-sub-name">Saldo cash</span>
+            <span class="ip-sub-meta">${ivPct(cashShare)} dari akun</span>
           </span>
-          <span class="iv-pf-nums">
-            <strong class="${p.cash < 0 ? 'negative' : ''}">${ivFull(p.cash)}</strong>
-          </span>
+          <span class="ip-sub-nums"><strong class="${p.cash < 0 ? 'negative' : ''}">${ivFull(p.cash)}</strong></span>
         </div>`;
 
       const holdingRows = p.holdings.map(h => {
@@ -718,39 +729,41 @@
         const capital = Number(h.TotalCapitalIDR) || 0;
         const pl = Number(h.ProfitLossIDR) || 0;
         const cls = pl > 0 ? 'positive' : pl < 0 ? 'negative' : '';
-        const color = ivSectorColor(h.Sector);
         return `
-          <div class="iv-pf-row">
-            <span class="iv-pf-icon" style="background:${color}22;color:${color}" aria-hidden="true">${escapeHtml(String(h.Asset || '?').substring(0, 3).toUpperCase())}</span>
-            <span class="iv-pf-info">
-              <span class="iv-pf-name">${escapeHtml(h.Asset)}</span>
-              <span class="iv-pf-meta">${escapeHtml(h.Sector)} · ${ivPct(p.value > 0 ? value / p.value : 0)}</span>
+          <div class="ip-sub-row">
+            <span class="ip-sub-dot" style="background:${ivSectorColor(h.Sector)}" aria-hidden="true"></span>
+            <span class="ip-sub-info">
+              <span class="ip-sub-name">${escapeHtml(h.Asset)}</span>
+              <span class="ip-sub-meta">${escapeHtml(h.Sector)} · modal ${ivShort(capital)}</span>
             </span>
-            <span class="iv-pf-nums">
+            <span class="ip-sub-nums">
               <strong>${ivFull(value)}</strong>
               <span class="${cls}">${ivPct(h.GrowthPercent, true)} · ${ivFull(pl, true)}</span>
-              <small>modal ${ivFull(capital)}</small>
             </span>
           </div>`;
       }).join('');
 
-      const open = !IV_PF_COLLAPSED.has(p.platform);
+      // Folded by default (the page is a list of accounts); remembers what was opened.
+      const open = IV_PF_OPENED.has(p.platform) && !IV_PF_COLLAPSED.has(p.platform);
+      const plShort = (p.pl > 0 ? '+' : p.pl < 0 ? '-' : '') + ivShort(Math.abs(p.pl));
       return `
-        <details class="iv-pf-card" data-platform="${escapeHtml(p.platform)}" ${open ? 'open' : ''} ontoggle="ivPfToggle(this)">
-          <summary class="iv-pf-summary">
-            <span class="iv-pf-head-row">
-              <span class="iv-pf-avatar" aria-hidden="true">${escapeHtml(ivPlatformInitials(p.platform))}</span>
-              <span class="iv-pf-title">
-                <strong>${escapeHtml(p.platform)}</strong>
-                <small>${p.holdings.length} aset · ${ivPct(share)} portofolio</small>
-              </span>
-              <i data-lucide="chevron-down" class="iv-pf-chev" aria-hidden="true"></i>
+        <details class="ip-pf" data-platform="${escapeHtml(p.platform)}" ${open ? 'open' : ''} ontoggle="ivPfToggle(this)">
+          <summary class="ip-pf-sum">
+            <span class="ip-pf-mark" style="--c:${color}" aria-hidden="true">${escapeHtml(ivPlatformInitials(p.platform))}</span>
+            <span class="ip-pf-info">
+              <strong>${escapeHtml(p.platform)}</strong>
+              <small>${p.holdings.length} aset · ${ivPct(share)}</small>
             </span>
-            <span class="iv-pf-total">${ivFull(p.value)}</span>
-            <span class="iv-pf-pl">${plLine}</span>
-            <span class="iv-pf-bar" aria-hidden="true">${segs}</span>
+            <span class="ip-pf-nums">
+              <strong>${ivFull(p.value)}</strong>
+              ${p.ret === null ? '<small>Belum ada aset</small>' : `<small class="${retCls}">${ivPct(p.ret, true)} · ${plShort}</small>`}
+            </span>
+            <i data-lucide="chevron-down" class="ip-pf-chev" aria-hidden="true"></i>
           </summary>
-          <div class="iv-pf-rows">${cashRow}${holdingRows}</div>
+          <div class="ip-pf-body">
+            <span class="ip-pf-bar" aria-hidden="true">${segs}</span>
+            ${cashRow}${holdingRows}
+          </div>
         </details>`;
     }).join('');
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -758,15 +771,16 @@
 
   function ivPfToggle(el) {
     const name = el.dataset.platform;
-    if (el.open) IV_PF_COLLAPSED.delete(name);
-    else IV_PF_COLLAPSED.add(name);
+    if (el.open) { IV_PF_COLLAPSED.delete(name); IV_PF_OPENED.add(name); }
+    else { IV_PF_COLLAPSED.add(name); IV_PF_OPENED.delete(name); }
   }
 
   // From the dashboard: jump to one platform's card, opened.
   function ivOpenPlatform(name) {
     IV_PF_COLLAPSED.delete(name);
+    IV_PF_OPENED.add(name);
     showPage('platformPage');
-    const card = [...document.querySelectorAll('#ivPfList .iv-pf-card')].find(c => c.dataset.platform === name);
+    const card = [...document.querySelectorAll('#ivPfList .ip-pf')].find(c => c.dataset.platform === name);
     if (!card) return;
     card.open = true;
     card.classList.remove('is-flash');
@@ -1062,7 +1076,7 @@
   }
 
   /* === RENDER DASHBOARD === */
-  const IV_SECTOR_COLORS = ['#60a5fa','#22d3ee','#fbbf24','#818cf8','#f472b6','#34d399','#fb923c','#94a3b8'];
+  const IV_SECTOR_COLORS = ['#60a5fa','#22d3ee','#a78bfa','#f472b6','#34d399','#fb923c','#e879f9','#94a3b8'];
   let IV_SECTOR_COLOR_MAP = {};
   let IV_HOLDINGS_SORT = 'value';
   let IV_HOLDINGS_EXPANDED = false;
@@ -1157,6 +1171,133 @@
     renderDcaPlanSimulator();
     renderPlatformCash(data.portfolio || []);
     renderPlatformAccounts(data.portfolio || []);
+    ivRenderGrowth();
+  }
+
+  /* === MONTHLY GROWTH CHART ===
+     Last 12 months as bars. "Nilai": portfolio value at each month end —
+     past months use the money that was in the portfolio (no market prices
+     were recorded then), the current month uses today's market value.
+     "Setoran": net money put in each month (deposits − withdrawals). */
+  let IV_GROWTH_MODE = 'value';
+  let IV_GROWTH_SEL = null;
+  const IV_MONTHS_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
+  function ivMonthLabel(key, withYear) {
+    const [y, m] = key.split('-').map(Number);
+    return IV_MONTHS_ID[m - 1] + (withYear ? ' ' + y : '');
+  }
+
+  function ivGrowthSeries() {
+    const d = LATEST_DASHBOARD_DATA;
+    if (!d || !d.monthlyGrowth || !d.monthlyGrowth.length) return [];
+    const now = new Date();
+    const nowKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    const all = d.monthlyGrowth.filter(m => m.month <= nowKey);
+    const market = (d.summary && d.summary.totalPortfolioValueIDR) || 0;
+    // A value chart starts where the portfolio actually holds money: a
+    // withdrawal logged before the opening holdings would otherwise draw a
+    // negative "value". Deposits view keeps every month.
+    let first = 0;
+    if (IV_GROWTH_MODE !== 'flow') {
+      while (first < all.length - 1 && all[first].book <= 0) first++;
+    }
+    const from = Math.max(first, all.length - 12);
+    return all.slice(from).map((m, i) => {
+      const at = from + i;
+      const isNow = m.month === nowKey;
+      const prev = at > 0 ? Math.max(all[at - 1].book, 0) : 0;
+      const value = isNow ? market : m.book;
+      return { key: m.month, net: m.net, value, prev, change: value - prev, isNow };
+    });
+  }
+
+  function ivGrowthMode(mode) {
+    IV_GROWTH_MODE = mode;
+    document.querySelectorAll('.ivg-tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === mode);
+      b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
+    });
+    ivRenderGrowth();
+  }
+
+  function ivGrowthSelect(key) {
+    IV_GROWTH_SEL = key;
+    document.querySelectorAll('#ivGrowthChart .ivg-col').forEach(c => {
+      const on = c.dataset.key === key;
+      c.classList.toggle('is-selected', on);
+      c.setAttribute('aria-pressed', String(on));
+    });
+    ivGrowthReadout();
+  }
+
+  function ivGrowthReadout() {
+    const read = document.getElementById('ivGrowthRead');
+    if (!read) return;
+    const series = ivGrowthSeries();
+    const m = series.find(x => x.key === IV_GROWTH_SEL) || series[series.length - 1];
+    if (!m) { read.innerHTML = ''; return; }
+    const cls = (v) => v > 0 ? 'positive' : v < 0 ? 'negative' : '';
+    const label = `<strong>${ivMonthLabel(m.key, true)}</strong>`;
+    if (IV_GROWTH_MODE === 'flow') {
+      read.innerHTML = `${label}<span>Setoran bersih <b class="${cls(m.net)}">${ivFull(m.net, true)}</b></span>`;
+    } else if (m.isNow) {
+      const mkt = m.value - (m.prev + m.net);
+      read.innerHTML = `${label}<span>${ivFull(m.value)} · <b class="${cls(m.change)}">${ivFull(m.change, true)}</b></span>`
+        + `<small>Setoran ${ivFull(m.net, true)} · pasar <span class="${cls(mkt)}">${ivFull(mkt, true)}</span> · nilai pasar hari ini</small>`;
+    } else {
+      read.innerHTML = `${label}<span>${ivFull(m.value)} · <b class="${cls(m.change)}">${ivFull(m.change, true)}</b></span>`
+        + `<small>Dana di portofolio akhir bulan (dari setoran)</small>`;
+    }
+  }
+
+  function ivRenderGrowth() {
+    const chart = document.getElementById('ivGrowthChart');
+    const sub = document.getElementById('ivGrowthSub');
+    if (!chart) return;
+    const series = ivGrowthSeries();
+    if (series.length < 2) {
+      chart.innerHTML = '<div class="empty-state">Grafik muncul setelah ada catatan di dua bulan berbeda.</div>';
+      if (sub) sub.textContent = '';
+      const read = document.getElementById('ivGrowthRead');
+      if (read) read.innerHTML = '';
+      return;
+    }
+    const flow = IV_GROWTH_MODE === 'flow';
+    const vals = series.map(m => flow ? m.net : m.value);
+    const max = Math.max(0, ...vals);
+    const min = Math.min(0, ...vals);
+    const range = (max - min) || 1;
+    const zero = (-min) / range * 100;              // % from the bottom
+
+    if (sub) {
+      if (flow) {
+        const total = series.reduce((s, m) => s + m.net, 0);
+        sub.textContent = `Total ${total < 0 ? '-' : ''}${ivShort(Math.abs(total))} · rata-rata ${ivShort(total / series.length)}/bln`;
+      } else {
+        const first = series[0];
+        const start = first.prev;
+        const grow = series[series.length - 1].value - start;
+        sub.textContent = `Sejak ${ivMonthLabel(first.key, true)} ${grow >= 0 ? '+' : '-'}${ivShort(Math.abs(grow))}`
+          + (start > 0 ? ` (${ivPct(grow / start, true)})` : '');
+      }
+    }
+
+    if (!series.some(m => m.key === IV_GROWTH_SEL)) IV_GROWTH_SEL = series[series.length - 1].key;
+    const cols = series.map((m, i) => {
+      const v = vals[i];
+      const h = Math.abs(v) / range * 100;
+      const bottom = zero + Math.min(v, 0) / range * 100;
+      const cls = ['ivg-col', m.isNow ? 'is-now' : '', v < 0 ? 'is-neg' : '', m.key === IV_GROWTH_SEL ? 'is-selected' : ''].join(' ').trim();
+      const aria = `${ivMonthLabel(m.key, true)}: ${flow ? 'setoran ' + ivFull(m.net, true) : 'nilai ' + ivFull(m.value)}`;
+      return `
+        <button type="button" class="${cls}" data-key="${m.key}" aria-pressed="${m.key === IV_GROWTH_SEL}" aria-label="${aria}" onclick="ivGrowthSelect('${m.key}')">
+          <span class="ivg-track"><span class="ivg-bar" style="bottom:${bottom}%;height:max(${h}%, 2px);animation-delay:${i * 25}ms"></span></span>
+          <span class="ivg-tick">${ivMonthLabel(m.key)}</span>
+        </button>`;
+    }).join('');
+    chart.innerHTML = `<div class="ivg-plot" style="--zero:${zero}%">${min < 0 ? '<span class="ivg-zero" aria-hidden="true"></span>' : ''}${cols}</div>`;
+    ivGrowthReadout();
   }
 
   function buildHeroNote(progress, summary) {
@@ -1382,58 +1523,97 @@
     renderTransactionHistory();
   }
 
+  const IV_TX_META = {
+    'Buy':             { label: 'Beli',            icon: 'shopping-bag',       tone: 'var(--info)',           out: true },
+    'Sell':            { label: 'Jual',            icon: 'hand-coins',         tone: 'var(--accent)',         out: false },
+    'Deposit':         { label: 'Setor',           icon: 'arrow-down-left',    tone: 'var(--income)',         out: false },
+    'Withdraw':        { label: 'Tarik',           icon: 'arrow-up-right',     tone: 'var(--expense)',        out: true },
+    'Initial Holding': { label: 'Saldo awal',      icon: 'package',            tone: '#a78bfa',               out: false },
+    'Cash Adjustment': { label: 'Penyesuaian',     icon: 'sliders-horizontal', tone: 'var(--text-secondary)', out: false },
+    'Transfer Out':    { label: 'Transfer keluar', icon: 'arrow-right-left',   tone: '#60a5fa',               out: true },
+    'Transfer In':     { label: 'Transfer masuk',  icon: 'arrow-right-left',   tone: '#60a5fa',               out: false }
+  };
+
+  function ivHistFilter(type) {
+    const input = document.getElementById('historyTypeFilter');
+    if (input) input.value = type;
+    document.querySelectorAll('#ivHistChips .ip-chip').forEach(c => {
+      const on = c.dataset.type === type;
+      c.classList.toggle('active', on);
+      c.setAttribute('aria-pressed', String(on));
+    });
+    const list = document.getElementById('transactionHistoryList');
+    if (list) list.dataset.showAll = 'false';
+    renderTransactionHistory();
+  }
+
+  function ivToggleHistoryAll() {
+    const list = document.getElementById('transactionHistoryList');
+    if (!list) return;
+    list.dataset.showAll = list.dataset.showAll === 'true' ? 'false' : 'true';
+    renderTransactionHistory();
+  }
+
   function renderTransactionHistory() {
     const container = document.getElementById('transactionHistoryList');
     const filter = document.getElementById('historyTypeFilter')?.value || 'All';
+    const sub = document.getElementById('ivHistSub');
     if (!container) return;
-    let items = HISTORY_DATA.transactions || [];
-    items = items.filter(i => i.status !== 'Deleted');
-    if (filter !== 'All') items = items.filter(i => i.transactionType === filter);
+    let items = (HISTORY_DATA.transactions || []).filter(i => i.status !== 'Deleted');
+    if (sub) sub.textContent = items.length ? `${items.length} transaksi terakhir · ketuk untuk menghapus` : '';
+    if (filter === 'Transfer') items = items.filter(i => i.transactionType === 'Transfer In' || i.transactionType === 'Transfer Out');
+    else if (filter !== 'All') items = items.filter(i => i.transactionType === filter);
     if (!items.length) {
-      container.innerHTML = '<div class="empty-state">No transactions found.</div>';
+      container.innerHTML = '<div class="empty-state">Tidak ada transaksi untuk filter ini.</div>';
       return;
     }
 
-    const MAX_SHOW = 10;
+    const MAX_SHOW = 20;
     const showAll = container.dataset.showAll === 'true';
     const displayItems = showAll ? items : items.slice(0, MAX_SHOW);
 
-    function investTxIcon(type) {
-      const map = { 'Buy': '🛒', 'Sell': '📤', 'Deposit': '💵', 'Withdraw': '🏧', 'Initial Holding': '📦', 'Cash Adjustment': '⚡', 'Transfer Out': '↗️', 'Transfer In': '↙️' };
-      return map[type] || '📌';
-    }
+    // Group by month, newest first (the list is already newest first).
+    const groups = [];
+    displayItems.forEach(item => {
+      const d = new Date(item.date);
+      const key = isNaN(d.getTime()) ? '-' : d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      let g = groups[groups.length - 1];
+      if (!g || g.key !== key) { g = { key, items: [] }; groups.push(g); }
+      g.items.push(item);
+    });
 
-    function investTxColor(type) {
-      const map = { 'Buy': '#60a5fa', 'Sell': '#f59e0b', 'Deposit': '#34d399', 'Withdraw': '#f87171', 'Initial Holding': '#8b5cf6', 'Cash Adjustment': '#64748b', 'Transfer Out': '#f97316', 'Transfer In': '#06b6d4' };
-      return map[type] || '#64748b';
-    }
-
-    let html = displayItems.map(item => {
-      const color = investTxColor(item.transactionType);
-      const icon = investTxIcon(item.transactionType);
-      const amtColor = ['Buy', 'Withdraw', 'Transfer Out'].includes(item.transactionType) ? 'var(--error)' : 'var(--success)';
-      const prefix = ['Buy', 'Withdraw', 'Transfer Out'].includes(item.transactionType) ? '-' : '+';
-      const label = item.notes || item.asset || item.transactionType;
-      const badge = item.sector !== 'Cash' ? item.sector : item.platform;
-
-      return `
-        <div class="mm-tx-card" onclick="confirmDeleteTransaction(${item.rowNumber}, '${jsStr(item.transactionType)}')">
-          <div class="mm-tx-card-icon" style="background:${color}20;color:${color}">${icon}</div>
-          <div class="mm-tx-card-body">
-            <span class="mm-tx-card-title">${escapeHtml(label)}</span>
-            <span class="mm-tx-card-badge">${escapeHtml(badge)} · ${formatDateShort(item.date)}</span>
-          </div>
-          <span class="mm-tx-card-amount" style="color:${amtColor}">${prefix}${formatIDR(item.amountIDR)}</span>
-        </div>`;
+    const dayFmt = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' });
+    let html = groups.map(g => {
+      const head = g.key === '-' ? 'Tanpa tanggal' : ivMonthLabel(g.key, true);
+      const rows = g.items.map(item => {
+        const type = item.transactionType;
+        const meta = IV_TX_META[type] || { label: type, icon: 'circle', tone: 'var(--text-secondary)', out: false };
+        const neutral = type === 'Transfer In' || type === 'Transfer Out' || type === 'Cash Adjustment';
+        const negative = type === 'Cash Adjustment' ? item.amountIDR < 0 : meta.out;
+        const amtCls = neutral ? '' : negative ? 'negative' : 'positive';
+        const title = item.sector !== 'Cash' && item.asset ? item.asset : (item.notes || meta.label);
+        const d = new Date(item.date);
+        const when = isNaN(d.getTime()) ? '' : dayFmt.format(d);
+        const metaLine = [meta.label, item.platform, when].filter(Boolean).join(' · ');
+        return `
+          <button type="button" class="ip-tx" style="--c:${meta.tone}" onclick="confirmDeleteTransaction(${item.rowNumber}, '${jsStr(type)}')" aria-label="${escapeHtml(title)}, ${escapeHtml(metaLine)}. Ketuk untuk menghapus.">
+            <span class="ip-tx-ic" aria-hidden="true"><i data-lucide="${meta.icon}"></i></span>
+            <span class="ip-tx-info">
+              <span class="ip-tx-name">${escapeHtml(title)}</span>
+              <span class="ip-tx-meta">${escapeHtml(metaLine)}</span>
+            </span>
+            <span class="ip-tx-amt ${amtCls}">${negative ? '-' : '+'}${formatIDR(Math.abs(item.amountIDR))}</span>
+          </button>`;
+      }).join('');
+      return `<section class="ip-month"><h3 class="ip-month-head"><span>${head}</span><small>${g.items.length} transaksi</small></h3><div class="ip-month-rows">${rows}</div></section>`;
     }).join('');
 
-    if (!showAll && items.length > MAX_SHOW) {
-      html += `<button class="btn-ghost btn-full" style="margin-top:10px;" onclick="document.getElementById('transactionHistoryList').dataset.showAll='true';renderTransactionHistory();">Show all (${items.length})</button>`;
-    } else if (showAll && items.length > MAX_SHOW) {
-      html += `<button class="btn-ghost btn-full" style="margin-top:10px;" onclick="document.getElementById('transactionHistoryList').dataset.showAll='false';renderTransactionHistory();">Show less</button>`;
+    if (items.length > MAX_SHOW) {
+      html += `<button type="button" class="ip-more" onclick="ivToggleHistoryAll()">${showAll ? 'Ringkas' : `Lihat semua (${items.length})`}</button>`;
     }
 
     container.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 
   function getHistoryTypeClass(type) {
@@ -1704,6 +1884,15 @@
   /* === WORKSPACE SWITCHER === */
   let currentWorkspace = 'money'; // 'invest' or 'money'
 
+  // Each workspace has its own colour theme (Style.html: body.ws-invest),
+  // so it is obvious at a glance which one is open.
+  function ivApplyWorkspaceTheme() {
+    const invest = currentWorkspace === 'invest';
+    document.body.classList.toggle('ws-invest', invest);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', invest ? '#0B0E16' : '#090F12');
+  }
+
   function switchWorkspace() {
     const investWrap = document.getElementById('investWorkspace');
     const moneyWrap = document.getElementById('moneyWorkspace');
@@ -1739,6 +1928,8 @@
       // Only load if no cache
       loadDashboard(true);
     }
+
+    ivApplyWorkspaceTheme();
 
     // Animate header title
     title.style.opacity = '0';

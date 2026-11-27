@@ -369,26 +369,15 @@ function mmLoadDashboard(skipIfCached) {
 }
 
 function mmRenderHeader() {
-  const hour = new Date().getHours();
-  let greeting = 'Selamat malam';
-  if (hour >= 4 && hour < 11) greeting = 'Selamat pagi';
-  else if (hour >= 11 && hour < 15) greeting = 'Selamat siang';
-  else if (hour >= 15 && hour < 18) greeting = 'Selamat sore';
-  setText('mmGreeting', greeting);
-
-  // User name — safeStorage so a browser that blocks storage still renders.
+  // Home has no greeting, date or avatar (personal app). The name is still
+  // shown on the Profile/Settings page.
   let savedName = safeStorage.getItem('mm_user_name') || 'Mr Evan';
   savedName = savedName.replace(/[🌿🌱🍃]/gu, '').trim() || 'Mr Evan';
-  setText('mmUserName', savedName);
-  // Home and the Profile tab show the same name, with initials as the avatar.
   const plainName = savedName.replace(/[^\p{L}\p{N}\s.'-]/gu, '').trim() || 'Profil';
   setText('mmProfileName', plainName);
   const initials = plainName.split(/\s+/).filter(w => w && !/^(mr|mrs|ms)\.?$/i.test(w))
     .map(w => w[0]).join('').slice(0, 2).toUpperCase() || plainName.slice(0, 2).toUpperCase();
   setText('mmProfileAvatar', initials);
-  setText('mmHomeAvatar', initials);
-
-  setText('mmDateText', new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date()));
 }
 
 function mmRenderDashboard(data) {
