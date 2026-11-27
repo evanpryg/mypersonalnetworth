@@ -151,6 +151,7 @@
     const btn = document.getElementById('fabBtn');
     const menu = document.getElementById('fabMenu');
     const overlay = document.getElementById('fabOverlay');
+    if (!btn || !menu || !overlay) return;
     const isOpen = btn.classList.contains('open');
     btn.classList.toggle('open');
     menu.classList.toggle('open');
@@ -560,8 +561,10 @@
     const isSector = tab !== 'platform';
     sectorList.style.display = isSector ? '' : 'none';
     platformList.style.display = isSector ? 'none' : '';
-    document.getElementById('ivAllocTabSector')?.classList.toggle('active', isSector);
-    document.getElementById('ivAllocTabPlatform')?.classList.toggle('active', !isSector);
+    const tabS = document.getElementById('ivAllocTabSector');
+    const tabP = document.getElementById('ivAllocTabPlatform');
+    if (tabS) { tabS.classList.toggle('active', isSector); tabS.setAttribute('aria-pressed', String(isSector)); }
+    if (tabP) { tabP.classList.toggle('active', !isSector); tabP.setAttribute('aria-pressed', String(!isSector)); }
     IV_ALLOC_TAB = isSector ? 'balance' : 'platform';
     ivAllocSubtitle();
   }
@@ -1345,7 +1348,10 @@
 
   function ivSortHoldings(mode) {
     IV_HOLDINGS_SORT = mode;
-    document.querySelectorAll('.iv-sort-tab').forEach(b => b.classList.toggle('active', b.dataset.sort === mode));
+    document.querySelectorAll('.iv-sort-tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.sort === mode);
+      b.setAttribute('aria-pressed', String(b.dataset.sort === mode));
+    });
     if (LATEST_DASHBOARD_DATA) renderPortfolio(LATEST_DASHBOARD_DATA.portfolio || []);
   }
 
@@ -1703,10 +1709,7 @@
     const moneyWrap = document.getElementById('moneyWorkspace');
     const investTabs = document.getElementById('investBottomTabs');
     const moneyTabs = document.getElementById('mmBottomTabs');
-    const investFab = document.getElementById('investFabContainer');
-    const moneyFab = document.getElementById('mmFabContainer');
     const title = document.getElementById('workspaceTitle');
-    const subtitle = document.getElementById('wsSubtitle');
     const dots = document.querySelectorAll('.ws-dot');
 
     if (currentWorkspace === 'invest') {
@@ -1715,10 +1718,7 @@
       moneyWrap.style.display = 'block';
       investTabs.style.display = 'none';
       moneyTabs.style.display = 'flex';
-      investFab.style.display = 'none';
-      moneyFab.style.display = 'block';
       title.textContent = 'Money Management';
-      subtitle.textContent = 'Arus kas & anggaran';
       // Dot indicator: first active
       dots[0].classList.add('active');
       dots[1].classList.remove('active');
@@ -1731,10 +1731,7 @@
       investWrap.style.display = 'block';
       moneyTabs.style.display = 'none';
       investTabs.style.display = 'flex';
-      moneyFab.style.display = 'none';
-      investFab.style.display = 'block';
       title.textContent = 'Investment Tracker';
-      subtitle.textContent = 'Portfolio & Growth';
       // Dot indicator: second active
       dots[0].classList.remove('active');
       dots[1].classList.add('active');
@@ -1745,11 +1742,7 @@
 
     // Animate header title
     title.style.opacity = '0';
-    subtitle.style.opacity = '0';
-    setTimeout(() => {
-      title.style.opacity = '1';
-      subtitle.style.opacity = '0.6';
-    }, 100);
+    setTimeout(() => { title.style.opacity = '1'; }, 100);
   }
 
   /* ============================================================

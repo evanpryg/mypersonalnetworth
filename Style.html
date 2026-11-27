@@ -10041,5 +10041,398 @@ body:has(#mmHistoryPage.active-page) #mmFabContainer { display: none; }
 @media (min-width: 1024px) {
   .hx.ah { max-width: 760px; }
 }
+/* ============================================================
+   INVESTMENT DASHBOARD v4 - "QUIET LEDGER"  (ui-ux-pro-max)
+   Same language as Money Home: no card around the value, one
+   card for the next move, allocation and holdings as plain
+   hairline lists. Namespace .iq-*; reuses .hx / .hq. Keep LAST.
+   ============================================================ */
+.iq-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.iq-goal-chip {
+  display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 58%;
+  font-size: 12px; font-weight: 600; color: var(--text-secondary);
+}
+.iq-goal-chip svg { width: 13px; height: 13px; flex: none; color: var(--accent); }
+.iq-goal-chip > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.iq .iv-pl-amount { font-size: 13px; font-weight: 650; }
+.iq .iv-pl-amount.positive { color: var(--income); }
+.iq .iv-pl-amount.negative { color: var(--expense); }
+
+.iq-goal { margin-top: 16px; }
+.iq-goal-meta { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--text-secondary); }
+.iq-goal-meta strong { font-size: 14px; font-weight: 700; color: var(--text); }
+.iq-goal-bar { height: 6px; margin: 8px 0 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); overflow: hidden; }
+.iq-goal-fill { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--accent); transition: width 0.7s var(--ease-out); }
+.iq-goal-note { font-size: 12px; line-height: 1.5; color: var(--text-muted); text-wrap: pretty; }
+
+.iq-stats { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.iq-stats .hx-flow-item dd:nth-of-type(1) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* --- The one card: next move ------------------------------------- */
+.iq-next { display: flex; flex-direction: column; overflow: hidden; }
+.iq-next-head { padding: 14px 16px 2px; }
+.iq-next-signal { display: flex; gap: 12px; align-items: flex-start; padding: 10px 16px 14px; }
+.iq-next-icon {
+  width: 32px; height: 32px; flex: none; display: grid; place-items: center;
+  border-radius: 10px; color: var(--accent); background: rgba(var(--accent-rgb), 0.12);
+}
+.iq-next-icon svg { width: 17px; height: 17px; }
+.iq-next-text { min-width: 0; }
+.iq-next-text strong { display: block; font-size: 14px; font-weight: 650; }
+.iq-next-text p { margin-top: 2px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
+.iq-sec { padding: 12px 16px 14px; border-top: 1px solid var(--border); }
+.iq .iv-dca-list { gap: 10px; }
+.iq .iv-dca-head { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.iq .iv-dca-name { color: var(--text); }
+.iq .iv-dca-row strong { color: var(--text); font-weight: 650; }
+.iq-sim { border-top: 1px solid var(--border); }
+.iq-sim > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 46px; padding: 0 16px; list-style: none; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--accent);
+}
+.iq-sim > summary::-webkit-details-marker { display: none; }
+.iq-sim > summary svg { width: 16px; height: 16px; transition: transform var(--dur-fast); }
+.iq-sim[open] > summary svg { transform: rotate(180deg); }
+.iq-sim > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.iq-sim-body { display: flex; flex-direction: column; gap: 10px; padding: 0 16px 14px; }
+.iq-sim-body .form-input { margin: 0; }
+
+/* --- Small segmented switch in list heads ------------------------ */
+.iq-seg { display: inline-flex; flex: none; padding: 2px; border: 1px solid var(--border); border-radius: 10px; }
+.iq .iq-seg-btn {
+  min-height: 32px; padding: 0 10px; border-radius: 8px;
+  font-size: 12px; font-weight: 600; color: var(--text-secondary);
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.iq .iq-seg-btn.active { background: var(--surface-2); color: var(--text); }
+.iq .iq-seg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* The 32px pill sits inside a 44px row, so the tap target still clears 44. */
+.iq .hq-head { min-height: 52px; }
+
+/* --- Plain lists: allocation + holdings --------------------------- */
+.iq-list { display: flex; flex-direction: column; }
+.iq-list .empty-state { padding: 20px 0; font-size: 13px; color: var(--text-muted); text-align: left; }
+.iq .iv-alloc-row { padding: 12px 0; }
+.iq .iv-alloc-row + .iv-alloc-row { border-top: 1px solid var(--hairline); }
+.iq .iv-alloc-row:first-child { padding-top: 12px; }
+.iq .iv-alloc-row:last-child { padding-bottom: 6px; }
+.iq .iv-alloc-bar { height: 4px; margin: 8px 0 6px; }
+.iq .iv-alloc-target { background: var(--text); box-shadow: none; }
+.iq .iv-status { padding: 0; background: none !important; border: 0; font-size: 12px; font-weight: 600; }
+.iq button.iv-alloc-row { width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--hairline); color: inherit; font: inherit; cursor: pointer; }
+.iq button.iv-alloc-row:first-child { border-top: 0; }
+
+.iq #ivHoldingsList { padding: 0; }
+.iq .iv-holding { min-height: 60px; padding: 10px 0; }
+.iq .iv-holding + .iv-holding { border-top: 1px solid var(--hairline); }
+.iq .iv-holding-badge { width: 34px; height: 34px; border-radius: 10px; font-size: 10px; }
+.iq .iv-holding-nums strong { font-weight: 650; }
+.iq .iv-holding-nums .positive { color: var(--income); }
+.iq .iv-holding-nums .negative { color: var(--expense); }
+.iq .iv-more { border-top: 1px solid var(--hairline); text-align: left; padding: 0; }
+.iq .iv-more:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.iq .hx-col > *, .iq > .iq-hero { animation: hxIn 0.4s var(--ease-out) backwards; }
+
+@media (min-width: 720px) {
+  .iq .iq-seg-btn:not(.active):hover { color: var(--text); }
+  .iq .iq-sim > summary:hover { background: var(--surface-2); }
+  .iq .iv-holding:hover .iv-holding-name, .iq button.iv-alloc-row:hover .iv-alloc-name { color: var(--accent); }
+}
+@media (min-width: 1024px) {
+  .hx.iq { max-width: 1080px; }
+}
+
+/* ============================================================
+   INSIGHT v4 - "QUIET LEDGER"  (ui-ux-pro-max: Minimalism & Swiss)
+   Was nine boxes; now the score sits on the page, ONE card holds
+   the month (vs last + cash flow), everything else is a hairline
+   list like Home. Namespace .ig-*; reuses .hx / .hq / .ah.
+   ============================================================ */
+#mmInsightPage > #insightContent { min-width: 0; }
+.ig .pos  { color: var(--income); }
+.ig .neg  { color: var(--expense); }
+.ig .warn { color: var(--warning); }
+
+/* --- Month switch --------------------------------------------------- */
+.ig-monthbar {
+  display: flex; align-items: center; gap: 4px;
+  margin-top: -6px; padding: 2px 0; border-bottom: 1px solid var(--border);
+}
+.ig-monthbar .ah-month { flex: 1; }
+.ig-monthbar .ah-icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.ig .ig-today {
+  min-height: 32px; padding: 0 10px; border-radius: 8px; flex: none;
+  font-size: 12px; font-weight: 600; color: var(--accent); background: rgba(var(--accent-rgb), 0.12);
+}
+
+/* --- Score: no card ------------------------------------------------- */
+.ig-hero { display: flex; flex-direction: column; gap: 16px; }
+.ig-score { display: flex; align-items: center; gap: 14px; }
+.ig-ring {
+  --tone: var(--success);
+  position: relative; width: 56px; height: 56px; flex: none;
+  display: grid; place-items: center;
+}
+.ig-ring.tone-ok   { --tone: var(--accent); }
+.ig-ring.tone-warn { --tone: var(--warning); }
+.ig-ring.tone-bad  { --tone: var(--error); }
+.ig-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ig-ring-arc { stroke: var(--tone); transition: stroke-dashoffset 0.8s var(--ease-out); }
+.ig-ring strong { position: relative; font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+.ig-score-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ig-status { font-size: 22px; line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; color: var(--success); }
+.ig-status.tone-ok   { color: var(--accent); }
+.ig-status.tone-warn { color: var(--warning); }
+.ig-status.tone-bad  { color: var(--error); }
+.ig-score-text p { font-size: 13px; color: var(--text-secondary); }
+
+.ig-kpis { padding-top: 14px; border-top: 1px solid var(--border); }
+.ig-kpis .hx-flow-item dd:nth-of-type(1) { font-size: 17px; white-space: nowrap; }
+.ig .ig-kpi-sub { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ig .ig-kpi-sub.pos { color: var(--income); }
+.ig .ig-kpi-sub.neg { color: var(--expense); }
+.ig-kpis-inv { padding-top: 12px; border-top: 0; }
+.ig-kpis-inv .hx-flow-item dd:nth-of-type(1) { font-size: 15px; }
+
+.ig-why > summary {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin: -10px 0;
+  list-style: none; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--accent);
+}
+.ig-why > summary::-webkit-details-marker { display: none; }
+.ig-why > summary svg { width: 14px; height: 14px; transition: transform var(--dur-fast); }
+.ig-why[open] > summary svg { transform: rotate(180deg); }
+.ig-why ul { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ig-why li { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; line-height: 1.45; color: var(--text-secondary); }
+.ig-why li svg { width: 14px; height: 14px; margin-top: 1px; flex: none; }
+.ig-why li.good svg { color: var(--success); }
+.ig-why li.bad svg { color: var(--error); }
+
+/* --- The one card --------------------------------------------------- */
+.ig-card { display: flex; flex-direction: column; overflow: hidden; }
+.ig-card-head { padding: 14px 16px 6px; }
+.ig-table { display: flex; flex-direction: column; padding: 0 16px 6px; }
+.ig-tr {
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 0.8fr) minmax(0, 1.1fr);
+  align-items: center; gap: 8px; min-height: 38px; font-size: 13px;
+}
+.ig-tr + .ig-tr { border-top: 1px solid var(--hairline); }
+.ig-tr > :not(:first-child) { text-align: right; white-space: nowrap; }
+.ig-tr [role="rowheader"] { color: var(--text-secondary); }
+.ig-tr strong { font-weight: 650; }
+.ig-tr strong.is-in { color: var(--income); }
+.ig-tr strong.is-out { color: var(--expense); }
+.ig-th { min-height: 28px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--text-muted); }
+.ig-delta { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.ig-proj { color: var(--text-secondary); }
+
+.ig-cf-wrap { padding: 12px 16px 14px; border-top: 1px solid var(--border); }
+.ig-cf-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.ig-cf-title { font-size: 13px; font-weight: 600; }
+.ig-cf-meta { font-size: 12px; color: var(--text-muted); text-align: right; }
+.ig-cf { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+.ig-cf-col { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.ig-cf-bars { display: flex; align-items: flex-end; justify-content: center; gap: 3px; width: 100%; height: 72px; }
+.ig-cf-bars span { width: min(10px, 38%); min-height: 2px; border-radius: 3px 3px 1px 1px; }
+.ig-cf-bars .in { background: var(--income); }
+.ig-cf-bars .out { background: rgba(var(--expense-rgb), 0.75); }
+.ig-cf-net { font-size: 11px; font-weight: 650; white-space: nowrap; }
+.ig-cf-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.ig-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; font-size: 12px; color: var(--text-muted); }
+.ig-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.ig-legend i { width: 8px; height: 8px; border-radius: 2px; }
+.ig-legend i.in { background: var(--income); }
+.ig-legend i.out { background: rgba(var(--expense-rgb), 0.75); }
+
+/* --- Attention: plain rows ------------------------------------------ */
+.ig-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.ig-item { --tone: var(--info); display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; }
+.ig-item + .ig-item { border-top: 1px solid var(--hairline); }
+.ig-item.tone-bad  { --tone: var(--error); }
+.ig-item.tone-warn { --tone: var(--warning); }
+.ig-item-ic {
+  width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 9px;
+  color: var(--tone); background: color-mix(in srgb, var(--tone) 13%, transparent);
+}
+.ig-item-ic svg { width: 15px; height: 15px; }
+.ig-item-body { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ig-item-body strong { font-size: 14px; font-weight: 600; }
+.ig-item-body span { font-size: 12px; line-height: 1.45; color: var(--text-secondary); }
+.ig-more { border-top: 1px solid var(--hairline); }
+.ig-more > summary {
+  display: flex; align-items: center; gap: 4px; min-height: 44px; list-style: none; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+}
+.ig-more > summary::-webkit-details-marker { display: none; }
+.ig-more > summary svg { width: 14px; height: 14px; transition: transform var(--dur-fast); }
+.ig-more[open] > summary svg { transform: rotate(180deg); }
+.ig-more .ig-list { border-top: 1px solid var(--hairline); }
+.ig-allgood, .ig-good {
+  display: flex; align-items: flex-start; gap: 8px; padding: 12px 0 2px;
+  font-size: 12px; line-height: 1.5; color: var(--text-secondary);
+}
+.ig-good { border-top: 1px solid var(--hairline); }
+.ig-allgood svg, .ig-good svg { width: 14px; height: 14px; margin-top: 2px; flex: none; color: var(--success); }
+
+/* --- Budget pace ---------------------------------------------------- */
+.ig-rows { display: flex; flex-direction: column; }
+.ig-rows > * + * { border-top: 1px solid var(--hairline); }
+.ig-pace { --tone: var(--accent); display: flex; flex-direction: column; gap: 6px; padding: 12px 0; }
+.ig-pace.is-warn { --tone: var(--warning); }
+.ig-pace.is-over { --tone: var(--error); }
+.ig-pace.is-done, .ig-pace.is-saving { --tone: var(--info); }
+.ig-pace-top { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 600; }
+.ig-pace-top em { margin-left: 4px; font-style: normal; font-size: 11px; font-weight: 500; color: var(--text-muted); }
+.ig-pace-top strong { color: var(--tone); font-weight: 650; }
+.ig-pace-bar { position: relative; height: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); }
+.ig-pace-fill { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--tone); }
+.ig-pace-mark { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; border-radius: 2px; background: var(--text); }
+.ig-pace-foot { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-muted); }
+.ig-pace-note { color: var(--text-secondary); }
+.ig-pace.is-over .ig-pace-note, .ig-pace.is-warn .ig-pace-note { color: var(--tone); }
+.ig-fine { padding-top: 10px; border-top: 1px solid var(--hairline); font-size: 12px; color: var(--text-muted); }
+
+/* --- Spending: one stacked bar + legend ----------------------------- */
+.ig-stack { display: flex; gap: 2px; height: 8px; margin: 12px 0 4px; border-radius: 999px; overflow: hidden; background: rgba(255, 255, 255, 0.07); }
+.ig-stack span { display: block; height: 100%; }
+.ig-leg { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; min-height: 40px; font-size: 13px; }
+.ig-leg-name { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ig-leg-name i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.ig-leg-pct { font-size: 12px; color: var(--text-muted); }
+.ig-leg strong { min-width: 76px; text-align: right; font-weight: 650; white-space: nowrap; }
+.ig-empty { padding: 16px 0; font-size: 13px; color: var(--text-muted); }
+
+/* --- Investment rows ------------------------------------------------ */
+.ig-kv { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; font-size: 13px; }
+.ig-kv > span { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ig-kv svg { width: 14px; height: 14px; flex: none; color: var(--text-muted); }
+.ig-kv strong { font-weight: 650; white-space: nowrap; }
+.ig-kpis-inv + .ig-rows { margin-top: 10px; border-top: 1px solid var(--hairline); }
+
+/* --- Yearly (folded) ------------------------------------------------ */
+.ig-fold { border-bottom: 1px solid var(--border); }
+.ig-fold > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 52px; list-style: none; cursor: pointer; border-bottom: 1px solid var(--border);
+}
+.ig-fold > summary::-webkit-details-marker { display: none; }
+.ig-fold > summary .hx-head-text { display: flex; flex-direction: column; }
+.ig-fold > summary svg { width: 18px; height: 18px; color: var(--text-muted); transition: transform var(--dur-fast); }
+.ig-fold[open] > summary svg { transform: rotate(180deg); }
+.ig-fold:not([open]) { border-bottom: 0; }
+.ig-fold .ig-yoy { padding: 4px 0 8px; }
+.ig-fold .insight-yoy-note { padding: 0 0 12px; }
+
+.ig summary:focus-visible, .ig .ig-today:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.ig .hx-col > *, .ig > .ah-top, .ig > .ig-monthbar { animation: hxIn 0.4s var(--ease-out) backwards; }
+
+@media (min-width: 720px) {
+  .ig-why > summary:hover, .ig-more > summary:hover { opacity: 0.8; }
+  .ig-fold > summary:hover .hx-title { color: var(--accent); }
+}
+@media (min-width: 1024px) {
+  .hx.ig { max-width: 1080px; }
+}
+@media (max-width: 360px) {
+  .ig-tr { font-size: 12px; gap: 4px; }
+  .ig-status { font-size: 19px; }
+}
+
+/* ============================================================
+   AI ASSISTANT AS A CHAT BUBBLE  (ui-ux-pro-max)
+   A round button floats above the bottom nav (bottom-right, out
+   of the thumb's way of the centre "Catat"); it opens the chat
+   as a popup panel anchored to it instead of a full page.
+   Phones: panel fills most of the height over a light scrim and
+   carries its own close button. Desktop: 400px panel above the
+   bubble, which stays as the toggle.
+   ============================================================ */
+.ai-fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--tab-height) + var(--safe-bottom) + 14px);
+  z-index: 110;
+  width: 52px; height: 52px;
+  display: grid; place-items: center;
+  padding: 0; border-radius: 50%;
+  border: 1px solid rgba(var(--accent-rgb), 0.38);
+  background: var(--surface-2);
+  color: var(--accent);
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.7), 0 0 0 4px rgba(9, 15, 18, 0.55);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast), opacity var(--dur-fast);
+  animation: aiFabIn 0.35s var(--ease-out) backwards;
+}
+.ai-fab svg { grid-area: 1 / 1; transition: opacity var(--dur-fast), transform 0.2s var(--ease-out); }
+.ai-fab .ai-fab-close { opacity: 0; transform: rotate(-90deg) scale(0.6); }
+.ai-fab.is-open .ai-fab-open { opacity: 0; transform: rotate(90deg) scale(0.6); }
+.ai-fab.is-open .ai-fab-close { opacity: 1; transform: none; }
+.ai-fab:active { transform: scale(0.92); }
+.ai-fab:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* Signed out: nothing to ask about yet. */
+body:has(#authGate:not(.hidden)) .ai-fab { display: none; }
+@keyframes aiFabIn { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+
+.ai-scrim {
+  position: fixed; inset: 0; z-index: 305;
+  background: rgba(4, 8, 10, 0.55);
+  animation: fadeIn 0.15s ease;
+}
+
+/* The panel: overrides the old full-screen .ai-chat box. */
+.ai-chat.ai-pop {
+  inset: auto 8px calc(8px + var(--safe-bottom)) 8px;
+  height: min(620px, calc(100dvh - env(safe-area-inset-top, 0px) - var(--safe-bottom) - 64px));
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  overflow: hidden;
+  background: var(--bg);
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.8);
+  transform-origin: calc(100% - 34px) 100%;
+  animation: aiPopIn 0.22s var(--ease-out);
+}
+.ai-pop .ai-bar { padding: 8px 6px 8px 14px; gap: 4px; }
+.ai-bar-mark {
+  width: 32px; height: 32px; flex: none; display: grid; place-items: center;
+  border-radius: 10px; color: var(--accent); background: rgba(var(--accent-rgb), 0.12);
+}
+.ai-pop .ai-bar-title { text-align: left; padding-left: 6px; }
+.ai-pop .ai-bar-title h2 { font-size: 15px; }
+.ai-pop .ai-bar-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ai-pop .ai-log { padding: 16px 16px 10px; gap: 16px; }
+.ai-pop .ai-compose { padding: 8px 12px 10px; }
+.ai-pop .ai-intro h3 { font-size: 18px; }
+.ai-pop .ai-suggest { margin-top: 18px; }
+.ai-pop .ai-chip { min-height: 44px; padding: 10px 14px; }
+@keyframes aiPopIn { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: none; } }
+
+/* Phones: the panel covers the bubble, so hide it while open. */
+@media (max-width: 719px) {
+  body.ai-open .ai-fab { opacity: 0; pointer-events: none; transform: scale(0.6); }
+}
+/* Larger screens: a floating panel, page stays usable behind it. */
+@media (min-width: 720px) {
+  body.ai-open { overflow: auto; }
+  .ai-scrim { display: none; }
+  .ai-chat.ai-pop {
+    left: auto;
+    right: 16px;
+    bottom: calc(var(--tab-height) + var(--safe-bottom) + 78px);
+    width: 400px;
+    height: min(640px, calc(100dvh - var(--tab-height) - var(--safe-bottom) - 110px));
+  }
+  .ai-pop .ai-bar-close { display: none; }
+  .ai-fab:hover { background: var(--surface); border-color: rgba(var(--accent-rgb), 0.6); }
+}
+@media (min-width: 1024px) {
+  .ai-fab { right: 24px; bottom: 24px; }
+  .ai-chat.ai-pop { right: 24px; bottom: 88px; height: min(680px, calc(100dvh - 120px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-fab, .ai-chat.ai-pop, .ai-scrim { animation: none; }
+  .ai-fab svg { transition: none; }
+}
 </style>
 

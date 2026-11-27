@@ -40,12 +40,36 @@ let MM_AI_EXTRA = null;
 function mmAiGetKey() { return (safeStorage.getItem(MM_AI_KEY_STORE) || '').trim(); }
 
 /* ---------- open / close ---------- */
+/* The chat is a popup tied to the floating bubble (#aiFab): the bubble
+   turns into a "close" chevron while the panel is open. */
+function mmAiSetFab(open) {
+  const fab = document.getElementById('aiFab');
+  const scrim = document.getElementById('mmAiScrim');
+  if (fab) {
+    fab.classList.toggle('is-open', open);
+    fab.setAttribute('aria-expanded', String(open));
+    fab.setAttribute('aria-label', open ? 'Tutup asisten keuangan AI' : 'Buka asisten keuangan AI');
+  }
+  if (scrim) scrim.classList.toggle('hidden', !open);
+}
+
+function mmToggleAiChat() {
+  const sheet = document.getElementById('mmAiSheet');
+  if (sheet && !sheet.classList.contains('hidden')) mmCloseAiChat();
+  else mmOpenAiChat();
+}
+
 function mmOpenAiChat() {
   const sheet = document.getElementById('mmAiSheet');
   if (!sheet) return;
-  MM_AI_OPENER = document.activeElement;
+  if (!sheet.classList.contains('hidden')) return;
+  const fab = document.getElementById('aiFab');
+  // Focus returns to the bubble when the panel closes, unless the chat was
+  // opened from somewhere else (drawer, settings) that is still on screen.
+  MM_AI_OPENER = (document.activeElement && document.activeElement !== document.body) ? document.activeElement : fab;
   sheet.classList.remove('hidden');
   document.body.classList.add('ai-open');
+  mmAiSetFab(true);
   mmAiRender();
   // Warm the full history in the background; the first answer needs it.
   if (typeof mmLoadSearchData === 'function' && !MM_SEARCH_CACHE) mmLoadSearchData();
@@ -55,17 +79,21 @@ function mmOpenAiChat() {
   // first control so the on-screen keyboard doesn't cover the suggestions.
   setTimeout(() => {
     if (input && mmAiGetKey() && window.matchMedia('(pointer: fine)').matches) input.focus();
-    else { const back = sheet.querySelector('.mm-search-back'); if (back) back.focus({ preventScroll: true }); }
+    else { const close = sheet.querySelector('.ai-bar-close'); if (close) close.focus({ preventScroll: true }); }
   }, 80);
 }
 
 function mmCloseAiChat() {
   const sheet = document.getElementById('mmAiSheet');
-  if (sheet) sheet.classList.add('hidden');
+  if (!sheet || sheet.classList.contains('hidden')) return;
+  sheet.classList.add('hidden');
   document.body.classList.remove('ai-open');
+  mmAiSetFab(false);
   const input = document.getElementById('mmAiInput');
   if (input) input.blur();
-  if (MM_AI_OPENER && document.contains(MM_AI_OPENER)) MM_AI_OPENER.focus({ preventScroll: true });
+  const back = (MM_AI_OPENER && document.contains(MM_AI_OPENER) && MM_AI_OPENER.getClientRects().length)
+    ? MM_AI_OPENER : document.getElementById('aiFab');
+  if (back) back.focus({ preventScroll: true });
   MM_AI_OPENER = null;
 }
 

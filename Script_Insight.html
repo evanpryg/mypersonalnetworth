@@ -1,10 +1,9 @@
 <script>
 /* ============================================================
    FINANCIAL INSIGHT — Frontend JavaScript
-   Layout, most useful first: score + KPIs, what needs attention,
-   this month vs last (with projection), budget pace, top spending,
-   cash flow trend, investment, then folded extras. Icons are Lucide
-   placeholders swapped in by lucide.createIcons() after render.
+   Same quiet language as Home: score and numbers on the page, ONE card
+   (this month vs last + cash flow), everything else as hairline lists.
+   Icons are Lucide placeholders swapped in by lucide.createIcons().
    ============================================================ */
 
 let INSIGHT_DATA = null;
@@ -111,17 +110,32 @@ function insightShort(value) { return mmFormatIDRShort(value); }
 function insIcon(name) { return `<i data-lucide="${name}" aria-hidden="true"></i>`; }
 function insEsc(v) { return escapeHtml(String(v == null ? '' : v)); }
 
-function insightSection(title, sub, body, extraClass) {
+/* Section on the page background: title + optional sub over a hairline,
+   then the body. Same shape as Home's plain lists (.hq-list-block). */
+function insightSection(title, sub, body, extraClass, action) {
   return `
-    <section class="ins-section ${extraClass || ''}">
-      <div class="ins-section-head">
-        <h3>${title}</h3>
-        ${sub ? `<p>${sub}</p>` : ''}
+    <section class="hq-list-block ig-block ${extraClass || ''}">
+      <div class="hx-head hq-head">
+        <div class="hx-head-text">
+          <h3 class="hx-title">${title}</h3>
+          ${sub ? `<p class="hx-sub">${sub}</p>` : ''}
+        </div>
+        ${action || ''}
       </div>
       ${body}
     </section>`;
 }
 
+/* Layout (v4 — "Quiet Ledger", same language as Home):
+   1. Top bar     — title, month switch, refresh
+   2. Skor        — ring + status + three numbers, no card
+   3. Bulan ini   — the ONE card: this month vs last + 6-month cash flow
+   4. Perhatian   — plain list, most urgent first, good news as one line
+   5. Anggaran    — plain list with today's pace marker
+   6. Belanja     — one stacked bar + legend rows
+   7. Investasi   — three numbers + best / worst / top-up rows
+   8. Per tahun   — folded
+   Desktop (>=1024): two columns — left 2-4, right 5-8. */
 function renderFinancialInsight(data) {
   const container = document.getElementById('insightContent');
   if (!container || !data) return;
@@ -132,34 +146,36 @@ function renderFinancialInsight(data) {
   const isLatestMonth = data.currentYear === now.getFullYear() && data.currentMonth >= (now.getMonth() + 1);
 
   const subText = isCurrentMonth
-    ? `${monthNames[data.currentMonth - 1]} ${data.currentYear} · hari ke-${data.dayOfMonth} dari ${data.daysInMonth}`
-    : `${monthNames[data.currentMonth - 1]} ${data.currentYear} · Rekap bulan selesai (${data.daysInMonth} hari)${data.isArchived ? ' · Ringkasan Arsip' : ''}`;
+    ? `Hari ke-${data.dayOfMonth} dari ${data.daysInMonth}`
+    : `Rekap ${data.daysInMonth} hari${data.isArchived ? ' · ringkasan arsip' : ''}`;
 
-  let html = `
-    <header class="ins-page-head">
-      <div class="ins-head-left">
-        <h2 class="page-title">Insight</h2>
-        <div class="ins-month-nav">
-          <button class="ins-nav-btn" onclick="insPrevMonth()" aria-label="Bulan sebelumnya">${insIcon('chevron-left')}</button>
-          <strong class="ins-month-title">${monthNames[data.currentMonth - 1]} ${data.currentYear}</strong>
-          <button class="ins-nav-btn" onclick="insNextMonth()" aria-label="Bulan berikutnya" ${isLatestMonth ? 'disabled style="opacity:0.35;cursor:not-allowed;"' : ''}>${insIcon('chevron-right')}</button>
-          ${!isCurrentMonth ? `<button class="ins-today-chip" onclick="insCurrentMonth()">Bulan ini</button>` : ''}
-        </div>
-        <p class="ins-page-sub">${subText}</p>
+  const head = `
+    <header class="ah-top">
+      <div class="ah-top-text">
+        <h1 class="ah-title">Insight</h1>
+        <p class="ah-sub">${subText}</p>
       </div>
-      <button class="ins-refresh" onclick="refreshInsight()" aria-label="Muat ulang analisis">${insIcon('refresh-cw')}</button>
-    </header>`;
+      <button type="button" class="ah-icon-btn is-bordered" onclick="refreshInsight()" aria-label="Muat ulang analisis">${insIcon('refresh-cw')}</button>
+    </header>
+    <div class="ig-monthbar" role="group" aria-label="Pilih bulan">
+      <button type="button" class="ah-icon-btn" onclick="insPrevMonth()" aria-label="Bulan sebelumnya">${insIcon('chevron-left')}</button>
+      <strong class="ah-month" aria-live="polite">${monthNames[data.currentMonth - 1]} ${data.currentYear}</strong>
+      <button type="button" class="ah-icon-btn" onclick="insNextMonth()" aria-label="Bulan berikutnya" ${isLatestMonth ? 'disabled' : ''}>${insIcon('chevron-right')}</button>
+      ${!isCurrentMonth ? `<button type="button" class="ig-today" onclick="insCurrentMonth()">Bulan ini</button>` : ''}
+    </div>`;
 
-  html += renderInsightHero(data);
-  html += renderAttention(data);
-  html += renderMonthCompare(data);
-  html += renderBudgetPace(data);
-  html += renderSpendingAnalysis(data);
-  html += renderCashFlowAnalysis(data);
-  if (data.investmentData) html += renderInvestmentInsight(data);
-  html += renderYearlyProgress(data);
+  const main = renderInsightHero(data) + renderMonthCard(data) + renderAttention(data);
+  const side = renderBudgetPace(data) + renderSpendingAnalysis(data)
+    + (data.investmentData ? renderInvestmentInsight(data) : '') + renderYearlyProgress(data);
 
-  container.innerHTML = html;
+  container.innerHTML = `
+    <div class="hx hq ig">
+      ${head}
+      <div class="hx-cols">
+        <div class="hx-col hx-col-main">${main}</div>
+        <div class="hx-col hx-col-side">${side}</div>
+      </div>
+    </div>`;
   if (window.lucide) lucide.createIcons();
 }
 
@@ -217,9 +233,10 @@ function computeHealth(data) {
   return { score, status, tone, reasons };
 }
 
+
 function renderInsightHero(data) {
   const h = computeHealth(data);
-  const r = 26;
+  const r = 22;
   const circumference = 2 * Math.PI * r;
   const offset = circumference - (h.score / 100) * circumference;
 
@@ -229,66 +246,121 @@ function renderInsightHero(data) {
   const pred = data.prediction || {};
   const isCurrent = data.isCurrentMonth;
   const hasPred = isCurrent ? (data.dayOfMonth >= 5 && pred.saving !== undefined) : true;
-  const kpi3Label = isCurrent ? 'Proyeksi sisa' : 'Status akhir';
+  const kpi3Label = isCurrent ? 'Proyeksi' : 'Status';
   const kpi3Val = isCurrent
     ? (hasPred ? insightShort(pred.saving) : '—')
     : (data.saving >= 0 ? 'Surplus' : 'Defisit');
-  const kpi3Sub = isCurrent ? (hasPred ? 'akhir bulan' : 'min. hari ke-5') : `${insightShort(Math.abs(data.saving))}`;
+  const kpi3Sub = isCurrent ? (hasPred ? 'akhir bulan' : 'mulai hari ke-5') : insightShort(Math.abs(data.saving));
+  const kpi3Cls = !hasPred ? '' : (isCurrent ? (pred.saving >= 0 ? 'pos' : 'neg') : (data.saving >= 0 ? 'pos' : 'neg'));
 
   const expenseShare = data.totalIncome > 0 ? Math.round(data.totalExpense / data.totalIncome * 100) : null;
-  const line = isCurrent
-    ? (expenseShare === null ? 'Belum ada pemasukan tercatat bulan ini.' : `Pengeluaran ${expenseShare}% dari pemasukan bulan ini.`)
-    : (expenseShare === null ? 'Tidak ada pemasukan tercatat pada bulan ini.' : `Pengeluaran ${expenseShare}% dari total pemasukan.`);
+  const line = expenseShare === null
+    ? (isCurrent ? 'Belum ada pemasukan tercatat bulan ini.' : 'Tidak ada pemasukan tercatat.')
+    : `Pengeluaran ${expenseShare}% dari pemasukan.`;
 
   return `
-    <section class="ins-hero">
-      <div class="ins-hero-top">
-        <div class="ins-ring tone-${h.tone}" role="img" aria-label="Skor kesehatan ${h.score} dari 100">
-          <svg viewBox="0 0 64 64" aria-hidden="true">
-            <circle cx="32" cy="32" r="${r}" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="6"/>
-            <circle class="ins-ring-arc" cx="32" cy="32" r="${r}" fill="none" stroke-width="6"
+    <section class="ig-hero" aria-label="Skor kesehatan keuangan">
+      <div class="ig-score">
+        <div class="ig-ring tone-${h.tone}" role="img" aria-label="Skor kesehatan ${h.score} dari 100">
+          <svg viewBox="0 0 52 52" aria-hidden="true">
+            <circle cx="26" cy="26" r="${r}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="5"/>
+            <circle class="ig-ring-arc" cx="26" cy="26" r="${r}" fill="none" stroke-width="5"
               stroke-dasharray="${circumference.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"
-              stroke-linecap="round" transform="rotate(-90 32 32)"/>
+              stroke-linecap="round" transform="rotate(-90 26 26)"/>
           </svg>
           <strong>${h.score}</strong>
         </div>
-        <div class="ins-hero-text">
-          <span class="ins-label">Skor kesehatan</span>
-          <span class="ins-status tone-${h.tone}">${h.status}</span>
+        <div class="ig-score-text">
+          <span class="ig-status tone-${h.tone}">${h.status}</span>
           <p>${line}</p>
         </div>
       </div>
 
-      <div class="ins-kpis">
-        <div class="ins-kpi">
-          <span>Saving rate</span>
-          <strong class="${data.savingRate >= 20 ? 'pos' : data.savingRate < 0 ? 'neg' : 'warn'}">${data.savingRate.toFixed(1)}%</strong>
-          <small class="${rateDelta === null ? '' : rateDelta >= 0 ? 'pos' : 'neg'}">${rateSub}</small>
+      <dl class="hx-flow ig-kpis">
+        <div class="hx-flow-item">
+          <dt>Saving rate</dt>
+          <dd class="${data.savingRate >= 20 ? 'pos' : data.savingRate < 0 ? 'neg' : 'warn'}">${data.savingRate.toFixed(1)}%</dd>
+          <dd class="ig-kpi-sub ${rateDelta === null ? '' : rateDelta >= 0 ? 'pos' : 'neg'}">${rateSub}</dd>
         </div>
-        <div class="ins-kpi">
-          <span>${isCurrent ? 'Sisa bulan ini' : 'Sisa akhir'}</span>
-          <strong class="${data.saving >= 0 ? 'pos' : 'neg'}">${insightShort(data.saving)}</strong>
-          <small>masuk − keluar</small>
+        <div class="hx-flow-item">
+          <dt>Sisa</dt>
+          <dd class="${data.saving >= 0 ? 'pos' : 'neg'}">${insightShort(data.saving)}</dd>
+          <dd class="ig-kpi-sub">masuk − keluar</dd>
         </div>
-        <div class="ins-kpi">
-          <span>${kpi3Label}</span>
-          <strong class="${!hasPred ? '' : (isCurrent ? (pred.saving >= 0 ? 'pos' : 'neg') : (data.saving >= 0 ? 'pos' : 'neg'))}">${kpi3Val}</strong>
-          <small>${kpi3Sub}</small>
+        <div class="hx-flow-item">
+          <dt>${kpi3Label}</dt>
+          <dd class="${kpi3Cls}">${kpi3Val}</dd>
+          <dd class="ig-kpi-sub">${kpi3Sub}</dd>
         </div>
-      </div>
+      </dl>
 
-      <details class="ins-why">
+      <details class="ig-why">
         <summary>Kenapa skor ${h.score}? ${insIcon('chevron-down')}</summary>
         <ul>
-          ${h.reasons.map(x => `<li class="${x.good ? 'good' : 'bad'}">${insIcon(x.good ? 'check' : 'x')}${insEsc(x.text)}</li>`).join('')}
+          ${h.reasons.map(x => `<li class="${x.good ? 'good' : 'bad'}">${insIcon(x.good ? 'check' : 'x')}<span>${insEsc(x.text)}</span></li>`).join('')}
         </ul>
       </details>
     </section>`;
 }
 
+/* === THE ONE CARD: this month vs last, then the 6-month cash flow ===
+   Two answers to "how is money moving" in one box instead of two. */
+function renderMonthCard(data) {
+  const isCurrent = data.isCurrentMonth;
+  const hasPred = isCurrent && data.dayOfMonth >= 5 && data.prediction;
+  const pred = data.prediction || {};
+  const delta = (cur, prev, upIsGood) => {
+    if (!prev) return '<span class="ig-delta">—</span>';
+    const pct = (cur - prev) / Math.abs(prev) * 100;
+    if (!isFinite(pct)) return '<span class="ig-delta">—</span>';
+    const good = upIsGood ? pct >= 0 : pct <= 0;
+    return `<span class="ig-delta ${good ? 'pos' : 'neg'}">${pct >= 0 ? '↑' : '↓'}${Math.abs(pct).toFixed(0)}%</span>`;
+  };
+  const col4 = (predVal, pastText, isPositive) => isCurrent
+    ? `<span role="cell" class="ig-proj">${hasPred ? insightShort(predVal) : '—'}</span>`
+    : `<span role="cell" class="ig-proj ${isPositive === undefined ? '' : (isPositive ? 'pos' : 'neg')}">${pastText}</span>`;
+  const rows = [
+    { label: 'Masuk', cls: 'is-in', now: insightShort(data.totalIncome), d: delta(data.totalIncome, data.prevIncome, true), c4: col4(pred.income, 'Tercatat') },
+    { label: 'Keluar', cls: 'is-out', now: insightShort(data.totalExpense), d: delta(data.totalExpense, data.prevExpense, false), c4: col4(pred.expense, 'Selesai') },
+    { label: 'Sisa', cls: data.saving >= 0 ? 'pos' : 'neg', now: insightShort(data.saving), d: delta(data.saving, data.prevSaving, true), c4: col4(pred.saving, data.saving >= 0 ? 'Surplus' : 'Defisit', data.saving >= 0) },
+    { label: 'Net worth', cls: '', now: insightShort(data.netWorth), d: '<span class="ig-delta">—</span>', c4: col4(pred.netWorth, 'Akhir bln') }
+  ];
+  const table = `
+    <div class="ig-table" role="table" aria-label="Bulan ini dibanding bulan lalu">
+      <div class="ig-tr ig-th" role="row">
+        <span role="columnheader"></span>
+        <span role="columnheader">${isCurrent ? 'Sekarang' : 'Realisasi'}</span>
+        <span role="columnheader">vs lalu</span>
+        <span role="columnheader">${isCurrent ? 'Proyeksi' : 'Status'}</span>
+      </div>
+      ${rows.map(r => `
+        <div class="ig-tr" role="row">
+          <span role="rowheader">${r.label}</span>
+          <strong role="cell" class="${r.cls}">${r.now}</strong>
+          <span role="cell">${r.d}</span>
+          ${r.c4}
+        </div>`).join('')}
+    </div>`;
+
+  const sub = isCurrent
+    ? (hasPred ? `Proyeksi dari ${data.dayOfMonth} hari berjalan` : 'Proyeksi muncul mulai hari ke-5')
+    : 'Dibanding bulan sebelumnya';
+
+  return `
+    <section class="hx-card ig-card" aria-labelledby="igMonthTitle">
+      <div class="ig-card-head">
+        <div class="hx-head-text">
+          <h3 class="hx-title" id="igMonthTitle">${isCurrent ? 'Bulan ini' : 'Ringkasan bulan'}</h3>
+          <p class="hx-sub">${sub}</p>
+        </div>
+      </div>
+      ${table}
+      ${renderCashFlowAnalysis(data)}
+    </section>`;
+}
+
 /* === WHAT NEEDS ATTENTION ===
-   Key insights and recommendations used to be two cards saying the same
-   things. One list now, most urgent first; good news becomes chips. */
+   One list, most urgent first; good news is a single quiet line. */
 function renderAttention(data) {
   const items = [];   // { rank, tone, icon, title, detail }
   const good = [];    // { icon, text }
@@ -372,71 +444,29 @@ function renderAttention(data) {
 
   items.sort((a, b) => a.rank - b.rank);
   const row = i => `
-    <li class="ins-item tone-${i.tone}">
-      <span class="ins-item-icon">${insIcon(i.icon)}</span>
-      <span class="ins-item-body"><strong>${i.title}</strong><span>${i.detail}</span></span>
+    <li class="ig-item tone-${i.tone}">
+      <span class="ig-item-ic">${insIcon(i.icon)}</span>
+      <span class="ig-item-body"><strong>${i.title}</strong><span>${i.detail}</span></span>
     </li>`;
 
-  const shown = items.slice(0, 4);
-  const rest = items.slice(4);
+  const shown = items.slice(0, 3);
+  const rest = items.slice(3);
   const list = items.length
-    ? `<ul class="ins-list">${shown.map(row).join('')}</ul>
-       ${rest.length ? `<details class="ins-more"><summary>${rest.length} lainnya ${insIcon('chevron-down')}</summary><ul class="ins-list">${rest.map(row).join('')}</ul></details>` : ''}`
-    : `<div class="ins-allgood">${insIcon('circle-check')}<span>Tidak ada yang perlu dikhawatirkan di bulan ini.</span></div>`;
+    ? `<ul class="ig-list">${shown.map(row).join('')}</ul>
+       ${rest.length ? `<details class="ig-more"><summary>${rest.length} lainnya ${insIcon('chevron-down')}</summary><ul class="ig-list">${rest.map(row).join('')}</ul></details>` : ''}`
+    : `<p class="ig-allgood">${insIcon('circle-check')}<span>Tidak ada yang perlu dikhawatirkan.</span></p>`;
 
-  const chips = good.length
-    ? `<div class="ins-chips" aria-label="Kabar baik">${good.map(g => `<span class="ins-chip">${insIcon(g.icon)}${g.text}</span>`).join('')}</div>`
+  const goodLine = good.length
+    ? `<p class="ig-good" aria-label="Kabar baik">${insIcon('sparkles')}<span>${good.map(g => g.text).join(' · ')}</span></p>`
     : '';
 
   const sub = items.length ? `${items.length} hal, paling mendesak di atas` : '';
-  return insightSection('Perlu perhatian', sub, `<div class="ins-card">${list}${chips}</div>`);
-}
-
-/* === THIS MONTH VS LAST, WITH PROJECTION === */
-function renderMonthCompare(data) {
-  const isCurrent = data.isCurrentMonth;
-  const hasPred = isCurrent && data.dayOfMonth >= 5 && data.prediction;
-  const pred = data.prediction || {};
-  const delta = (cur, prev, upIsGood) => {
-    if (!prev) return '<span class="ins-delta">—</span>';
-    const pct = (cur - prev) / Math.abs(prev) * 100;
-    if (!isFinite(pct)) return '<span class="ins-delta">—</span>';
-    const good = upIsGood ? pct >= 0 : pct <= 0;
-    return `<span class="ins-delta ${good ? 'pos' : 'neg'}">${pct >= 0 ? '↑' : '↓'}${Math.abs(pct).toFixed(0)}%</span>`;
-  };
-  const fourthCol = (predVal, pastText, isPositive) => {
-    if (isCurrent) return `<span role="cell" class="ins-proj">${hasPred ? insightShort(predVal) : '—'}</span>`;
-    return `<span role="cell" class="${isPositive === undefined ? '' : (isPositive ? 'pos' : 'neg')}"><strong>${pastText}</strong></span>`;
-  };
-  const rows = [
-    { label: 'Pemasukan', now: insightShort(data.totalIncome), d: delta(data.totalIncome, data.prevIncome, true), col4: fourthCol(pred.income, 'Tercatat') },
-    { label: 'Pengeluaran', now: insightShort(data.totalExpense), d: delta(data.totalExpense, data.prevExpense, false), col4: fourthCol(pred.expense, 'Selesai') },
-    { label: 'Sisa', now: insightShort(data.saving), d: delta(data.saving, data.prevSaving, true), col4: fourthCol(pred.saving, data.saving >= 0 ? 'Surplus' : 'Defisit', data.saving >= 0), cls: data.saving >= 0 ? 'pos' : 'neg' },
-    { label: 'Net worth', now: insightShort(data.netWorth), d: '<span class="ins-delta">—</span>', col4: fourthCol(pred.netWorth, 'Akhir bln') }
-  ];
-  const col4Header = isCurrent ? 'Proyeksi' : 'Status';
-  const body = `
-    <div class="ins-card ins-table" role="table" aria-label="Bulan ini dibanding bulan lalu">
-      <div class="ins-tr ins-th" role="row">
-        <span role="columnheader"></span><span role="columnheader">${isCurrent ? 'Sekarang' : 'Realisasi'}</span><span role="columnheader">vs lalu</span><span role="columnheader">${col4Header}</span>
-      </div>
-      ${rows.map(r => `
-        <div class="ins-tr" role="row">
-          <span role="rowheader">${r.label}</span>
-          <strong role="cell" class="${r.cls || ''}">${r.now}</strong>
-          <span role="cell">${r.d}</span>
-          ${r.col4}
-        </div>`).join('')}
-    </div>`;
-  const sub = isCurrent
-    ? (hasPred ? `Proyeksi dari rata-rata ${data.dayOfMonth} hari berjalan` : 'Proyeksi muncul mulai hari ke-5')
-    : 'Dibandingkan dengan bulan sebelumnya';
-  return insightSection(isCurrent ? 'Bulan ini' : 'Ringkasan bulan', sub, body);
+  return insightSection('Perlu perhatian', sub, `${list}${goodLine}`);
 }
 
 /* === BUDGET PACE ===
-   The dashboard shows how much is used; this shows whether that is ahead
-   of the calendar — the marker is where spending "should" be today. */
+   Home shows how much is used; this shows whether that is ahead of the
+   calendar — the tick is where spending "should" be today. */
 function renderBudgetPace(data) {
   const items = data.budgetAnalysis.filter(b => b.target > 0);
   if (!items.length) return '';
@@ -457,51 +487,50 @@ function renderBudgetPace(data) {
         : (left >= 0 ? `${insightShort(left / Math.max(daysLeft, 1))}/hari` : `lebih ${insightShort(-left)}`))
       : (b.isSaving
         ? (left > 0 ? `kurang ${insightShort(left)}` : `tercapai +${insightShort(-left)}`)
-        : (left >= 0 ? `sisa hemat ${insightShort(left)}` : `overbudget +${insightShort(-left)}`));
+        : (left >= 0 ? `hemat ${insightShort(left)}` : `over +${insightShort(-left)}`));
     return `
-      <div class="ins-pace is-${state}">
-        <div class="ins-pace-top">
+      <div class="ig-pace is-${state}">
+        <div class="ig-pace-top">
           <span>${insEsc(b.category)}${b.isSaving ? ' <em>tabungan</em>' : ''}</span>
           <strong>${pct.toFixed(0)}%</strong>
         </div>
-        <div class="ins-pace-bar">
-          <span class="ins-pace-fill" style="width:${Math.min(pct, 100)}%"></span>
-          ${b.isSaving || !isCurrent ? '' : `<span class="ins-pace-mark" style="left:${timePct}%" aria-hidden="true"></span>`}
+        <div class="ig-pace-bar">
+          <span class="ig-pace-fill" style="width:${Math.min(pct, 100)}%"></span>
+          ${b.isSaving || !isCurrent ? '' : `<span class="ig-pace-mark" style="left:${timePct}%" aria-hidden="true"></span>`}
         </div>
-        <div class="ins-pace-foot"><span>${insightShort(b.spent)} / ${insightShort(b.target).replace('Rp ', '')}${!b.isSaving && left > 0 ? ' · sisa ' + insightShort(left).replace('Rp ', '') : ''}</span><span class="ins-pace-note">${foot}</span></div>
+        <div class="ig-pace-foot"><span>${insightShort(b.spent)} / ${insightShort(b.target).replace('Rp ', '')}</span><span class="ig-pace-note">${foot}</span></div>
       </div>`;
   }).join('');
 
-  const basis = `Dana ${insightShort(data.budgetBase || 0)} = sisa bulan lalu ${insightShort(data.carryover || 0)} + pemasukan ${insightShort(data.totalIncome)}`;
   const sub = isCurrent
-    ? `${basis} · garis putih = batas ideal hari ini (${timePct.toFixed(0)}%)`
-    : `${basis} · realisasi akhir`;
-  return insightSection(isCurrent ? 'Laju budget' : 'Realisasi budget', sub, `<div class="ins-card">${rows}</div>`);
+    ? `Dana ${insightShort(data.budgetBase || 0)} · garis = batas ideal hari ini`
+    : `Dana ${insightShort(data.budgetBase || 0)} · realisasi akhir`;
+  const note = `<p class="ig-fine">Dana = sisa bulan lalu ${insightShort(data.carryover || 0)} + pemasukan ${insightShort(data.totalIncome)}</p>`;
+  return insightSection(isCurrent ? 'Laju anggaran' : 'Realisasi anggaran', sub, `<div class="ig-rows">${rows}</div>${note}`);
 }
 
-/* === TOP SPENDING === */
+/* === TOP SPENDING ===
+   One stacked bar for the shares, then a legend row per category. */
 function renderSpendingAnalysis(data) {
   const monthNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   const monthLabel = monthNames[data.currentMonth - 1] || 'Bulan ini';
   if (!data.spendingByCategory.length) {
-    return insightSection('Pengeluaran terbesar', `${monthLabel} ${data.currentYear}, per kategori`, '<div class="ins-card"><div class="empty-state" style="padding:12px;font-size:13px;color:var(--text-muted);">Tidak ada pengeluaran tercatat di bulan ini.</div></div>');
+    return insightSection('Pengeluaran terbesar', `${monthLabel} ${data.currentYear}`, '<p class="ig-empty">Tidak ada pengeluaran tercatat di bulan ini.</p>');
   }
   const top = data.spendingByCategory.slice(0, 5);
   const colors = ['#22d3ee', '#fbbf24', '#f472b6', '#818cf8', '#fb923c'];
-  const max = top[0] ? top[0].amount : 1;
-  const note = top[0] && top[0].percent > 40
-    ? `<p class="ins-note">${insIcon('info')}${insEsc(top[0].category)} mengambil ${top[0].percent.toFixed(0)}% pengeluaran.</p>` : '';
-
+  const stack = top.map((c, i) => `<span style="width:${Math.max(c.percent, 0).toFixed(1)}%;background:${colors[i]}" title="${insEsc(c.category)} ${c.percent.toFixed(0)}%"></span>`).join('');
   const rows = top.map((c, i) => `
-    <div class="ins-bar-row">
-      <span class="ins-bar-name"><i class="ins-dot" style="background:${colors[i]}"></i>${insEsc(c.category)}</span>
-      <span class="ins-bar-track"><span style="width:${(c.amount / max * 100).toFixed(0)}%;background:${colors[i]}"></span></span>
-      <span class="ins-bar-val"><strong>${insightShort(c.amount)}</strong><small>${c.percent.toFixed(0)}%</small></span>
+    <div class="ig-leg">
+      <span class="ig-leg-name"><i style="background:${colors[i]}"></i>${insEsc(c.category)}</span>
+      <span class="ig-leg-pct">${c.percent.toFixed(0)}%</span>
+      <strong>${insightShort(c.amount)}</strong>
     </div>`).join('');
-  return insightSection('Pengeluaran terbesar', `${monthLabel} ${data.currentYear}, per kategori`, `<div class="ins-card">${rows}${note}</div>`);
+  return insightSection('Pengeluaran terbesar', `${monthLabel} ${data.currentYear}, per kategori`,
+    `<div class="ig-stack" role="img" aria-label="Porsi pengeluaran per kategori">${stack}</div><div class="ig-rows">${rows}</div>`);
 }
 
-/* === CASH FLOW TREND === */
+/* === CASH FLOW TREND (lives inside the month card) === */
 function renderCashFlowAnalysis(data) {
   const history = data.monthlyHistory;
   if (history.length < 2) return '';
@@ -510,25 +539,28 @@ function renderCashFlowAnalysis(data) {
   const positive = history.filter(h => h.saving > 0).length;
 
   const cols = history.map(h => `
-    <div class="ins-cf-col" title="${insEsc(h.label)} · masuk ${insightIDR(h.income)} · keluar ${insightIDR(h.expense)}">
-      <div class="ins-cf-bars">
+    <div class="ig-cf-col" title="${insEsc(h.label)} · masuk ${insightIDR(h.income)} · keluar ${insightIDR(h.expense)}">
+      <div class="ig-cf-bars">
         <span class="in" style="height:${(h.income / max * 100).toFixed(0)}%"></span>
         <span class="out" style="height:${(h.expense / max * 100).toFixed(0)}%"></span>
       </div>
-      <span class="ins-cf-net ${h.saving >= 0 ? 'pos' : 'neg'}">${h.saving >= 0 ? '+' : '−'}${insightShort(Math.abs(h.saving)).replace('Rp ', '')}</span>
-      <span class="ins-cf-label">${insEsc(h.label)}</span>
+      <span class="ig-cf-net ${h.saving >= 0 ? 'pos' : 'neg'}">${h.saving >= 0 ? '+' : '−'}${insightShort(Math.abs(h.saving)).replace('Rp ', '')}</span>
+      <span class="ig-cf-label">${insEsc(h.label)}</span>
     </div>`).join('');
 
-  const body = `
-    <div class="ins-card">
-      <div class="ins-cf">${cols}</div>
-      <div class="ins-legend">
-        <span><i class="ins-sw in"></i>Masuk</span>
-        <span><i class="ins-sw out"></i>Keluar</span>
-        <span>Angka = sisa</span>
+  return `
+    <div class="ig-cf-wrap">
+      <div class="ig-cf-head">
+        <span class="ig-cf-title">Cash flow ${history.length} bulan</span>
+        <span class="ig-cf-meta">${positive}/${history.length} positif · rata-rata ${insightShort(avgSaving)}</span>
+      </div>
+      <div class="ig-cf" role="img" aria-label="Pemasukan dan pengeluaran ${history.length} bulan terakhir">${cols}</div>
+      <div class="ig-legend">
+        <span><i class="in"></i>Masuk</span>
+        <span><i class="out"></i>Keluar</span>
+        <span>angka = sisa</span>
       </div>
     </div>`;
-  return insightSection('Cash flow', `${positive} dari ${history.length} bulan positif · rata-rata sisa ${insightShort(avgSaving)}`, body);
 }
 
 /* === INVESTMENT === */
@@ -540,27 +572,20 @@ function renderInvestmentInsight(data) {
   const worst = portfolio.length ? portfolio.reduce((a, b) => a.GrowthPercent < b.GrowthPercent ? a : b) : null;
   const pl = inv.profitLoss >= 0;
 
-  const perf = best ? `
-    <div class="ins-perf">
-      <span>${insIcon('arrow-up-right')}Terbaik <strong>${insEsc(best.Asset)}</strong><em class="pos">+${(best.GrowthPercent * 100).toFixed(1)}%</em></span>
-      ${worst && worst.Asset !== best.Asset ? `<span>${insIcon('arrow-down-right')}Terlemah <strong>${insEsc(worst.Asset)}</strong><em class="${worst.GrowthPercent >= 0 ? 'pos' : 'neg'}">${(worst.GrowthPercent * 100).toFixed(1)}%</em></span>` : ''}
-    </div>` : '';
-
-  const rebalance = inv.rebalanceSuggestions && inv.rebalanceSuggestions.length ? `
-    <div class="ins-rebal">
-      <span class="ins-label">Saran top-up</span>
-      ${inv.rebalanceSuggestions.slice(0, 3).map(r => `<div><span>${insEsc(r.sector)}</span><strong>+${insightShort(r.suggestedAmountIDR)}</strong></div>`).join('')}
-    </div>` : '';
+  const rows = [];
+  if (best) rows.push(`<div class="ig-kv"><span>${insIcon('arrow-up-right')}Terbaik · ${insEsc(best.Asset)}</span><strong class="pos">+${(best.GrowthPercent * 100).toFixed(1)}%</strong></div>`);
+  if (worst && best && worst.Asset !== best.Asset) rows.push(`<div class="ig-kv"><span>${insIcon('arrow-down-right')}Terlemah · ${insEsc(worst.Asset)}</span><strong class="${worst.GrowthPercent >= 0 ? 'pos' : 'neg'}">${(worst.GrowthPercent * 100).toFixed(1)}%</strong></div>`);
+  (inv.rebalanceSuggestions || []).slice(0, 2).forEach(r => {
+    rows.push(`<div class="ig-kv"><span>${insIcon('plus')}Top-up · ${insEsc(r.sector)}</span><strong>${insightShort(r.suggestedAmountIDR)}</strong></div>`);
+  });
 
   const body = `
-    <div class="ins-card">
-      <div class="ins-kpis ins-kpis-flat">
-        <div class="ins-kpi"><span>Nilai</span><strong>${insightShort(inv.totalValue)}</strong></div>
-        <div class="ins-kpi"><span>Profit/Loss</span><strong class="${pl ? 'pos' : 'neg'}">${pl ? '+' : ''}${insightShort(inv.profitLoss)}</strong></div>
-        <div class="ins-kpi"><span>Return</span><strong class="${inv.returnPercent >= 0 ? 'pos' : 'neg'}">${inv.returnPercent >= 0 ? '+' : ''}${inv.returnPercent.toFixed(1)}%</strong></div>
-      </div>
-      ${perf}${rebalance}
-    </div>`;
+    <dl class="hx-flow ig-kpis ig-kpis-inv">
+      <div class="hx-flow-item"><dt>Nilai</dt><dd>${insightShort(inv.totalValue)}</dd></div>
+      <div class="hx-flow-item"><dt>Profit/Loss</dt><dd class="${pl ? 'pos' : 'neg'}">${pl ? '+' : ''}${insightShort(inv.profitLoss)}</dd></div>
+      <div class="hx-flow-item"><dt>Return</dt><dd class="${inv.returnPercent >= 0 ? 'pos' : 'neg'}">${inv.returnPercent >= 0 ? '+' : ''}${inv.returnPercent.toFixed(1)}%</dd></div>
+    </dl>
+    ${rows.length ? `<div class="ig-rows">${rows.join('')}</div>` : ''}`;
   return insightSection('Investasi', `${portfolio.length} aset`, body);
 }
 
@@ -616,9 +641,9 @@ function renderYearlyProgress(data) {
     : '';
 
   return `
-    <details class="ins-section ins-fold">
-      <summary><span><strong>Perkembangan per tahun</strong><small>${years.length} tahun</small></span>${insIcon('chevron-down')}</summary>
-      <div class="ins-card"><div class="insight-yoy">${rows}</div>${archivedNote}</div>
+    <details class="ig-fold">
+      <summary><span class="hx-head-text"><span class="hx-title">Perkembangan per tahun</span><span class="hx-sub">${years.length} tahun</span></span>${insIcon('chevron-down')}</summary>
+      <div class="insight-yoy ig-yoy">${rows}</div>${archivedNote}
     </details>`;
 }
 
